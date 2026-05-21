@@ -1,25 +1,47 @@
-import { Bell, Search } from "lucide-react";
+import { Bell, LogOut, Search } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { useRouterState } from "@tanstack/react-router";
+import { useRouterState, useRouteContext } from "@tanstack/react-router";
+import { signOut } from "@/lib/supabase/session";
+import { useNavigate } from "@tanstack/react-router";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const labels: Record<string, string> = {
   dashboard: "Dashboard", eleitores: "Eleitores", liderancas: "Lideranças",
   demandas: "Demandas", agenda: "Agenda", pesquisas: "Pesquisas",
-  relatorios: "Relatórios", configuracoes: "Configurações",
+  relatorios: "Relatórios", configuracoes: "Configurações", admin: "Admin", tenants: "Clientes", metricas: "Métricas",
 };
 
 export function AppNavbar() {
   const path = useRouterState({ select: (r) => r.location.pathname });
   const seg = path.split("/").filter(Boolean);
+  const { profile, activeTenant } = useRouteContext({ strict: false });
+  const navigate = useNavigate();
+
+  const initials = (profile?.full_name ?? "U")
+    .split(" ")
+    .map((n) => n[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+
+  async function handleLogout() {
+    await signOut();
+    navigate({ to: "/login" });
+  }
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-border bg-card/80 px-4 backdrop-blur supports-[backdrop-filter]:bg-card/60 md:px-6">
       <SidebarTrigger className="-ml-1" />
       <nav className="hidden items-center gap-1.5 text-sm md:flex">
-        <span className="text-muted-foreground">Strategos</span>
+        <span className="text-muted-foreground">{activeTenant?.name ?? "Strategos"}</span>
         {seg.map((s, i) => (
           <span key={i} className="flex items-center gap-1.5">
             <span className="text-muted-foreground/50">/</span>
@@ -36,17 +58,25 @@ export function AppNavbar() {
         </div>
         <Button variant="ghost" size="icon" className="relative">
           <Bell className="h-4 w-4" />
-          <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-destructive" />
         </Button>
-        <div className="flex items-center gap-2 rounded-full border border-border bg-background py-1 pl-1 pr-3">
-          <Avatar className="h-7 w-7">
-            <AvatarFallback className="bg-primary text-xs text-primary-foreground">RC</AvatarFallback>
-          </Avatar>
-          <div className="hidden text-xs leading-tight sm:block">
-            <div className="font-medium">Ricardo Campos</div>
-            <div className="text-muted-foreground">Coordenador</div>
-          </div>
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button type="button" className="flex items-center gap-2 rounded-full border border-border bg-background py-1 pl-1 pr-3">
+              <Avatar className="h-7 w-7">
+                <AvatarFallback className="bg-primary text-xs text-primary-foreground">{initials}</AvatarFallback>
+              </Avatar>
+              <div className="hidden text-left text-xs leading-tight sm:block">
+                <div className="font-medium">{profile?.full_name ?? "Usuário"}</div>
+                <div className="text-muted-foreground">{activeTenant?.name}</div>
+              </div>
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={handleLogout}>
+              <LogOut className="mr-2 h-4 w-4" /> Sair
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   );

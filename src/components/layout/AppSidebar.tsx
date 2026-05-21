@@ -1,12 +1,14 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
   LayoutDashboard, Users, Crown, MessageSquareWarning, Calendar,
-  BarChart3, FileText, Settings, Vote,
+  BarChart3, FileText, Settings, Vote, Shield,
 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
   SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar,
 } from "@/components/ui/sidebar";
+
+const adminItem = { title: "Super Admin", url: "/admin/tenants", icon: Shield };
 
 const items = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
@@ -19,7 +21,7 @@ const items = [
   { title: "Configurações", url: "/configuracoes", icon: Settings },
 ];
 
-export function AppSidebar() {
+export function AppSidebar({ isSuperAdmin = false }: { isSuperAdmin?: boolean }) {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const path = useRouterState({ select: (r) => r.location.pathname });
@@ -45,7 +47,7 @@ export function AppSidebar() {
           <SidebarGroupLabel className="text-sidebar-foreground/50">Navegação</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {items.map((item) => {
+              {[...items, ...(isSuperAdmin ? [adminItem] : [])].map((item) => {
                 const active = path === item.url || (item.url !== "/dashboard" && path.startsWith(item.url));
                 return (
                   <SidebarMenuItem key={item.title}>

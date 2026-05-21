@@ -9,8 +9,14 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SignupRouteImport } from './routes/signup'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppRouteImport } from './routes/_app'
+import { Route as AdminRouteImport } from './routes/_admin'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as PSlugRouteImport } from './routes/p.$slug'
+import { Route as InviteTokenRouteImport } from './routes/invite.$token'
+import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as AppRelatoriosRouteImport } from './routes/_app.relatorios'
 import { Route as AppPesquisasRouteImport } from './routes/_app.pesquisas'
 import { Route as AppLiderancasRouteImport } from './routes/_app.liderancas'
@@ -19,14 +25,45 @@ import { Route as AppDemandasRouteImport } from './routes/_app.demandas'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppConfiguracoesRouteImport } from './routes/_app.configuracoes'
 import { Route as AppAgendaRouteImport } from './routes/_app.agenda'
+import { Route as AdminTenantsRouteImport } from './routes/_admin.tenants'
+import { Route as AdminMetricasRouteImport } from './routes/_admin.metricas'
 
+const SignupRoute = SignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppRoute = AppRouteImport.update({
   id: '/_app',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/_admin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PSlugRoute = PSlugRouteImport.update({
+  id: '/p/$slug',
+  path: '/p/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InviteTokenRoute = InviteTokenRouteImport.update({
+  id: '/invite/$token',
+  path: '/invite/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthCallbackRoute = AuthCallbackRouteImport.update({
+  id: '/auth/callback',
+  path: '/auth/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppRelatoriosRoute = AppRelatoriosRouteImport.update({
@@ -69,9 +106,23 @@ const AppAgendaRoute = AppAgendaRouteImport.update({
   path: '/agenda',
   getParentRoute: () => AppRoute,
 } as any)
+const AdminTenantsRoute = AdminTenantsRouteImport.update({
+  id: '/tenants',
+  path: '/tenants',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminMetricasRoute = AdminMetricasRouteImport.update({
+  id: '/metricas',
+  path: '/metricas',
+  getParentRoute: () => AdminRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
+  '/signup': typeof SignupRoute
+  '/metricas': typeof AdminMetricasRoute
+  '/tenants': typeof AdminTenantsRoute
   '/agenda': typeof AppAgendaRoute
   '/configuracoes': typeof AppConfiguracoesRoute
   '/dashboard': typeof AppDashboardRoute
@@ -80,9 +131,16 @@ export interface FileRoutesByFullPath {
   '/liderancas': typeof AppLiderancasRoute
   '/pesquisas': typeof AppPesquisasRoute
   '/relatorios': typeof AppRelatoriosRoute
+  '/auth/callback': typeof AuthCallbackRoute
+  '/invite/$token': typeof InviteTokenRoute
+  '/p/$slug': typeof PSlugRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
+  '/signup': typeof SignupRoute
+  '/metricas': typeof AdminMetricasRoute
+  '/tenants': typeof AdminTenantsRoute
   '/agenda': typeof AppAgendaRoute
   '/configuracoes': typeof AppConfiguracoesRoute
   '/dashboard': typeof AppDashboardRoute
@@ -91,11 +149,19 @@ export interface FileRoutesByTo {
   '/liderancas': typeof AppLiderancasRoute
   '/pesquisas': typeof AppPesquisasRoute
   '/relatorios': typeof AppRelatoriosRoute
+  '/auth/callback': typeof AuthCallbackRoute
+  '/invite/$token': typeof InviteTokenRoute
+  '/p/$slug': typeof PSlugRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_admin': typeof AdminRouteWithChildren
   '/_app': typeof AppRouteWithChildren
+  '/login': typeof LoginRoute
+  '/signup': typeof SignupRoute
+  '/_admin/metricas': typeof AdminMetricasRoute
+  '/_admin/tenants': typeof AdminTenantsRoute
   '/_app/agenda': typeof AppAgendaRoute
   '/_app/configuracoes': typeof AppConfiguracoesRoute
   '/_app/dashboard': typeof AppDashboardRoute
@@ -104,11 +170,18 @@ export interface FileRoutesById {
   '/_app/liderancas': typeof AppLiderancasRoute
   '/_app/pesquisas': typeof AppPesquisasRoute
   '/_app/relatorios': typeof AppRelatoriosRoute
+  '/auth/callback': typeof AuthCallbackRoute
+  '/invite/$token': typeof InviteTokenRoute
+  '/p/$slug': typeof PSlugRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/login'
+    | '/signup'
+    | '/metricas'
+    | '/tenants'
     | '/agenda'
     | '/configuracoes'
     | '/dashboard'
@@ -117,9 +190,16 @@ export interface FileRouteTypes {
     | '/liderancas'
     | '/pesquisas'
     | '/relatorios'
+    | '/auth/callback'
+    | '/invite/$token'
+    | '/p/$slug'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/login'
+    | '/signup'
+    | '/metricas'
+    | '/tenants'
     | '/agenda'
     | '/configuracoes'
     | '/dashboard'
@@ -128,10 +208,18 @@ export interface FileRouteTypes {
     | '/liderancas'
     | '/pesquisas'
     | '/relatorios'
+    | '/auth/callback'
+    | '/invite/$token'
+    | '/p/$slug'
   id:
     | '__root__'
     | '/'
+    | '/_admin'
     | '/_app'
+    | '/login'
+    | '/signup'
+    | '/_admin/metricas'
+    | '/_admin/tenants'
     | '/_app/agenda'
     | '/_app/configuracoes'
     | '/_app/dashboard'
@@ -140,15 +228,38 @@ export interface FileRouteTypes {
     | '/_app/liderancas'
     | '/_app/pesquisas'
     | '/_app/relatorios'
+    | '/auth/callback'
+    | '/invite/$token'
+    | '/p/$slug'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRoute: typeof AdminRouteWithChildren
   AppRoute: typeof AppRouteWithChildren
+  LoginRoute: typeof LoginRoute
+  SignupRoute: typeof SignupRoute
+  AuthCallbackRoute: typeof AuthCallbackRoute
+  InviteTokenRoute: typeof InviteTokenRoute
+  PSlugRoute: typeof PSlugRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/signup': {
+      id: '/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_app': {
       id: '/_app'
       path: ''
@@ -156,11 +267,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_admin': {
+      id: '/_admin'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/p/$slug': {
+      id: '/p/$slug'
+      path: '/p/$slug'
+      fullPath: '/p/$slug'
+      preLoaderRoute: typeof PSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/invite/$token': {
+      id: '/invite/$token'
+      path: '/invite/$token'
+      fullPath: '/invite/$token'
+      preLoaderRoute: typeof InviteTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/callback': {
+      id: '/auth/callback'
+      path: '/auth/callback'
+      fullPath: '/auth/callback'
+      preLoaderRoute: typeof AuthCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app/relatorios': {
@@ -219,8 +358,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAgendaRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_admin/tenants': {
+      id: '/_admin/tenants'
+      path: '/tenants'
+      fullPath: '/tenants'
+      preLoaderRoute: typeof AdminTenantsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/_admin/metricas': {
+      id: '/_admin/metricas'
+      path: '/metricas'
+      fullPath: '/metricas'
+      preLoaderRoute: typeof AdminMetricasRouteImport
+      parentRoute: typeof AdminRoute
+    }
   }
 }
+
+interface AdminRouteChildren {
+  AdminMetricasRoute: typeof AdminMetricasRoute
+  AdminTenantsRoute: typeof AdminTenantsRoute
+}
+
+const AdminRouteChildren: AdminRouteChildren = {
+  AdminMetricasRoute: AdminMetricasRoute,
+  AdminTenantsRoute: AdminTenantsRoute,
+}
+
+const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
 interface AppRouteChildren {
   AppAgendaRoute: typeof AppAgendaRoute
@@ -248,7 +413,13 @@ const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRoute: AdminRouteWithChildren,
   AppRoute: AppRouteWithChildren,
+  LoginRoute: LoginRoute,
+  SignupRoute: SignupRoute,
+  AuthCallbackRoute: AuthCallbackRoute,
+  InviteTokenRoute: InviteTokenRoute,
+  PSlugRoute: PSlugRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

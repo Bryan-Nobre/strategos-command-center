@@ -7,6 +7,7 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
+import type { RouterContext } from "@/router-context";
 
 import appCss from "../styles.css?url";
 
@@ -67,14 +68,14 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   );
 }
 
-export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
+export const Route = createRootRouteWithContext<RouterContext>()({
   head: () => ({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
-      { name: "author", content: "Lovable" },
+      { title: "Strategos CRM" },
+      { name: "description", content: "CRM político multi-tenant" },
+      { name: "author", content: "Strategos" },
       { property: "og:title", content: "Lovable App" },
       { property: "og:description", content: "Lovable Generated Project" },
       { property: "og:type", content: "website" },
@@ -96,7 +97,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="pt-BR">
       <head>
         <HeadContent />
       </head>
