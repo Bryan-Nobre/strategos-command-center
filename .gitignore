@@ -27,7 +27,10 @@ dist-ssr
 .env.test.local
 .env.production.local
 
-# Wrangler / Cloudflare
+# Vercel
+.vercel
+
+# Wrangler / Cloudflare (opcional)
 .wrangler/
 .dev.vars
 

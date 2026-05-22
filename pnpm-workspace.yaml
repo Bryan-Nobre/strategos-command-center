@@ -1,7 +1,7 @@
 allowBuilds:
   esbuild: true
   sharp: true
-  workerd: true
+  nitro: true
 minimumReleaseAgeExclude:
   - '@supabase/auth-js@2.106.1'
   - '@supabase/functions-js@2.106.1'

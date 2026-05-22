@@ -9,7 +9,7 @@ VITE_SUPABASE_URL=https://ifefpxvmkyikqlnpcbxw.supabase.co
 VITE_SUPABASE_ANON_KEY=<sua-anon-key>
 ```
 
-No deploy Cloudflare, configure as mesmas variáveis `VITE_*` no painel do Worker.
+No deploy **Vercel**, configure as mesmas variáveis `VITE_*` no painel do projeto. Ver [deploy-vercel.md](deploy-vercel.md).
 
 ## Auth — Redirect URLs
 
