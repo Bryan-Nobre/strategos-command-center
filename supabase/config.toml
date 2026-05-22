@@ -22,3 +22,6 @@ additional_redirect_urls = ["http://localhost:3080/auth/callback"]
 
 [auth.email]
 enable_signup = true
+
+[functions.signup-politician]
+verify_jwt = false

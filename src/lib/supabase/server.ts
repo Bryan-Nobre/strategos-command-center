@@ -1,25 +1,18 @@
 import { createServerClient } from "@supabase/ssr";
+import { parseCookieHeader } from "@supabase/ssr";
 import type { Database } from "@/types/supabase";
 import { getSupabaseAnonKey, getSupabaseUrl } from "./env";
 
 export function createServerSupabaseClient(request: Request) {
+  const cookieHeader = request.headers.get("Cookie") ?? "";
+
   return createServerClient<Database>(getSupabaseUrl(), getSupabaseAnonKey(), {
     cookies: {
       getAll() {
-        const cookieHeader = request.headers.get("Cookie") ?? "";
-        return cookieHeader
-          .split(";")
-          .map((c) => c.trim())
-          .filter(Boolean)
-          .map((pair) => {
-            const idx = pair.indexOf("=");
-            const name = pair.slice(0, idx);
-            const value = decodeURIComponent(pair.slice(idx + 1));
-            return { name, value };
-          });
+        return parseCookieHeader(cookieHeader);
       },
       setAll() {
-        // SSR read-only context; cookie writes happen on client after auth
+        // Escrita de cookies no SSR é feita pelo cliente após login
       },
     },
   });

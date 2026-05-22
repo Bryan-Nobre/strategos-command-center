@@ -1,4 +1,4 @@
-import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useRouter } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Vote } from "lucide-react";
@@ -6,24 +6,27 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { signUpPolitician } from "@/services/auth";
+import { completePoliticianOnboarding, signUpPolitician } from "@/services/auth";
+import { SignupPendingEmailError } from "@/lib/supabase/errors";
 import { z } from "zod";
 import { signupFormSchema } from "@/types/domain";
+import { getAuthErrorMessage } from "@/lib/supabase/errors";
 import { setStoredTenantId, loadAuthContext } from "@/lib/supabase/session";
+import { ensurePublicAuthRedirect } from "@/lib/supabase/auth-route";
 import { toast } from "sonner";
 
 type SignupForm = z.infer<typeof signupFormSchema>;
 
 export const Route = createFileRoute("/signup")({
-  beforeLoad: async () => {
-    const auth = await loadAuthContext();
-    if (auth.session && auth.activeTenant) throw redirect({ to: "/dashboard" });
+  beforeLoad: async ({ context }) => {
+    return ensurePublicAuthRedirect(context, "signup");
   },
   component: SignupPage,
 });
 
 function SignupPage() {
   const navigate = useNavigate();
+  const router = useRouter();
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<SignupForm>({
     resolver: zodResolver(signupFormSchema),
     defaultValues: { headline: "Juntos por uma cidade melhor" },
@@ -31,19 +34,31 @@ function SignupPage() {
 
   async function onSubmit(values: SignupForm) {
     try {
-      const { tenantId } = await signUpPolitician({
-        email: values.email,
-        password: values.password,
-        fullName: values.fullName,
-        tenantName: values.tenantName,
-        slug: values.slug,
-        headline: values.headline,
-      });
+      const auth = await loadAuthContext();
+      const { tenantId } =
+        auth.session && auth.user && !auth.activeTenant
+          ? await completePoliticianOnboarding({
+              tenantName: values.tenantName,
+              slug: values.slug,
+              headline: values.headline,
+            })
+          : await signUpPolitician({
+              email: values.email,
+              password: values.password,
+              fullName: values.fullName,
+              tenantName: values.tenantName,
+              slug: values.slug,
+              headline: values.headline,
+            });
       setStoredTenantId(tenantId);
-      toast.success("Campanha criada com sucesso!");
+      toast.success(
+        "Campanha registrada! Após o pagamento, o administrador ativará seu acesso.",
+      );
+      await router.invalidate();
       navigate({ to: "/dashboard" });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Erro no cadastro");
+      const message = getAuthErrorMessage(err);
+      toast.error(message, { duration: err instanceof SignupPendingEmailError ? 8000 : 5000 });
     }
   }
 

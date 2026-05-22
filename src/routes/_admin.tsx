@@ -1,26 +1,14 @@
-import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
+import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppNavbar } from "@/components/layout/AppNavbar";
 import { AdminSidebar } from "@/components/layout/AdminSidebar";
 import { Toaster } from "@/components/ui/sonner";
-import { loadAuthContext } from "@/lib/supabase/session";
+import { ensureAdminAuth } from "@/lib/supabase/auth-route";
 
 export const Route = createFileRoute("/_admin")({
   path: "/admin",
   beforeLoad: async ({ context }) => {
-    const auth = await loadAuthContext();
-    if (!auth.session) throw redirect({ to: "/login" });
-    if (auth.profile?.platform_role !== "super_admin") {
-      throw redirect({ to: "/dashboard" });
-    }
-    return {
-      ...context,
-      session: auth.session,
-      user: auth.user,
-      profile: auth.profile,
-      tenants: auth.tenants,
-      activeTenant: auth.activeTenant,
-    };
+    return ensureAdminAuth(context);
   },
   component: AdminLayout,
 });

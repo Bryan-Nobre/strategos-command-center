@@ -1,6 +1,9 @@
 import type { Session, User } from "@supabase/supabase-js";
-import type { Tables } from "@/types/supabase";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/types/supabase";
 import { createClient } from "./client";
+import { createServerSupabaseClient } from "./server";
+import type { Tables } from "@/types/supabase";
 
 export type Profile = Tables<"profiles">;
 export type Tenant = Tables<"tenants">;
@@ -21,17 +24,26 @@ export function getStoredTenantId(): string | null {
 }
 
 export function setStoredTenantId(tenantId: string) {
+  if (typeof window === "undefined") return;
   localStorage.setItem(ACTIVE_TENANT_KEY, tenantId);
 }
 
-export async function loadAuthContext(): Promise<AuthContext> {
-  const supabase = createClient();
-  const { data: { session } } = await supabase.auth.getSession();
-  const user = session?.user ?? null;
+async function resolveAuthFromClient(
+  supabase: SupabaseClient<Database>,
+  options?: { useStoredTenant?: boolean },
+): Promise<AuthContext> {
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
 
-  if (!user) {
+  if (userError || !user) {
     return { session: null, user: null, profile: null, tenants: [], activeTenant: null };
   }
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -48,24 +60,53 @@ export async function loadAuthContext(): Promise<AuthContext> {
     .map((m) => m.tenants)
     .filter((t): t is Tenant => t != null);
 
-  const storedId = getStoredTenantId();
+  const useStored = options?.useStoredTenant ?? typeof window !== "undefined";
+  const storedId = useStored ? getStoredTenantId() : null;
   const activeTenant =
-    tenants.find((t) => t.id === storedId) ??
-    tenants.find((t) => t.status === "active") ??
-    tenants[0] ??
-    null;
+    tenants.find((t) => t.id === storedId) ?? tenants[0] ?? null;
 
-  if (activeTenant && activeTenant.id !== storedId) {
+  if (useStored && activeTenant && activeTenant.id !== storedId) {
     setStoredTenantId(activeTenant.id);
   }
 
   return {
-    session,
+    session: session ?? null,
     user,
     profile: profile ?? null,
     tenants,
     activeTenant,
   };
+}
+
+/**
+ * Carrega sessão/perfil/tenants para guards de rota (SSR + hidratação).
+ * Ignora localStorage para o tenant ativo ficar igual no servidor e no cliente.
+ */
+export async function loadAuthContextForRoute(request?: Request): Promise<AuthContext> {
+  if (request) {
+    const supabase = createServerSupabaseClient(request);
+    return resolveAuthFromClient(supabase, { useStoredTenant: false });
+  }
+
+  if (typeof window === "undefined") {
+    return { session: null, user: null, profile: null, tenants: [], activeTenant: null };
+  }
+
+  return resolveAuthFromClient(createClient(), { useStoredTenant: false });
+}
+
+/** Uso em formulários/ações — respeita tenant salvo no localStorage. */
+export async function loadAuthContext(request?: Request): Promise<AuthContext> {
+  if (request) {
+    const supabase = createServerSupabaseClient(request);
+    return resolveAuthFromClient(supabase, { useStoredTenant: false });
+  }
+
+  if (typeof window === "undefined") {
+    return { session: null, user: null, profile: null, tenants: [], activeTenant: null };
+  }
+
+  return resolveAuthFromClient(createClient());
 }
 
 export async function signOut() {

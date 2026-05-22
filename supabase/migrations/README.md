@@ -8,6 +8,10 @@ Execute **nesta ordem** (o prefixo `01`, `02`… define a sequência):
 | 02 | `02 - rls_and_helpers.sql` | Funções auxiliares + políticas RLS |
 | 03 | `03 - rpc_onboarding.sql` | RPCs (landing, tenant, dashboard, convites) |
 | 04 | `04 - harden_function_grants.sql` | Restrição de `EXECUTE` em funções sensíveis |
+| 05 | `05 - signup_edge_rpc.sql` | RPC `setup_politician_tenant_for_user` (Edge signup) |
+| 06 | `06 - tenant_team_profiles.sql` | RLS equipe + FK `tenant_members` → `profiles` |
+| 07 | `07 - exclude_super_admin_tenants.sql` | Bloqueia campanha para `super_admin` |
+| 08 | `08 - tenant_default_suspended.sql` | Novos clientes `suspended` + landing ao ativar |
 
 ## Preciso rodar todas no meu projeto?
 
@@ -45,5 +49,10 @@ Versões já registradas em `politicos-hub`:
 - `rls_and_helpers`
 - `rpc_onboarding`
 - `harden_function_grants`
+- `signup_edge_rpc`
 
 Os nomes dos arquivos locais foram renomeados para leitura humana; o conteúdo SQL é o mesmo.
+
+## Edge Function `signup-politician`
+
+Deploy e uso: [docs/edge-signup.md](../../docs/edge-signup.md).

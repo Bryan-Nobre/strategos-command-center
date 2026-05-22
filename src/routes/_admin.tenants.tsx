@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { listAllTenants, updateTenant } from "@/services/admin";
 import { LoadingState } from "@/components/common/LoadingState";
+import { EmptyState } from "@/components/common/EmptyState";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -38,8 +39,17 @@ function AdminTenantsPage() {
 
   return (
     <div className="space-y-8">
-      <PageHeader title="Clientes" description="Gerencie contas, planos e status da plataforma." />
+      <PageHeader
+        title="Clientes"
+        description="Novos cadastros entram como Suspensos. Após o pagamento, altere o status para Ativo."
+      />
       <div className="space-y-3">
+        {(tenants ?? []).length === 0 && (
+          <EmptyState
+            title="Nenhum cliente cadastrado"
+            description="Contas de super administrador não aparecem aqui — apenas campanhas de políticos."
+          />
+        )}
         {(tenants ?? []).map((t) => (
           <Card key={t.id} className="shadow-elegant">
             <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
@@ -48,7 +58,9 @@ function AdminTenantsPage() {
                 <div className="text-xs text-muted-foreground">/{t.slug} · {t.plan}</div>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <Badge variant={t.status === "active" ? "default" : "destructive"}>{t.status}</Badge>
+                <Badge variant={t.status === "active" ? "default" : "secondary"}>
+                  {t.status === "suspended" ? "Suspenso (aguardando pagamento)" : t.status}
+                </Badge>
                 <Select
                   value={t.status}
                   onValueChange={(v) => mutation.mutate({ id: t.id, status: v as Enums<"tenant_status"> })}

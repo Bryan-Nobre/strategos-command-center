@@ -1,14 +1,40 @@
 import { createClient } from "@/lib/supabase/client";
 import type { Enums } from "@/types/supabase";
 
-export async function listTeamMembers(tenantId: string) {
+export type TeamMemberWithProfile = {
+  id: string;
+  role: Enums<"tenant_role">;
+  user_id: string;
+  profiles: { id: string; full_name: string | null };
+};
+
+export async function listTeamMembers(tenantId: string): Promise<TeamMemberWithProfile[]> {
   const supabase = createClient();
-  const { data, error } = await supabase
+
+  const { data: members, error: membersError } = await supabase
     .from("tenant_members")
-    .select("id, role, user_id, profiles(full_name, id)")
+    .select("id, role, user_id")
     .eq("tenant_id", tenantId);
-  if (error) throw error;
-  return data;
+
+  if (membersError) throw membersError;
+  if (!members?.length) return [];
+
+  const userIds = members.map((m) => m.user_id);
+  const { data: profiles, error: profilesError } = await supabase
+    .from("profiles")
+    .select("id, full_name")
+    .in("id", userIds);
+
+  if (profilesError) throw profilesError;
+
+  const profileById = new Map((profiles ?? []).map((p) => [p.id, p]));
+
+  return members.map((m) => ({
+    id: m.id,
+    role: m.role,
+    user_id: m.user_id,
+    profiles: profileById.get(m.user_id) ?? { id: m.user_id, full_name: null },
+  }));
 }
 
 export async function createInvitation(

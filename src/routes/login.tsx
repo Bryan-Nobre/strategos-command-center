@@ -1,4 +1,4 @@
-import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 import { Vote } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -7,22 +7,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { signInWithPassword } from "@/services/auth";
 import { loadAuthContext } from "@/lib/supabase/session";
+import { getAuthErrorMessage } from "@/lib/supabase/errors";
+import { ensurePublicAuthRedirect } from "@/lib/supabase/auth-route";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/login")({
-  beforeLoad: async () => {
-    const auth = await loadAuthContext();
-    if (auth.session) {
-      throw redirect({
-        to: auth.profile?.platform_role === "super_admin" ? "/admin/tenants" : "/dashboard",
-      });
-    }
+  beforeLoad: async ({ context }) => {
+    return ensurePublicAuthRedirect(context, "login");
   },
   component: LoginPage,
 });
 
 function LoginPage() {
   const navigate = useNavigate();
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -32,12 +30,27 @@ function LoginPage() {
     setLoading(true);
     try {
       await signInWithPassword(email, password);
+      await router.invalidate();
       const auth = await loadAuthContext();
-      navigate({
-        to: auth.profile?.platform_role === "super_admin" ? "/admin/tenants" : "/dashboard",
-      });
+      if (auth.profile?.platform_role === "super_admin") {
+        toast.success("Login realizado com sucesso!");
+        navigate({ to: "/admin/tenants" });
+        return;
+      }
+      if (!auth.activeTenant) {
+        toast.info("Conclua o cadastro da sua campanha.");
+        navigate({ to: "/signup" });
+        return;
+      }
+      if (auth.activeTenant.status !== "active") {
+        toast.info("Sua conta aguarda ativação pelo administrador.");
+        navigate({ to: "/dashboard" });
+        return;
+      }
+      toast.success("Login realizado com sucesso!");
+      navigate({ to: "/dashboard" });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Erro ao entrar");
+      toast.error(getAuthErrorMessage(err));
     } finally {
       setLoading(false);
     }

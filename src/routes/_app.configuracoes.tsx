@@ -191,7 +191,7 @@ function ConfigPage() {
               {(team ?? []).map((m) => (
                 <div key={m.id} className="flex items-center justify-between rounded-lg border p-4">
                   <div>
-                    <div className="font-medium">{(m.profiles as { full_name?: string })?.full_name ?? "Membro"}</div>
+                    <div className="font-medium">{m.profiles.full_name ?? "Membro"}</div>
                     <div className="text-xs text-muted-foreground">{m.role}</div>
                   </div>
                   <Badge>{m.role}</Badge>

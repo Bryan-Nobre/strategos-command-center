@@ -1,4 +1,6 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useEffect } from "react";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { getQueryClient } from "@/lib/query-client";
 import {
   Outlet,
   Link,
@@ -8,6 +10,8 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import type { RouterContext } from "@/router-context";
+import { Toaster } from "@/components/ui/sonner";
+import { createClient } from "@/lib/supabase/client";
 
 import appCss from "../styles.css?url";
 
@@ -110,11 +114,25 @@ function RootShell({ children }: { children: React.ReactNode }) {
 }
 
 function RootComponent() {
-  const { queryClient } = Route.useRouteContext();
+  const queryClient = getQueryClient();
+  const router = useRouter();
+
+  useEffect(() => {
+    const supabase = createClient();
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "TOKEN_REFRESHED") {
+        void router.invalidate();
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [router]);
 
   return (
     <QueryClientProvider client={queryClient}>
       <Outlet />
+      <Toaster richColors closeButton position="top-right" />
     </QueryClientProvider>
   );
 }

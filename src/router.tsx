@@ -1,17 +1,11 @@
-import { QueryClient } from "@tanstack/react-query";
 import { createRouter } from "@tanstack/react-router";
 import { routeTree } from "./routeTree.gen";
 import type { RouterContext } from "./router-context";
 
 export const getRouter = () => {
-  const queryClient = new QueryClient();
-
   const router = createRouter({
     routeTree,
     context: {
-      queryClient,
-      session: null,
-      user: null,
       profile: null,
       tenants: [],
       activeTenant: null,

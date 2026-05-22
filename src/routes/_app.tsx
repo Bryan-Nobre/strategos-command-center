@@ -1,33 +1,18 @@
-import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
+import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { AppNavbar } from "@/components/layout/AppNavbar";
 import { Toaster } from "@/components/ui/sonner";
-import { loadAuthContext } from "@/lib/supabase/session";
 import { TenantProvider } from "@/contexts/tenant-context";
 import { LoadingState } from "@/components/common/LoadingState";
+import { TenantAccessBlocked } from "@/components/auth/TenantAccessBlocked";
+import { ensureAppAuth } from "@/lib/supabase/auth-route";
+import { isTenantOperational } from "@/lib/tenant-access";
 
 export const Route = createFileRoute("/_app")({
   // Segurança real: RLS/backend — guard apenas UX
   beforeLoad: async ({ context, location }) => {
-    const auth = await loadAuthContext();
-    if (!auth.session) {
-      throw redirect({ to: "/login", search: { redirect: location.href } });
-    }
-    if (auth.tenants.length === 0 && auth.profile?.platform_role !== "super_admin") {
-      throw redirect({ to: "/signup" });
-    }
-    if (!auth.activeTenant && auth.profile?.platform_role !== "super_admin") {
-      throw redirect({ to: "/signup" });
-    }
-    return {
-      ...context,
-      session: auth.session,
-      user: auth.user,
-      profile: auth.profile,
-      tenants: auth.tenants,
-      activeTenant: auth.activeTenant,
-    };
+    return ensureAppAuth(context, location.href);
   },
   component: AppLayout,
 });
@@ -37,6 +22,10 @@ function AppLayout() {
 
   if (!activeTenant && profile?.platform_role !== "super_admin") {
     return <LoadingState label="Carregando campanha..." />;
+  }
+
+  if (activeTenant && !isTenantOperational(activeTenant)) {
+    return <TenantAccessBlocked tenant={activeTenant} />;
   }
 
   return (
