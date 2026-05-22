@@ -12,5 +12,8 @@ export default defineConfig({
     server: {
       port: 3080,
     },
+    resolve: {
+      dedupe: ["@tanstack/react-query", "@tanstack/query-core"],
+    },
   },
 });
