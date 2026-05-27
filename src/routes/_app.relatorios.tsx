@@ -6,8 +6,12 @@ import { ChartCard } from "@/components/common/ChartCard";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { useTenant } from "@/hooks/use-tenant";
 import { useSupporters } from "@/hooks/use-supporters";
+import { useDemands } from "@/hooks/use-demands";
 import { usePollSnapshots } from "@/hooks/use-dashboard";
 import { LoadingState } from "@/components/common/LoadingState";
+import { downloadCsv, buildCsvFilename } from "@/lib/csv/download";
+import { supportersToCsv } from "@/lib/csv/supporters-csv";
+import { buildConsolidatedReportCsv } from "@/lib/csv/reports-csv";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/relatorios")({
@@ -15,24 +19,27 @@ export const Route = createFileRoute("/_app/relatorios")({
 });
 
 function RelatoriosPage() {
-  const { tenantId } = useTenant();
+  const { tenantId, activeTenant } = useTenant();
   const { data: supporters, isLoading } = useSupporters(tenantId);
+  const { data: demands } = useDemands(tenantId);
   const { data: polls } = usePollSnapshots(tenantId);
-  const crescimento = (polls?.find((p) => p.snapshot_type === "crescimento_apoiadores")?.data ?? []) as { mes: string; apoiadores: number }[];
+  const crescimento = (polls?.find((p) => p.snapshot_type === "crescimento_apoiadores")?.data ?? []) as {
+    mes: string;
+    apoiadores: number;
+  }[];
 
-  function exportCsv() {
+  const slug = activeTenant?.slug ?? "campanha";
+
+  function exportSupporters() {
     const rows = supporters ?? [];
-    const header = "nome,telefone,bairro,cidade,status,apoio\n";
-    const body = rows.map((r) =>
-      [r.name, r.phone, r.neighborhood, r.city, r.status, r.support_level].map((v) => `"${v ?? ""}"`).join(","),
-    ).join("\n");
-    const blob = new Blob([header + body], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "apoiadores.csv";
-    a.click();
-    toast.success("Exportação iniciada");
+    downloadCsv(buildCsvFilename(slug, "apoiadores"), supportersToCsv(rows));
+    toast.success(`${rows.length} apoiador(es) exportado(s)`);
+  }
+
+  function exportConsolidated() {
+    const csv = buildConsolidatedReportCsv(supporters ?? [], demands ?? []);
+    downloadCsv(buildCsvFilename(slug, "relatorio-consolidado"), csv);
+    toast.success("Relatório consolidado gerado");
   }
 
   if (isLoading) return <LoadingState />;
@@ -42,19 +49,46 @@ function RelatoriosPage() {
       <PageHeader
         title="Relatórios"
         description="Exportação e visualização consolidada."
-        actions={<Button size="sm" onClick={exportCsv}><Download className="mr-2 h-4 w-4" />Exportar CSV</Button>}
+        actions={
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={exportSupporters}>
+              <Download className="mr-2 h-4 w-4" />
+              Apoiadores CSV
+            </Button>
+            <Button size="sm" onClick={exportConsolidated}>
+              <Download className="mr-2 h-4 w-4" />
+              Relatório consolidado
+            </Button>
+          </div>
+        }
       />
-      <ChartCard title="Crescimento" description="Base de apoiadores">
+
+      <ChartCard
+        title="Crescimento"
+        description={crescimento.length ? "Dados de pesquisas salvas" : "Atualize em Pesquisas para ver evolução"}
+      >
         <div className="h-64">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={crescimento}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="mes" />
-              <YAxis />
-              <Tooltip />
-              <Area type="monotone" dataKey="apoiadores" stroke="var(--chart-2)" fill="var(--chart-2)" fillOpacity={0.15} />
-            </AreaChart>
-          </ResponsiveContainer>
+          {crescimento.length ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={crescimento}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="mes" />
+                <YAxis />
+                <Tooltip />
+                <Area
+                  type="monotone"
+                  dataKey="apoiadores"
+                  stroke="var(--chart-2)"
+                  fill="var(--chart-2)"
+                  fillOpacity={0.15}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+              Nenhum dado de crescimento cadastrado. Vá em Pesquisas para adicionar.
+            </div>
+          )}
         </div>
       </ChartCard>
     </div>

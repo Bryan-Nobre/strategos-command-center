@@ -5,14 +5,17 @@ export async function listDemands(tenantId: string) {
   const supabase = createClient();
   const { data, error } = await supabase
     .from("demands")
-    .select("id, title, category, status, priority, neighborhood, description, created_at, updated_at")
+    .select("id, title, category, status, priority, neighborhood, description, assigned_to, created_at, updated_at")
     .eq("tenant_id", tenantId)
     .order("created_at", { ascending: false });
   if (error) throw error;
   return data;
 }
 
-export async function createDemand(tenantId: string, payload: TablesInsert<"demands">) {
+export async function createDemand(
+  tenantId: string,
+  payload: Omit<TablesInsert<"demands">, "tenant_id">,
+) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   const { data, error } = await supabase

@@ -1,8 +1,9 @@
-import type { Tenant } from "@/lib/supabase/session";
 import type { Enums } from "@/types/supabase";
+import { TENANT_STATUS_LABELS } from "@/types/tenant";
 
-export function isTenantOperational(tenant: Tenant | null | undefined): boolean {
-  return tenant?.status === "active";
+/** CRM liberado para uso operacional (active + trial). Segurança real: RLS/backend. */
+export function isTenantOperational(tenant: { status: Enums<"tenant_status"> } | null | undefined): boolean {
+  return tenant?.status === "active" || tenant?.status === "trial";
 }
 
 export function getTenantAccessMessage(status: Enums<"tenant_status">): {
@@ -23,9 +24,16 @@ export function getTenantAccessMessage(status: Enums<"tenant_status">): {
         "Estamos revisando seu cadastro. Entre em contato com o administrador da plataforma para mais informações.",
     };
   }
+  if (status === "cancelled") {
+    return {
+      title: "Conta encerrada",
+      description:
+        "O acesso a esta campanha foi cancelado. Entre em contato com o administrador da plataforma se acredita que isso é um erro.",
+    };
+  }
   return {
     title: "Acesso indisponível",
-    description: "Entre em contato com o administrador da plataforma.",
+    description: `Status: ${TENANT_STATUS_LABELS[status] ?? status}. Entre em contato com o administrador da plataforma.`,
   };
 }
 

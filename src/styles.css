@@ -18,6 +18,7 @@
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-primary-hover: var(--primary-hover);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
@@ -42,109 +43,157 @@
   --color-chart-5: var(--chart-5);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-muted: var(--sidebar-muted-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
   --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
   --color-sidebar-accent: var(--sidebar-accent);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-brand: var(--brand);
+  --color-brand-green: var(--brand-green);
 }
 
+/* ==================================================
+   LIGHT MODE — paleta oficial Strategos CRM
+   ================================================== */
 :root {
-  --radius: 0.75rem;
+  --radius: 1.5rem;
 
-  /* Surfaces */
-  --background: oklch(0.985 0.005 240);
-  --foreground: oklch(0.18 0.03 250);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.18 0.03 250);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.18 0.03 250);
+  --brand: #061735;
+  --brand-green: #10944a;
+  --brand-green-hover: #27ae60;
 
-  /* Primary: navy blue */
-  --primary: oklch(0.28 0.07 255);
-  --primary-foreground: oklch(0.985 0.005 240);
+  --background: #f5f7fa;
+  --foreground: #2b2f36;
+  --card: #ffffff;
+  --card-foreground: #2b2f36;
+  --popover: #ffffff;
+  --popover-foreground: #2b2f36;
 
-  /* Secondary: petroleum/teal-blue */
-  --secondary: oklch(0.95 0.015 230);
-  --secondary-foreground: oklch(0.28 0.07 255);
+  --primary: #10944a;
+  --primary-hover: #27ae60;
+  --primary-foreground: #ffffff;
+  --secondary: #eef1f5;
+  --secondary-foreground: #2b2f36;
+  --muted: #eef1f5;
+  --muted-foreground: #64748b;
+  --accent: rgba(16, 148, 74, 0.1);
+  --accent-foreground: #061735;
+  --destructive: #b45353;
+  --destructive-foreground: #ffffff;
+  --success: #10944a;
+  --success-foreground: #ffffff;
+  --warning: #d97706;
+  --warning-foreground: #2b2f36;
+  --info: #10944a;
+  --info-foreground: #ffffff;
 
-  --muted: oklch(0.96 0.008 240);
-  --muted-foreground: oklch(0.48 0.02 250);
+  --border: rgba(6, 23, 53, 0.08);
+  --input: rgba(6, 23, 53, 0.1);
+  --ring: rgba(16, 148, 74, 0.35);
 
-  --accent: oklch(0.55 0.09 220);
-  --accent-foreground: oklch(0.985 0.005 240);
+  --chart-1: #10944a;
+  --chart-2: #27ae60;
+  --chart-3: #061735;
+  --chart-4: #64748b;
+  --chart-5: #94a3b8;
 
-  --destructive: oklch(0.58 0.22 27);
-  --destructive-foreground: oklch(0.985 0.005 240);
+  --sidebar: #ffffff;
+  --sidebar-foreground: #2b2f36;
+  --sidebar-muted-foreground: #64748b;
+  --sidebar-primary: #061735;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: rgba(6, 23, 53, 0.04);
+  --sidebar-accent-foreground: #2b2f36;
+  --sidebar-border: rgba(6, 23, 53, 0.06);
+  --sidebar-ring: rgba(16, 148, 74, 0.25);
 
-  --success: oklch(0.62 0.13 155);
-  --success-foreground: oklch(0.985 0.005 240);
-  --warning: oklch(0.78 0.15 75);
-  --warning-foreground: oklch(0.18 0.03 250);
-  --info: oklch(0.62 0.12 235);
-  --info-foreground: oklch(0.985 0.005 240);
+  --sidebar-surface: rgba(6, 23, 53, 0.03);
+  --sidebar-logo-gradient: linear-gradient(160deg, #061735, #10944a);
+  --sidebar-active-gradient: linear-gradient(90deg, rgba(16, 148, 74, 0.12) 0%, transparent 100%);
+  --sidebar-active-border: rgba(16, 148, 74, 0.15);
+  --sidebar-active-shadow: none;
 
-  --border: oklch(0.91 0.012 245);
-  --input: oklch(0.91 0.012 245);
-  --ring: oklch(0.55 0.09 220);
+  --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  --body-gradient: radial-gradient(
+    900px 480px at 85% -5%,
+    rgba(16, 148, 74, 0.06),
+    transparent 55%
+  );
 
-  --chart-1: oklch(0.28 0.07 255);
-  --chart-2: oklch(0.55 0.09 220);
-  --chart-3: oklch(0.65 0.12 200);
-  --chart-4: oklch(0.62 0.13 155);
-  --chart-5: oklch(0.78 0.15 75);
-
-  /* Sidebar: dark navy */
-  --sidebar: oklch(0.22 0.05 258);
-  --sidebar-foreground: oklch(0.92 0.01 240);
-  --sidebar-primary: oklch(0.6 0.13 215);
-  --sidebar-primary-foreground: oklch(0.985 0.005 240);
-  --sidebar-accent: oklch(0.28 0.06 258);
-  --sidebar-accent-foreground: oklch(0.985 0.005 240);
-  --sidebar-border: oklch(0.3 0.05 258);
-  --sidebar-ring: oklch(0.55 0.09 220);
+  --admin-sidebar-active-bg: rgba(180, 83, 83, 0.1);
+  --admin-sidebar-active-border: rgba(180, 83, 83, 0.22);
 }
 
+/* ==================================================
+   DARK MODE — paleta oficial Strategos CRM
+   ================================================== */
 .dark {
-  --background: oklch(0.16 0.03 250);
-  --foreground: oklch(0.96 0.008 240);
-  --card: oklch(0.21 0.04 255);
-  --card-foreground: oklch(0.96 0.008 240);
-  --popover: oklch(0.21 0.04 255);
-  --popover-foreground: oklch(0.96 0.008 240);
-  --primary: oklch(0.7 0.13 220);
-  --primary-foreground: oklch(0.16 0.03 250);
-  --secondary: oklch(0.26 0.04 258);
-  --secondary-foreground: oklch(0.96 0.008 240);
-  --muted: oklch(0.26 0.04 258);
-  --muted-foreground: oklch(0.7 0.02 245);
-  --accent: oklch(0.55 0.1 220);
-  --accent-foreground: oklch(0.985 0.005 240);
-  --destructive: oklch(0.6 0.2 27);
-  --destructive-foreground: oklch(0.96 0.008 240);
-  --success: oklch(0.65 0.14 155);
-  --success-foreground: oklch(0.16 0.03 250);
-  --warning: oklch(0.78 0.15 75);
-  --warning-foreground: oklch(0.16 0.03 250);
-  --info: oklch(0.65 0.13 235);
-  --info-foreground: oklch(0.16 0.03 250);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 12%);
-  --ring: oklch(0.55 0.09 220);
-  --chart-1: oklch(0.7 0.13 220);
-  --chart-2: oklch(0.6 0.12 200);
-  --chart-3: oklch(0.65 0.13 175);
-  --chart-4: oklch(0.7 0.14 155);
-  --chart-5: oklch(0.8 0.15 75);
-  --sidebar: oklch(0.18 0.04 255);
-  --sidebar-foreground: oklch(0.92 0.01 240);
-  --sidebar-primary: oklch(0.6 0.13 215);
-  --sidebar-primary-foreground: oklch(0.985 0.005 240);
-  --sidebar-accent: oklch(0.24 0.05 258);
-  --sidebar-accent-foreground: oklch(0.985 0.005 240);
-  --sidebar-border: oklch(1 0 0 / 8%);
-  --sidebar-ring: oklch(0.55 0.09 220);
+  --brand: #061735;
+  --brand-green: #10944a;
+  --brand-green-hover: #27ae60;
+
+  --background: #081120;
+  --foreground: #f5f7fa;
+  --card: #0f172a;
+  --card-foreground: #f5f7fa;
+  --popover: #0f172a;
+  --popover-foreground: #f5f7fa;
+
+  --primary: #10944a;
+  --primary-hover: #27ae60;
+  --primary-foreground: #ffffff;
+  --secondary: #0b1730;
+  --secondary-foreground: #f5f7fa;
+  --muted: #112240;
+  --muted-foreground: #94a3b8;
+  --accent: rgba(16, 148, 74, 0.14);
+  --accent-foreground: #f5f7fa;
+  --destructive: #9f4a4a;
+  --destructive-foreground: #ffffff;
+  --success: #10944a;
+  --success-foreground: #ffffff;
+  --warning: #f59e0b;
+  --warning-foreground: #081120;
+  --info: #27ae60;
+  --info-foreground: #ffffff;
+
+  --border: rgba(255, 255, 255, 0.05);
+  --input: rgba(255, 255, 255, 0.08);
+  --ring: rgba(39, 174, 96, 0.4);
+
+  --chart-1: #10944a;
+  --chart-2: #27ae60;
+  --chart-3: #4ade80;
+  --chart-4: #0b1730;
+  --chart-5: #94a3b8;
+
+  --sidebar: #0b1730;
+  --sidebar-foreground: #f5f7fa;
+  --sidebar-muted-foreground: #94a3b8;
+  --sidebar-primary: #112240;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: rgba(255, 255, 255, 0.04);
+  --sidebar-accent-foreground: #f5f7fa;
+  --sidebar-border: rgba(255, 255, 255, 0.05);
+  --sidebar-ring: rgba(39, 174, 96, 0.35);
+
+  --sidebar-surface: rgba(255, 255, 255, 0.02);
+  --sidebar-logo-gradient: linear-gradient(160deg, #112240, #10944a);
+  --sidebar-active-gradient: linear-gradient(90deg, rgba(34, 197, 94, 0.15) 0%, transparent 100%);
+  --sidebar-active-border: rgba(34, 197, 94, 0.2);
+  --sidebar-active-shadow: 0 0 20px rgba(34, 197, 94, 0.08);
+
+  --card-shadow: none;
+  --body-gradient: radial-gradient(
+    1200px 600px at 80% -10%,
+    rgba(16, 148, 74, 0.08),
+    transparent 55%
+  );
+
+  --admin-sidebar-active-bg: rgba(239, 68, 68, 0.14);
+  --admin-sidebar-active-border: rgba(239, 68, 68, 0.24);
 }
 
 @layer base {
@@ -152,25 +201,106 @@
     border-color: var(--color-border);
   }
 
+  html {
+    color-scheme: light;
+    transition:
+      background-color 0.2s ease,
+      color 0.2s ease;
+  }
+
+  html.dark {
+    color-scheme: dark;
+  }
+
   body {
     background-color: var(--color-background);
+    background-image: var(--body-gradient);
     color: var(--color-foreground);
-    font-feature-settings: "rlig" 1, "calt" 1;
+    font-feature-settings:
+      "rlig" 1,
+      "calt" 1;
+    transition:
+      background-color 0.2s ease,
+      color 0.2s ease;
   }
 
   ::selection {
-    background-color: color-mix(in oklab, var(--accent) 30%, transparent);
+    background-color: color-mix(in oklab, var(--brand-green) 28%, transparent);
   }
 }
 
 @layer utilities {
   .gradient-primary {
-    background-image: linear-gradient(135deg, var(--primary), var(--accent));
+    background-image: linear-gradient(135deg, var(--brand), var(--brand-green));
   }
+
   .gradient-surface {
-    background-image: linear-gradient(180deg, var(--card), color-mix(in oklab, var(--card) 92%, var(--accent)));
+    background-image: linear-gradient(
+      180deg,
+      var(--card),
+      color-mix(in oklab, var(--card) 94%, var(--brand-green))
+    );
   }
+
   .shadow-elegant {
-    box-shadow: 0 1px 2px 0 oklch(0 0 0 / 0.04), 0 8px 24px -12px color-mix(in oklab, var(--primary) 25%, transparent);
+    box-shadow: var(--card-shadow);
+  }
+
+  .strategos-sidebar {
+    border-color: var(--sidebar-border);
+    background: var(--sidebar);
+  }
+
+  .dark .strategos-sidebar [data-sidebar="sidebar"] {
+    background: linear-gradient(180deg, #081120 0%, #0b1730 100%) !important;
+  }
+
+  .dark .strategos-admin-sidebar [data-sidebar="sidebar"] {
+    background: linear-gradient(180deg, #0a111c 0%, #121a28 100%) !important;
+  }
+
+  .strategos-admin-sidebar {
+    border-color: var(--sidebar-border);
+    background: var(--sidebar);
+  }
+
+  .strategos-nav-item {
+    color: var(--sidebar-muted-foreground);
+    transition:
+      background-color 0.2s ease,
+      color 0.2s ease,
+      border-color 0.2s ease,
+      box-shadow 0.2s ease;
+  }
+
+  .strategos-nav-item:hover {
+    color: var(--sidebar-foreground);
+    background-color: var(--sidebar-accent);
+  }
+
+  .strategos-nav-item[data-active="true"],
+  .strategos-nav-item[data-active=""] {
+    color: var(--sidebar-foreground) !important;
+    font-weight: 600;
+    background-color: transparent !important;
+    background-image: var(--sidebar-active-gradient) !important;
+    border: 1px solid var(--sidebar-active-border) !important;
+    box-shadow: var(--sidebar-active-shadow) !important;
+  }
+
+  .strategos-admin-nav-item[data-active="true"],
+  .strategos-admin-nav-item[data-active=""] {
+    background-image: none !important;
+    background-color: var(--admin-sidebar-active-bg) !important;
+    border: 1px solid var(--admin-sidebar-active-border) !important;
+    box-shadow: none !important;
+  }
+
+  .transition-theme {
+    transition:
+      background-color 0.2s ease,
+      border-color 0.2s ease,
+      color 0.2s ease,
+      box-shadow 0.2s ease;
   }
 }

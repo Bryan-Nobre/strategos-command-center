@@ -30,10 +30,11 @@ export const supporterFormSchema = z.object({
   city: z.string().optional(),
   electoral_zone: z.string().optional(),
   electoral_section: z.string().optional(),
-  status: supporterStatusSchema.default("interessado"),
-  support_level: supportLevelSchema.default("indeciso"),
+  status: supporterStatusSchema,
+  support_level: supportLevelSchema,
   notes: z.string().optional(),
   tags: z.string().optional(),
+  leadership_id: z.string().optional(),
 });
 
 export const demandFormSchema = z.object({
@@ -43,6 +44,7 @@ export const demandFormSchema = z.object({
   priority: demandPrioritySchema.default("media"),
   neighborhood: z.string().optional(),
   description: z.string().optional(),
+  assigned_to: z.string().optional(),
 });
 
 export const agendaFormSchema = z.object({
@@ -97,6 +99,18 @@ export const DEMAND_CATEGORY_LABELS: Record<string, string> = {
   infraestrutura: "Infraestrutura",
   seguranca: "Segurança",
   iluminacao: "Iluminação",
+};
+
+export const DEMAND_STATUS_LABELS: Record<string, string> = {
+  aberto: "Aberto",
+  em_andamento: "Em andamento",
+  resolvido: "Resolvido",
+};
+
+export const DEMAND_PRIORITY_LABELS: Record<string, string> = {
+  alta: "Alta",
+  media: "Média",
+  baixa: "Baixa",
 };
 
 export const FUNNEL_STAGES = [

@@ -2,7 +2,6 @@ import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppNavbar } from "@/components/layout/AppNavbar";
 import { AdminSidebar } from "@/components/layout/AdminSidebar";
-import { Toaster } from "@/components/ui/sonner";
 import { ensureAdminAuth } from "@/lib/supabase/auth-route";
 
 export const Route = createFileRoute("/_admin")({
@@ -24,7 +23,6 @@ function AdminLayout() {
             <Outlet />
           </main>
         </SidebarInset>
-        <Toaster />
       </div>
     </SidebarProvider>
   );

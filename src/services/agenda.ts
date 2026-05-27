@@ -12,7 +12,10 @@ export async function listAgendaEvents(tenantId: string) {
   return data;
 }
 
-export async function createAgendaEvent(tenantId: string, payload: TablesInsert<"agenda_events">) {
+export async function createAgendaEvent(
+  tenantId: string,
+  payload: Omit<TablesInsert<"agenda_events">, "tenant_id">,
+) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   const { data, error } = await supabase

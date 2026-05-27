@@ -24,7 +24,11 @@ export function TenantAccessBlocked({ tenant }: TenantAccessBlockedProps) {
             <CreditCard className="h-7 w-7" />
           </div>
           <Badge variant="secondary" className="mb-2">
-            {tenant.status === "suspended" ? "Aguardando pagamento" : tenant.status}
+            {tenant.status === "suspended"
+              ? "Aguardando pagamento"
+              : tenant.status === "cancelled"
+                ? "Conta encerrada"
+                : tenant.status}
           </Badge>
           <CardTitle>{title}</CardTitle>
           <CardDescription className="text-base leading-relaxed">{description}</CardDescription>
@@ -51,8 +55,14 @@ export function TenantAccessBlocked({ tenant }: TenantAccessBlockedProps) {
             </Button>
           </div>
           <p className="text-center text-xs text-muted-foreground">
-            Após a confirmação do pagamento, o administrador alterará o status da sua conta para{" "}
-            <strong>Ativo</strong> e você poderá usar o sistema normalmente.
+            {tenant.status === "cancelled"
+              ? "Para reativar o acesso, fale com o administrador da plataforma."
+              : (
+                <>
+                  Após a confirmação do pagamento, o administrador alterará o status da sua conta para{" "}
+                  <strong>Ativo</strong> e você poderá usar o sistema normalmente.
+                </>
+              )}
           </p>
         </CardContent>
       </Card>

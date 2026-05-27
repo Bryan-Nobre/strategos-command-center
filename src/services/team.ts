@@ -43,7 +43,9 @@ export async function createInvitation(
   role: Enums<"tenant_role">,
 ) {
   const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   const { data, error } = await supabase
     .from("team_invitations")
     .insert({ tenant_id: tenantId, email, role, invited_by: user?.id ?? null })
@@ -57,7 +59,7 @@ export async function listInvitations(tenantId: string) {
   const supabase = createClient();
   const { data, error } = await supabase
     .from("team_invitations")
-    .select("id, email, role, status, expires_at, created_at")
+    .select("id, email, role, status, expires_at, created_at, token")
     .eq("tenant_id", tenantId)
     .eq("status", "pending");
   if (error) throw error;
@@ -78,7 +80,9 @@ export async function updateProfile(payload: {
   avatar_url?: string;
 }) {
   const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) throw new Error("Não autenticado");
   const { error } = await supabase.from("profiles").update(payload).eq("id", user.id);
   if (error) throw error;
@@ -86,7 +90,9 @@ export async function updateProfile(payload: {
 
 export async function getUserPreferences(tenantId: string) {
   const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return null;
   const { data, error } = await supabase
     .from("user_preferences")
@@ -103,7 +109,9 @@ export async function upsertUserPreferences(
   payload: { theme?: string; notifications?: Record<string, boolean> },
 ) {
   const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) throw new Error("Não autenticado");
   const { error } = await supabase.from("user_preferences").upsert({
     user_id: user.id,

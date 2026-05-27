@@ -633,7 +633,7 @@ export type Database = {
         | "leadership"
         | "operator"
         | "viewer"
-      tenant_status: "active" | "suspended" | "pending"
+      tenant_status: "active" | "suspended" | "pending" | "trial" | "cancelled"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -797,7 +797,7 @@ export const Constants = {
         "operator",
         "viewer",
       ],
-      tenant_status: ["active", "suspended", "pending"],
+      tenant_status: ["active", "suspended", "pending", "trial", "cancelled"],
     },
   },
 } as const

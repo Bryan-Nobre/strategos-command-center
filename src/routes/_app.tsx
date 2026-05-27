@@ -2,8 +2,8 @@ import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { AppNavbar } from "@/components/layout/AppNavbar";
-import { Toaster } from "@/components/ui/sonner";
 import { TenantProvider } from "@/contexts/tenant-context";
+import { useThemePreference } from "@/hooks/use-theme-preference";
 import { LoadingState } from "@/components/common/LoadingState";
 import { TenantAccessBlocked } from "@/components/auth/TenantAccessBlocked";
 import { ensureAppAuth } from "@/lib/supabase/auth-route";
@@ -18,7 +18,8 @@ export const Route = createFileRoute("/_app")({
 });
 
 function AppLayout() {
-  const { tenants, activeTenant, profile } = Route.useRouteContext();
+  const { tenants, activeTenant, profile, membershipRole } = Route.useRouteContext();
+  useThemePreference(activeTenant?.id);
 
   if (!activeTenant && profile?.platform_role !== "super_admin") {
     return <LoadingState label="Carregando campanha..." />;
@@ -29,7 +30,7 @@ function AppLayout() {
   }
 
   return (
-    <TenantProvider tenants={tenants} activeTenant={activeTenant}>
+    <TenantProvider tenants={tenants} activeTenant={activeTenant} membershipRole={membershipRole}>
       <SidebarProvider>
         <div className="flex min-h-screen w-full bg-background">
           <AppSidebar isSuperAdmin={profile?.platform_role === "super_admin"} />
@@ -39,7 +40,6 @@ function AppLayout() {
               <Outlet />
             </main>
           </SidebarInset>
-          <Toaster />
         </div>
       </SidebarProvider>
     </TenantProvider>

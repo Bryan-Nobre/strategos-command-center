@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { getQueryClient } from "@/lib/query-client";
 import {
@@ -11,7 +10,11 @@ import {
 } from "@tanstack/react-router";
 import type { RouterContext } from "@/router-context";
 import { Toaster } from "@/components/ui/sonner";
-import { createClient } from "@/lib/supabase/client";
+import { SessionProvider } from "@/contexts/session-provider";
+import { AuthProvider } from "@/contexts/auth-provider";
+import { ErrorBoundary } from "@/components/common/ErrorBoundary";
+import { ThemeProvider, useTheme } from "@/contexts/theme-provider";
+import { themeInitScript } from "@/lib/theme";
 
 import appCss from "../styles.css?url";
 
@@ -87,9 +90,12 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       { name: "twitter:site", content: "@Lovable" },
     ],
     links: [
+      { rel: "stylesheet", href: appCss },
+      { rel: "preconnect", href: "https://fonts.googleapis.com" },
+      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
         rel: "stylesheet",
-        href: appCss,
+        href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap",
       },
     ],
   }),
@@ -101,11 +107,15 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 
 function RootShell({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" suppressHydrationWarning>
       <head>
         <HeadContent />
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
-      <body>
+      <body
+        className="font-sans antialiased"
+        style={{ fontFamily: "Inter, system-ui, sans-serif" }}
+      >
         {children}
         <Scripts />
       </body>
@@ -115,24 +125,24 @@ function RootShell({ children }: { children: React.ReactNode }) {
 
 function RootComponent() {
   const queryClient = getQueryClient();
-  const router = useRouter();
-
-  useEffect(() => {
-    const supabase = createClient();
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "TOKEN_REFRESHED") {
-        void router.invalidate();
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, [router]);
 
   return (
     <QueryClientProvider client={queryClient}>
-      <Outlet />
-      <Toaster richColors closeButton position="top-right" />
+      <ThemeProvider>
+        <ErrorBoundary>
+          <SessionProvider>
+            <AuthProvider>
+              <Outlet />
+              <ThemedToaster />
+            </AuthProvider>
+          </SessionProvider>
+        </ErrorBoundary>
+      </ThemeProvider>
     </QueryClientProvider>
   );
+}
+
+function ThemedToaster() {
+  const { resolvedTheme } = useTheme();
+  return <Toaster theme={resolvedTheme} richColors closeButton position="top-right" />;
 }

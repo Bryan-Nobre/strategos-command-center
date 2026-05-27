@@ -20,11 +20,13 @@ import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as AppRelatoriosRouteImport } from './routes/_app.relatorios'
 import { Route as AppPesquisasRouteImport } from './routes/_app.pesquisas'
 import { Route as AppLiderancasRouteImport } from './routes/_app.liderancas'
+import { Route as AppEquipeRouteImport } from './routes/_app.equipe'
 import { Route as AppEleitoresRouteImport } from './routes/_app.eleitores'
 import { Route as AppDemandasRouteImport } from './routes/_app.demandas'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppConfiguracoesRouteImport } from './routes/_app.configuracoes'
 import { Route as AppAgendaRouteImport } from './routes/_app.agenda'
+import { Route as AdminUsersRouteImport } from './routes/_admin.users'
 import { Route as AdminTenantsRouteImport } from './routes/_admin.tenants'
 import { Route as AdminMetricasRouteImport } from './routes/_admin.metricas'
 
@@ -81,6 +83,11 @@ const AppLiderancasRoute = AppLiderancasRouteImport.update({
   path: '/liderancas',
   getParentRoute: () => AppRoute,
 } as any)
+const AppEquipeRoute = AppEquipeRouteImport.update({
+  id: '/equipe',
+  path: '/equipe',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppEleitoresRoute = AppEleitoresRouteImport.update({
   id: '/eleitores',
   path: '/eleitores',
@@ -106,6 +113,11 @@ const AppAgendaRoute = AppAgendaRouteImport.update({
   path: '/agenda',
   getParentRoute: () => AppRoute,
 } as any)
+const AdminUsersRoute = AdminUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminTenantsRoute = AdminTenantsRouteImport.update({
   id: '/tenants',
   path: '/tenants',
@@ -123,11 +135,13 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/metricas': typeof AdminMetricasRoute
   '/tenants': typeof AdminTenantsRoute
+  '/users': typeof AdminUsersRoute
   '/agenda': typeof AppAgendaRoute
   '/configuracoes': typeof AppConfiguracoesRoute
   '/dashboard': typeof AppDashboardRoute
   '/demandas': typeof AppDemandasRoute
   '/eleitores': typeof AppEleitoresRoute
+  '/equipe': typeof AppEquipeRoute
   '/liderancas': typeof AppLiderancasRoute
   '/pesquisas': typeof AppPesquisasRoute
   '/relatorios': typeof AppRelatoriosRoute
@@ -141,11 +155,13 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRoute
   '/metricas': typeof AdminMetricasRoute
   '/tenants': typeof AdminTenantsRoute
+  '/users': typeof AdminUsersRoute
   '/agenda': typeof AppAgendaRoute
   '/configuracoes': typeof AppConfiguracoesRoute
   '/dashboard': typeof AppDashboardRoute
   '/demandas': typeof AppDemandasRoute
   '/eleitores': typeof AppEleitoresRoute
+  '/equipe': typeof AppEquipeRoute
   '/liderancas': typeof AppLiderancasRoute
   '/pesquisas': typeof AppPesquisasRoute
   '/relatorios': typeof AppRelatoriosRoute
@@ -162,11 +178,13 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/_admin/metricas': typeof AdminMetricasRoute
   '/_admin/tenants': typeof AdminTenantsRoute
+  '/_admin/users': typeof AdminUsersRoute
   '/_app/agenda': typeof AppAgendaRoute
   '/_app/configuracoes': typeof AppConfiguracoesRoute
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/demandas': typeof AppDemandasRoute
   '/_app/eleitores': typeof AppEleitoresRoute
+  '/_app/equipe': typeof AppEquipeRoute
   '/_app/liderancas': typeof AppLiderancasRoute
   '/_app/pesquisas': typeof AppPesquisasRoute
   '/_app/relatorios': typeof AppRelatoriosRoute
@@ -182,11 +200,13 @@ export interface FileRouteTypes {
     | '/signup'
     | '/metricas'
     | '/tenants'
+    | '/users'
     | '/agenda'
     | '/configuracoes'
     | '/dashboard'
     | '/demandas'
     | '/eleitores'
+    | '/equipe'
     | '/liderancas'
     | '/pesquisas'
     | '/relatorios'
@@ -200,11 +220,13 @@ export interface FileRouteTypes {
     | '/signup'
     | '/metricas'
     | '/tenants'
+    | '/users'
     | '/agenda'
     | '/configuracoes'
     | '/dashboard'
     | '/demandas'
     | '/eleitores'
+    | '/equipe'
     | '/liderancas'
     | '/pesquisas'
     | '/relatorios'
@@ -220,11 +242,13 @@ export interface FileRouteTypes {
     | '/signup'
     | '/_admin/metricas'
     | '/_admin/tenants'
+    | '/_admin/users'
     | '/_app/agenda'
     | '/_app/configuracoes'
     | '/_app/dashboard'
     | '/_app/demandas'
     | '/_app/eleitores'
+    | '/_app/equipe'
     | '/_app/liderancas'
     | '/_app/pesquisas'
     | '/_app/relatorios'
@@ -323,6 +347,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppLiderancasRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/equipe': {
+      id: '/_app/equipe'
+      path: '/equipe'
+      fullPath: '/equipe'
+      preLoaderRoute: typeof AppEquipeRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/eleitores': {
       id: '/_app/eleitores'
       path: '/eleitores'
@@ -358,6 +389,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAgendaRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_admin/users': {
+      id: '/_admin/users'
+      path: '/users'
+      fullPath: '/users'
+      preLoaderRoute: typeof AdminUsersRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/_admin/tenants': {
       id: '/_admin/tenants'
       path: '/tenants'
@@ -378,11 +416,13 @@ declare module '@tanstack/react-router' {
 interface AdminRouteChildren {
   AdminMetricasRoute: typeof AdminMetricasRoute
   AdminTenantsRoute: typeof AdminTenantsRoute
+  AdminUsersRoute: typeof AdminUsersRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
   AdminMetricasRoute: AdminMetricasRoute,
   AdminTenantsRoute: AdminTenantsRoute,
+  AdminUsersRoute: AdminUsersRoute,
 }
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
@@ -393,6 +433,7 @@ interface AppRouteChildren {
   AppDashboardRoute: typeof AppDashboardRoute
   AppDemandasRoute: typeof AppDemandasRoute
   AppEleitoresRoute: typeof AppEleitoresRoute
+  AppEquipeRoute: typeof AppEquipeRoute
   AppLiderancasRoute: typeof AppLiderancasRoute
   AppPesquisasRoute: typeof AppPesquisasRoute
   AppRelatoriosRoute: typeof AppRelatoriosRoute
@@ -404,6 +445,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppDashboardRoute: AppDashboardRoute,
   AppDemandasRoute: AppDemandasRoute,
   AppEleitoresRoute: AppEleitoresRoute,
+  AppEquipeRoute: AppEquipeRoute,
   AppLiderancasRoute: AppLiderancasRoute,
   AppPesquisasRoute: AppPesquisasRoute,
   AppRelatoriosRoute: AppRelatoriosRoute,

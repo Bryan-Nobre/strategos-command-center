@@ -9,6 +9,7 @@ export const getRouter = () => {
       profile: null,
       tenants: [],
       activeTenant: null,
+      membershipRole: null,
     } satisfies RouterContext,
     scrollRestoration: true,
     defaultPreloadStaleTime: 0,

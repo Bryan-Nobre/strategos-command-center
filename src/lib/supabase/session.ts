@@ -3,7 +3,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/supabase";
 import { createClient } from "./client";
 import { createServerSupabaseClient } from "./server";
-import type { Tables } from "@/types/supabase";
+import { clearTenantScopedCache } from "@/lib/query-cache";
+import { getQueryClient } from "@/lib/query-client";
+import type { Tables, Enums } from "@/types/supabase";
 
 export type Profile = Tables<"profiles">;
 export type Tenant = Tables<"tenants">;
@@ -14,6 +16,8 @@ export type AuthContext = {
   profile: Profile | null;
   tenants: Tenant[];
   activeTenant: Tenant | null;
+  /** Papel do usuário na campanha ativa (RLS é a fonte de verdade). */
+  membershipRole: Enums<"tenant_role"> | null;
 };
 
 const ACTIVE_TENANT_KEY = "strategos_active_tenant_id";
@@ -38,7 +42,14 @@ async function resolveAuthFromClient(
   } = await supabase.auth.getUser();
 
   if (userError || !user) {
-    return { session: null, user: null, profile: null, tenants: [], activeTenant: null };
+    return {
+      session: null,
+      user: null,
+      profile: null,
+      tenants: [],
+      activeTenant: null,
+      membershipRole: null,
+    };
   }
 
   const {
@@ -53,7 +64,7 @@ async function resolveAuthFromClient(
 
   const { data: memberships } = await supabase
     .from("tenant_members")
-    .select("tenant_id, tenants(id, slug, name, plan, status, owner_user_id, created_at, updated_at)")
+    .select("tenant_id, role, tenants(id, slug, name, plan, status, owner_user_id, created_at, updated_at)")
     .eq("user_id", user.id);
 
   const tenants = (memberships ?? [])
@@ -65,6 +76,9 @@ async function resolveAuthFromClient(
   const activeTenant =
     tenants.find((t) => t.id === storedId) ?? tenants[0] ?? null;
 
+  const membershipRole =
+    (memberships ?? []).find((m) => m.tenant_id === activeTenant?.id)?.role ?? null;
+
   if (useStored && activeTenant && activeTenant.id !== storedId) {
     setStoredTenantId(activeTenant.id);
   }
@@ -75,6 +89,7 @@ async function resolveAuthFromClient(
     profile: profile ?? null,
     tenants,
     activeTenant,
+    membershipRole,
   };
 }
 
@@ -89,7 +104,14 @@ export async function loadAuthContextForRoute(request?: Request): Promise<AuthCo
   }
 
   if (typeof window === "undefined") {
-    return { session: null, user: null, profile: null, tenants: [], activeTenant: null };
+    return {
+      session: null,
+      user: null,
+      profile: null,
+      tenants: [],
+      activeTenant: null,
+      membershipRole: null,
+    };
   }
 
   return resolveAuthFromClient(createClient(), { useStoredTenant: false });
@@ -103,7 +125,14 @@ export async function loadAuthContext(request?: Request): Promise<AuthContext> {
   }
 
   if (typeof window === "undefined") {
-    return { session: null, user: null, profile: null, tenants: [], activeTenant: null };
+    return {
+      session: null,
+      user: null,
+      profile: null,
+      tenants: [],
+      activeTenant: null,
+      membershipRole: null,
+    };
   }
 
   return resolveAuthFromClient(createClient());
@@ -113,4 +142,7 @@ export async function signOut() {
   const supabase = createClient();
   await supabase.auth.signOut();
   localStorage.removeItem(ACTIVE_TENANT_KEY);
+  if (typeof window !== "undefined") {
+    clearTenantScopedCache(getQueryClient());
+  }
 }

@@ -9,6 +9,7 @@ function withAuth(context: RouterContext, auth: AuthContext): RouterContext {
     profile: auth.profile,
     tenants: auth.tenants,
     activeTenant: auth.activeTenant,
+    membershipRole: auth.membershipRole,
   };
 }
 

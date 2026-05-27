@@ -26,11 +26,13 @@ export async function listLeaderships(tenantId: string) {
   return (data ?? []).map((l) => ({
     ...l,
     apoiadores: countMap.get(l.id) ?? 0,
-    crescimento: 0,
   }));
 }
 
-export async function createLeadership(tenantId: string, payload: TablesInsert<"leaderships">) {
+export async function createLeadership(
+  tenantId: string,
+  payload: Omit<TablesInsert<"leaderships">, "tenant_id">,
+) {
   const supabase = createClient();
   const { data, error } = await supabase
     .from("leaderships")
@@ -52,4 +54,12 @@ export async function updateLeadership(id: string, payload: TablesUpdate<"leader
   const { data, error } = await supabase.from("leaderships").update(payload).eq("id", id).select().single();
   if (error) throw error;
   return data;
+}
+
+/** Remove vínculos de apoiadores e exclui a liderança. Segurança real: RLS/backend. */
+export async function deleteLeadership(id: string) {
+  const supabase = createClient();
+  await supabase.from("supporters").update({ leadership_id: null }).eq("leadership_id", id);
+  const { error } = await supabase.from("leaderships").delete().eq("id", id);
+  if (error) throw error;
 }

@@ -1,29 +1,43 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useRouteContext } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { User, Palette, Bell, UsersRound, Shield, ExternalLink } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  Bell,
+  ExternalLink,
+  Monitor,
+  Moon,
+  Plus,
+  Shield,
+  Sun,
+  Target,
+  Trash2,
+  User,
+} from "lucide-react";
+import { useTheme } from "@/contexts/theme-provider";
+import type { Theme } from "@/lib/theme";
+import { toast } from "sonner";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useTenant } from "@/hooks/use-tenant";
-import { useRouteContext } from "@tanstack/react-router";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
-  listTeamMembers, createInvitation, listInvitations,
-  updateProfile, getUserPreferences, upsertUserPreferences,
-} from "@/services/team";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import { useManualGoalsConfig, useSaveManualGoalsConfig } from "@/hooks/use-dashboard";
+import { useTenant } from "@/hooks/use-tenant";
 import { getLandingPage, updateLandingPage } from "@/services/landing";
-import { LoadingState } from "@/components/common/LoadingState";
-import { toast } from "sonner";
-import type { Enums } from "@/types/supabase";
-
+import type { ManualGoalConfig, ManualGoalMetric } from "@/services/dashboard";
+import { getUserPreferences, updateProfile, upsertUserPreferences } from "@/services/team";
 export const Route = createFileRoute("/_app/configuracoes")({
   component: ConfigPage,
 });
@@ -31,19 +45,8 @@ export const Route = createFileRoute("/_app/configuracoes")({
 function ConfigPage() {
   const { tenantId, activeTenant } = useTenant();
   const { profile } = useRouteContext({ from: "/_app" });
+  const { theme, setTheme } = useTheme();
   const qc = useQueryClient();
-
-  const { data: team, isLoading: teamLoading } = useQuery({
-    queryKey: ["team", tenantId],
-    queryFn: () => listTeamMembers(tenantId),
-    enabled: !!tenantId,
-  });
-
-  const { data: invitations } = useQuery({
-    queryKey: ["invitations", tenantId],
-    queryFn: () => listInvitations(tenantId),
-    enabled: !!tenantId,
-  });
 
   const { data: landing } = useQuery({
     queryKey: ["landing", tenantId],
@@ -57,14 +60,15 @@ function ConfigPage() {
     enabled: !!tenantId,
   });
 
+  const { data: goalsConfig } = useManualGoalsConfig(tenantId);
+
   const [fullName, setFullName] = useState(profile?.full_name ?? "");
   const [phone, setPhone] = useState(profile?.phone ?? "");
   const [bio, setBio] = useState(profile?.bio ?? "");
   const [headline, setHeadline] = useState("");
   const [landingBio, setLandingBio] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState<Enums<"tenant_role">>("viewer");
+  const [manualGoals, setManualGoals] = useState<ManualGoalConfig[]>([]);
 
   useEffect(() => {
     if (landing) {
@@ -74,6 +78,11 @@ function ConfigPage() {
     }
   }, [landing]);
 
+  useEffect(() => {
+    if (!goalsConfig) return;
+    setManualGoals(goalsConfig);
+  }, [goalsConfig]);
+
   const saveProfile = useMutation({
     mutationFn: () => updateProfile({ full_name: fullName, phone, bio }),
     onSuccess: () => toast.success("Perfil salvo"),
@@ -82,84 +91,368 @@ function ConfigPage() {
 
   const saveLanding = useMutation({
     mutationFn: () => updateLandingPage(tenantId, { headline, bio: landingBio, whatsapp }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["landing", tenantId] }); toast.success("Landing atualizada"); },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const inviteMutation = useMutation({
-    mutationFn: () => createInvitation(tenantId, inviteEmail, inviteRole),
-    onSuccess: (data) => {
-      toast.success(`Convite criado. Link: /invite/${data.token}`);
-      qc.invalidateQueries({ queryKey: ["invitations", tenantId] });
-      setInviteEmail("");
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["landing", tenantId] });
+      toast.success("Landing atualizada");
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const initials = (profile?.full_name ?? "U").split(" ").map((n) => n[0]).slice(0, 2).join("");
+  const saveManualGoals = useSaveManualGoalsConfig(tenantId);
 
-  if (teamLoading) return <LoadingState />;
+  function addGoal() {
+    const today = new Date();
+    const end = new Date(today);
+    end.setDate(today.getDate() + 6);
+    setManualGoals((prev) => [
+      ...prev,
+      {
+        id: crypto.randomUUID(),
+        name: `Meta ${prev.length + 1}`,
+        metric: "new_supporters",
+        startDate: today.toISOString().slice(0, 10),
+        endDate: end.toISOString().slice(0, 10),
+        target: 10,
+      },
+    ]);
+  }
+
+  const initials = (profile?.full_name ?? "U")
+    .split(" ")
+    .map((n) => n[0])
+    .slice(0, 2)
+    .join("");
 
   return (
-    <div className="space-y-8">
-      <PageHeader title="Configurações" description="Perfil, equipe, landing e preferências." />
+    <div className="space-y-6">
+      <PageHeader
+        title="Configurações"
+        description="Centralize perfil, metas e operação da campanha."
+      />
 
-      <Tabs defaultValue="perfil">
-        <TabsList className="grid w-full grid-cols-2 sm:w-auto sm:grid-cols-5">
-          <TabsTrigger value="perfil"><User className="mr-2 h-4 w-4" />Perfil</TabsTrigger>
-          <TabsTrigger value="landing"><ExternalLink className="mr-2 h-4 w-4" />Landing</TabsTrigger>
-          <TabsTrigger value="notificacoes"><Bell className="mr-2 h-4 w-4" />Notificações</TabsTrigger>
-          <TabsTrigger value="equipe"><UsersRound className="mr-2 h-4 w-4" />Equipe</TabsTrigger>
-          <TabsTrigger value="plano"><Shield className="mr-2 h-4 w-4" />Plano</TabsTrigger>
+      <Card className="shadow-elegant">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Campanha ativa</CardTitle>
+          <CardDescription>{activeTenant?.name ?? "Sem campanha selecionada"}</CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-wrap items-center gap-2">
+          <Badge variant="secondary">{activeTenant?.plan ?? "trial"}</Badge>
+          <Badge variant="outline">Status: {activeTenant?.status ?? "—"}</Badge>
+          <Badge variant="outline">Slug: {activeTenant?.slug ?? "—"}</Badge>
+        </CardContent>
+      </Card>
+
+      <Tabs defaultValue="perfil" className="space-y-4">
+        <TabsList className="grid h-auto w-full grid-cols-2 gap-2 rounded-lg bg-muted p-2 md:grid-cols-3 xl:grid-cols-5">
+          <TabsTrigger value="perfil">
+            <User className="mr-2 h-4 w-4" />
+            Perfil
+          </TabsTrigger>
+          <TabsTrigger value="landing">
+            <ExternalLink className="mr-2 h-4 w-4" />
+            Landing
+          </TabsTrigger>
+          <TabsTrigger value="metas">
+            <Target className="mr-2 h-4 w-4" />
+            Metas
+          </TabsTrigger>
+          <TabsTrigger value="notificacoes">
+            <Bell className="mr-2 h-4 w-4" />
+            Notificações
+          </TabsTrigger>
+          <TabsTrigger value="plano">
+            <Shield className="mr-2 h-4 w-4" />
+            Plano
+          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="perfil" className="mt-6">
+        <TabsContent value="perfil" className="space-y-4">
           <Card className="shadow-elegant">
-            <CardHeader><CardTitle>Perfil</CardTitle></CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center gap-4">
-                <Avatar className="h-16 w-16"><AvatarFallback className="bg-primary text-primary-foreground">{initials}</AvatarFallback></Avatar>
+            <CardHeader>
+              <CardTitle>Perfil do usuário</CardTitle>
+              <CardDescription>Dados pessoais usados na operação da campanha.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex items-center gap-4 rounded-lg border bg-muted/40 p-4">
+                <Avatar className="h-14 w-14">
+                  <AvatarFallback className="bg-primary text-primary-foreground">
+                    {initials}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="font-medium">{profile?.full_name ?? "Usuário"}</p>
+                  <p className="text-sm text-muted-foreground">{profile?.id}</p>
+                </div>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
-                <div className="grid gap-2"><Label>Nome</Label><Input value={fullName} onChange={(e) => setFullName(e.target.value)} /></div>
-                <div className="grid gap-2"><Label>Telefone</Label><Input value={phone} onChange={(e) => setPhone(e.target.value)} /></div>
+                <div className="grid gap-2">
+                  <Label>Nome</Label>
+                  <Input value={fullName} onChange={(e) => setFullName(e.target.value)} />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Telefone</Label>
+                  <Input value={phone} onChange={(e) => setPhone(e.target.value)} />
+                </div>
               </div>
-              <div className="grid gap-2"><Label>Bio</Label><Textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={3} /></div>
-              <Button onClick={() => saveProfile.mutate()}>Salvar alterações</Button>
+              <div className="grid gap-2">
+                <Label>Bio</Label>
+                <Textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={3} />
+              </div>
+              <div className="flex justify-end">
+                <Button onClick={() => saveProfile.mutate()} disabled={saveProfile.isPending}>
+                  {saveProfile.isPending ? "Salvando..." : "Salvar alterações"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-elegant">
+            <CardHeader>
+              <CardTitle>Aparência</CardTitle>
+              <CardDescription>
+                Escolha entre modo claro, escuro ou preferência do sistema.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-2 sm:max-w-xs">
+                <Label>Tema da interface</Label>
+                <Select
+                  value={theme}
+                  onValueChange={(value) => {
+                    const next = value as Theme;
+                    setTheme(next);
+                    upsertUserPreferences(tenantId, { theme: next }).catch(() => {
+                      toast.error("Não foi possível salvar a preferência de tema.");
+                    });
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="light">
+                      <span className="flex items-center gap-2">
+                        <Sun className="h-4 w-4" /> Claro
+                      </span>
+                    </SelectItem>
+                    <SelectItem value="dark">
+                      <span className="flex items-center gap-2">
+                        <Moon className="h-4 w-4" /> Escuro
+                      </span>
+                    </SelectItem>
+                    <SelectItem value="system">
+                      <span className="flex items-center gap-2">
+                        <Monitor className="h-4 w-4" /> Sistema
+                      </span>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="landing" className="mt-6">
+        <TabsContent value="landing">
           <Card className="shadow-elegant">
             <CardHeader>
               <CardTitle>Landing pública</CardTitle>
               <CardDescription>
-                <Link to="/p/$slug" params={{ slug: landing?.slug ?? activeTenant?.slug ?? "" }} className="text-primary hover:underline" target="_blank">
+                <Link
+                  to="/p/$slug"
+                  params={{ slug: landing?.slug ?? activeTenant?.slug ?? "" }}
+                  className="text-primary hover:underline"
+                  target="_blank"
+                >
                   /p/{landing?.slug ?? activeTenant?.slug}
                 </Link>
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-2"><Label>Slogan</Label><Input value={headline} onChange={(e) => setHeadline(e.target.value)} /></div>
-              <div className="grid gap-2"><Label>Bio pública</Label><Textarea value={landingBio} onChange={(e) => setLandingBio(e.target.value)} rows={4} /></div>
-              <div className="grid gap-2"><Label>WhatsApp</Label><Input value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} placeholder="5511999990000" /></div>
-              <Button onClick={() => saveLanding.mutate()}>Salvar landing</Button>
+            <CardContent className="space-y-6">
+              <div className="grid gap-2">
+                <Label>Slogan</Label>
+                <Input value={headline} onChange={(e) => setHeadline(e.target.value)} />
+              </div>
+              <div className="grid gap-2">
+                <Label>Bio pública</Label>
+                <Textarea
+                  value={landingBio}
+                  onChange={(e) => setLandingBio(e.target.value)}
+                  rows={4}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label>WhatsApp</Label>
+                <Input
+                  value={whatsapp}
+                  onChange={(e) => setWhatsapp(e.target.value)}
+                  placeholder="5511999990000"
+                />
+              </div>
+              <div className="flex justify-end">
+                <Button onClick={() => saveLanding.mutate()} disabled={saveLanding.isPending}>
+                  {saveLanding.isPending ? "Salvando..." : "Salvar landing"}
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="notificacoes" className="mt-6">
+        <TabsContent value="metas">
           <Card className="shadow-elegant">
-            <CardHeader><CardTitle>Notificações</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle>Metas personalizadas</CardTitle>
+              <CardDescription>
+                Defina nome, métrica, período e quantidade alvo. O Dashboard mostra o progresso de
+                cada meta.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex justify-end">
+                <Button variant="outline" onClick={addGoal}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Nova meta
+                </Button>
+              </div>
+
+              <div className="space-y-3">
+                {manualGoals.map((goal, idx) => (
+                  <div key={goal.id} className="space-y-3 rounded-lg border p-4">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium">Meta {idx + 1}</p>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive"
+                        onClick={() =>
+                          setManualGoals((prev) => prev.filter((item) => item.id !== goal.id))
+                        }
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <div className="grid gap-3 md:grid-cols-12">
+                      <div className="grid gap-2 md:col-span-4">
+                        <Label>Nome da meta</Label>
+                        <Input
+                          value={goal.name}
+                          onChange={(e) =>
+                            setManualGoals((prev) =>
+                              prev.map((item) =>
+                                item.id === goal.id ? { ...item, name: e.target.value } : item,
+                              ),
+                            )
+                          }
+                        />
+                      </div>
+                      <div className="grid gap-2 md:col-span-3">
+                        <Label>Métrica</Label>
+                        <Select
+                          value={goal.metric}
+                          onValueChange={(value) =>
+                            setManualGoals((prev) =>
+                              prev.map((item) =>
+                                item.id === goal.id
+                                  ? { ...item, metric: value as ManualGoalMetric }
+                                  : item,
+                              ),
+                            )
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="new_supporters">Novos apoiadores</SelectItem>
+                            <SelectItem value="resolved_demands">Demandas resolvidas</SelectItem>
+                            <SelectItem value="new_strong_supporters">
+                              Novos apoiadores fortes
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="grid gap-2 md:col-span-2">
+                        <Label>De</Label>
+                        <Input
+                          type="date"
+                          value={goal.startDate}
+                          onChange={(e) =>
+                            setManualGoals((prev) =>
+                              prev.map((item) =>
+                                item.id === goal.id ? { ...item, startDate: e.target.value } : item,
+                              ),
+                            )
+                          }
+                        />
+                      </div>
+                      <div className="grid gap-2 md:col-span-2">
+                        <Label>Até</Label>
+                        <Input
+                          type="date"
+                          value={goal.endDate}
+                          onChange={(e) =>
+                            setManualGoals((prev) =>
+                              prev.map((item) =>
+                                item.id === goal.id ? { ...item, endDate: e.target.value } : item,
+                              ),
+                            )
+                          }
+                        />
+                      </div>
+                      <div className="grid gap-2 md:col-span-1">
+                        <Label>Qtd</Label>
+                        <Input
+                          type="number"
+                          min={0}
+                          value={goal.target}
+                          onChange={(e) =>
+                            setManualGoals((prev) =>
+                              prev.map((item) =>
+                                item.id === goal.id
+                                  ? { ...item, target: Math.max(0, Number(e.target.value) || 0) }
+                                  : item,
+                              ),
+                            )
+                          }
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="rounded-lg border bg-muted/40 p-4 text-sm text-muted-foreground">
+                O progresso aparece no Dashboard com realizado/objetivo dentro do período definido.
+              </div>
+              <div className="flex justify-end">
+                <Button
+                  disabled={saveManualGoals.isPending}
+                  onClick={() => saveManualGoals.mutate(manualGoals)}
+                >
+                  {saveManualGoals.isPending ? "Salvando..." : "Salvar metas"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="notificacoes">
+          <Card className="shadow-elegant">
+            <CardHeader>
+              <CardTitle>Preferências de notificações</CardTitle>
+              <CardDescription>Ative somente os alertas úteis para sua rotina.</CardDescription>
+            </CardHeader>
             <CardContent className="space-y-4">
               {["demands", "polls", "agenda", "weekly_email"].map((key) => (
                 <div key={key} className="flex items-center justify-between rounded-lg border p-4">
                   <Label className="capitalize">{key.replace("_", " ")}</Label>
                   <Switch
-                    defaultChecked={(prefs?.notifications as Record<string, boolean>)?.[key] ?? true}
+                    defaultChecked={
+                      (prefs?.notifications as Record<string, boolean>)?.[key] ?? true
+                    }
                     onCheckedChange={(checked) => {
-                      const n = { ...(prefs?.notifications as Record<string, boolean>), [key]: checked };
+                      const n = {
+                        ...(prefs?.notifications as Record<string, boolean>),
+                        [key]: checked,
+                      };
                       upsertUserPreferences(tenantId, { notifications: n });
                     }}
                   />
@@ -169,50 +462,18 @@ function ConfigPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="equipe" className="mt-6">
+        <TabsContent value="plano">
           <Card className="shadow-elegant">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Equipe</CardTitle>
-              <div className="flex gap-2">
-                <Input placeholder="e-mail" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} className="w-48" />
-                <Select value={inviteRole} onValueChange={(v) => setInviteRole(v as Enums<"tenant_role">)}>
-                  <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="coordinator">Coordenador</SelectItem>
-                    <SelectItem value="advisor">Assessor</SelectItem>
-                    <SelectItem value="operator">Operador</SelectItem>
-                    <SelectItem value="viewer">Visualizador</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Button size="sm" onClick={() => inviteMutation.mutate()}>Convidar</Button>
-              </div>
+            <CardHeader>
+              <CardTitle>Plano atual</CardTitle>
+              <CardDescription>Gerenciado pela plataforma SaaS.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              {(team ?? []).map((m) => (
-                <div key={m.id} className="flex items-center justify-between rounded-lg border p-4">
-                  <div>
-                    <div className="font-medium">{m.profiles.full_name ?? "Membro"}</div>
-                    <div className="text-xs text-muted-foreground">{m.role}</div>
-                  </div>
-                  <Badge>{m.role}</Badge>
-                </div>
-              ))}
-              {(invitations ?? []).map((inv) => (
-                <div key={inv.id} className="flex items-center justify-between rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-                  <span>{inv.email} (pendente)</span>
-                  <Link to="/invite/$token" params={{ token: inv.token }} className="text-primary text-xs">Link convite</Link>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="plano" className="mt-6">
-          <Card className="shadow-elegant">
-            <CardHeader><CardTitle>Plano atual</CardTitle><CardDescription>Gerenciado pela plataforma SaaS.</CardDescription></CardHeader>
-            <CardContent>
-              <Badge className="text-base px-4 py-2">{activeTenant?.plan ?? "trial"}</Badge>
-              <p className="mt-2 text-sm text-muted-foreground">Status: {activeTenant?.status}</p>
+              <Badge className="px-4 py-2 text-base">{activeTenant?.plan ?? "trial"}</Badge>
+              <p className="text-sm text-muted-foreground">Status: {activeTenant?.status}</p>
+              <p className="text-sm text-muted-foreground">
+                Necessidades de upgrade e billing avançado entram na fase comercial.
+              </p>
             </CardContent>
           </Card>
         </TabsContent>

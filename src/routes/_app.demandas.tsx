@@ -1,18 +1,56 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { Plus, MapPin, AlertCircle, Clock, CheckCircle2 } from "lucide-react";
+import { useMemo, useState, type DragEvent as ReactDragEvent } from "react";
+import {
+  Plus,
+  MapPin,
+  AlertCircle,
+  Clock,
+  CheckCircle2,
+  Filter,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { EmptyState } from "@/components/common/EmptyState";
+import { ConfirmDeleteDialog } from "@/components/common/ConfirmDeleteDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { useTenant } from "@/hooks/use-tenant";
-import { useDemands, useCreateDemand, useUpdateDemand } from "@/hooks/use-demands";
+import { useDemands, useCreateDemand, useUpdateDemand, useDeleteDemand } from "@/hooks/use-demands";
+import { useTeamMembers } from "@/hooks/use-team";
 import { LoadingState } from "@/components/common/LoadingState";
-import { DEMAND_CATEGORY_LABELS } from "@/types/domain";
+import {
+  DEMAND_CATEGORY_LABELS,
+  DEMAND_PRIORITY_LABELS,
+  DEMAND_STATUS_LABELS,
+} from "@/types/domain";
 import type { Enums } from "@/types/supabase";
 
 export const Route = createFileRoute("/_app/demandas")({
@@ -20,35 +58,118 @@ export const Route = createFileRoute("/_app/demandas")({
 });
 
 const columns = [
-  { key: "aberto" as const, dbStatus: "aberto" as Enums<"demand_status">, title: "Aberto", icon: AlertCircle, color: "text-destructive", bg: "bg-destructive/10" },
-  { key: "andamento" as const, dbStatus: "em_andamento" as Enums<"demand_status">, title: "Em andamento", icon: Clock, color: "text-warning-foreground", bg: "bg-warning/15" },
-  { key: "resolvido" as const, dbStatus: "resolvido" as Enums<"demand_status">, title: "Resolvido", icon: CheckCircle2, color: "text-success", bg: "bg-success/10" },
+  {
+    key: "aberto" as const,
+    dbStatus: "aberto" as Enums<"demand_status">,
+    title: "Aberto",
+    icon: AlertCircle,
+    color: "text-destructive",
+    bg: "bg-destructive/10",
+  },
+  {
+    key: "andamento" as const,
+    dbStatus: "em_andamento" as Enums<"demand_status">,
+    title: "Em andamento",
+    icon: Clock,
+    color: "text-warning-foreground",
+    bg: "bg-warning/15",
+  },
+  {
+    key: "resolvido" as const,
+    dbStatus: "resolvido" as Enums<"demand_status">,
+    title: "Resolvido",
+    icon: CheckCircle2,
+    color: "text-success",
+    bg: "bg-success/10",
+  },
 ];
 
 const prioVariant: Record<string, "destructive" | "secondary" | "outline"> = {
-  alta: "destructive", media: "secondary", baixa: "outline",
+  alta: "destructive",
+  media: "secondary",
+  baixa: "outline",
 };
+
+type DemandRow = NonNullable<ReturnType<typeof useDemands>["data"]>[number];
 
 function DemandasPage() {
   const { tenantId } = useTenant();
   const { data: demands, isLoading } = useDemands(tenantId);
+  const { data: team } = useTeamMembers(tenantId);
   const createMutation = useCreateDemand(tenantId);
   const updateMutation = useUpdateDemand(tenantId);
-  const [open, setOpen] = useState(false);
-  const [title, setTitle] = useState("");
-  const [category, setCategory] = useState<Enums<"demand_category">>("infraestrutura");
-  const [neighborhood, setNeighborhood] = useState("");
+  const deleteMutation = useDeleteDemand(tenantId);
+
+  const [createOpen, setCreateOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<DemandRow | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<DemandRow | null>(null);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [neighborhoodFilter, setNeighborhoodFilter] = useState("all");
+  const [assigneeFilter, setAssigneeFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+
+  const [dragOverStatus, setDragOverStatus] = useState<Enums<"demand_status"> | null>(null);
+  const [draggedDemandId, setDraggedDemandId] = useState<string | null>(null);
+
+  const teamMap = useMemo(
+    () => new Map((team ?? []).map((m) => [m.user_id, m.profiles.full_name ?? "Membro"])),
+    [team],
+  );
+
+  const neighborhoods = useMemo(() => {
+    const set = new Set<string>();
+    for (const d of demands ?? []) {
+      if (d.neighborhood) set.add(d.neighborhood);
+    }
+    return [...set].sort();
+  }, [demands]);
+
+  const filtered = useMemo(() => {
+    return (demands ?? []).filter((d) => {
+      const matchCategory = categoryFilter === "all" || d.category === categoryFilter;
+      const matchNeighborhood =
+        neighborhoodFilter === "all" || d.neighborhood === neighborhoodFilter;
+      const matchAssignee =
+        assigneeFilter === "all" ||
+        (assigneeFilter === "none" ? !d.assigned_to : d.assigned_to === assigneeFilter);
+      const matchStatus = statusFilter === "all" || d.status === statusFilter;
+      return matchCategory && matchNeighborhood && matchAssignee && matchStatus;
+    });
+  }, [demands, categoryFilter, neighborhoodFilter, assigneeFilter, statusFilter]);
+
+  const grouped = {
+    aberto: filtered.filter((d) => d.status === "aberto"),
+    andamento: filtered.filter((d) => d.status === "em_andamento"),
+    resolvido: filtered.filter((d) => d.status === "resolvido"),
+  };
 
   if (isLoading) return <LoadingState />;
 
-  const grouped = {
-    aberto: (demands ?? []).filter((d) => d.status === "aberto"),
-    andamento: (demands ?? []).filter((d) => d.status === "em_andamento"),
-    resolvido: (demands ?? []).filter((d) => d.status === "resolvido"),
-  };
-
   function moveDemand(id: string, status: Enums<"demand_status">) {
     updateMutation.mutate({ id, status });
+  }
+
+  function handleDragStart(e: ReactDragEvent, id: string) {
+    setDraggedDemandId(id);
+    // HTML5 drag-and-drop: persistimos o id no dataTransfer para recuperar no drop.
+    e.dataTransfer.setData("text/plain", id);
+    e.dataTransfer.effectAllowed = "move";
+  }
+
+  function handleDragEnd() {
+    setDragOverStatus(null);
+    setDraggedDemandId(null);
+  }
+
+  function handleDrop(e: ReactDragEvent, status: Enums<"demand_status">) {
+    e.preventDefault();
+    const idFromTransfer = e.dataTransfer.getData("text/plain");
+    const id = idFromTransfer || draggedDemandId;
+    if (id) moveDemand(id, status);
+    setDragOverStatus(null);
+    setDraggedDemandId(null);
   }
 
   return (
@@ -57,76 +178,447 @@ function DemandasPage() {
         title="Demandas da população"
         description="Kanban de solicitações por status."
         actions={
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild><Button size="sm"><Plus className="mr-2 h-4 w-4" />Nova demanda</Button></DialogTrigger>
-            <DialogContent>
-              <DialogHeader><DialogTitle>Nova demanda</DialogTitle></DialogHeader>
-              <div className="grid gap-4">
-                <div className="grid gap-2"><Label>Título</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} /></div>
-                <div className="grid gap-2">
-                  <Label>Categoria</Label>
-                  <Select value={category} onValueChange={(v) => setCategory(v as Enums<"demand_category">)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(DEMAND_CATEGORY_LABELS).map(([k, l]) => (
-                        <SelectItem key={k} value={k}>{l}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+          <>
+            <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
+              <SheetTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Filter className="mr-2 h-4 w-4" />
+                  Filtros
+                </Button>
+              </SheetTrigger>
+              <SheetContent>
+                <SheetHeader>
+                  <SheetTitle>Filtros</SheetTitle>
+                  <SheetDescription>Refine as demandas exibidas.</SheetDescription>
+                </SheetHeader>
+                <div className="mt-6 grid gap-4">
+                  <FilterSelect
+                    label="Categoria"
+                    value={categoryFilter}
+                    onChange={setCategoryFilter}
+                    options={[
+                      { value: "all", label: "Todas" },
+                      ...Object.entries(DEMAND_CATEGORY_LABELS).map(([k, l]) => ({
+                        value: k,
+                        label: l,
+                      })),
+                    ]}
+                  />
+                  <FilterSelect
+                    label="Bairro"
+                    value={neighborhoodFilter}
+                    onChange={setNeighborhoodFilter}
+                    options={[
+                      { value: "all", label: "Todos" },
+                      ...neighborhoods.map((n) => ({ value: n, label: n })),
+                    ]}
+                  />
+                  <FilterSelect
+                    label="Responsável"
+                    value={assigneeFilter}
+                    onChange={setAssigneeFilter}
+                    options={[
+                      { value: "all", label: "Todos" },
+                      { value: "none", label: "Sem responsável" },
+                      ...(team ?? []).map((m) => ({
+                        value: m.user_id,
+                        label: m.profiles.full_name ?? m.user_id,
+                      })),
+                    ]}
+                  />
+                  <FilterSelect
+                    label="Status"
+                    value={statusFilter}
+                    onChange={setStatusFilter}
+                    options={[
+                      { value: "all", label: "Todos" },
+                      ...Object.entries(DEMAND_STATUS_LABELS).map(([k, l]) => ({
+                        value: k,
+                        label: l,
+                      })),
+                    ]}
+                  />
                 </div>
-                <div className="grid gap-2"><Label>Bairro</Label><Input value={neighborhood} onChange={(e) => setNeighborhood(e.target.value)} /></div>
-              </div>
-              <DialogFooter>
-                <Button onClick={() => {
-                  createMutation.mutate({ title, category, neighborhood: neighborhood || null, status: "aberto", priority: "media" });
-                  setOpen(false);
-                  setTitle("");
-                }}>Salvar</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+              </SheetContent>
+            </Sheet>
+            <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Nova demanda
+                </Button>
+              </DialogTrigger>
+              <DemandFormDialog
+                title="Nova demanda"
+                team={team ?? []}
+                loading={createMutation.isPending}
+                onSubmit={(values) => {
+                  createMutation.mutate(
+                    {
+                      title: values.title,
+                      category: values.category,
+                      neighborhood: values.neighborhood || null,
+                      description: values.description || null,
+                      status: values.status,
+                      priority: values.priority,
+                      assigned_to: values.assigned_to || null,
+                    },
+                    { onSuccess: () => setCreateOpen(false) },
+                  );
+                }}
+              />
+            </Dialog>
+          </>
         }
       />
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-        {columns.map((col) => {
-          const items = grouped[col.key];
-          return (
-            <div key={col.key} className="flex flex-col rounded-xl border border-border bg-muted/30 p-4">
-              <div className="mb-4 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className={`flex h-7 w-7 items-center justify-center rounded-md ${col.bg} ${col.color}`}>
-                    <col.icon className="h-4 w-4" />
-                  </span>
-                  <h3 className="font-semibold">{col.title}</h3>
+      {!demands?.length ? (
+        <EmptyState
+          icon={AlertCircle}
+          title="Nenhuma demanda registrada"
+          description="Cadastre solicitações da população para acompanhar no kanban."
+          actionLabel="Nova demanda"
+          onAction={() => setCreateOpen(true)}
+        />
+      ) : (
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+          {columns.map((col) => {
+            const items = grouped[col.key];
+            return (
+              <div
+                key={col.key}
+                className={[
+                  "flex flex-col rounded-xl border border-border bg-muted/30 p-4",
+                  dragOverStatus === col.dbStatus ? "ring-2 ring-primary/50" : "",
+                ].join(" ")}
+                onDragOver={(e) => {
+                  // Permite drop no navegador.
+                  e.preventDefault();
+                  if (updateMutation.isPending) return;
+                  setDragOverStatus(col.dbStatus);
+                  e.dataTransfer.dropEffect = "move";
+                }}
+                onDragLeave={() => setDragOverStatus(null)}
+                onDrop={(e) => handleDrop(e, col.dbStatus)}
+              >
+                <div className="mb-4 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`flex h-7 w-7 items-center justify-center rounded-md ${col.bg} ${col.color}`}
+                    >
+                      <col.icon className="h-4 w-4" />
+                    </span>
+                    <h3 className="font-semibold">{col.title}</h3>
+                  </div>
+                  <Badge variant="outline">{items.length}</Badge>
                 </div>
-                <Badge variant="outline">{items.length}</Badge>
+                <div className="space-y-3">
+                  {items.map((d) => (
+                    <Card
+                      key={d.id}
+                      className={[
+                        "shadow-sm",
+                        draggedDemandId === d.id ? "opacity-70" : "",
+                        "cursor-grab",
+                      ].join(" ")}
+                      draggable={!updateMutation.isPending}
+                      onDragStart={(e) => handleDragStart(e, d.id)}
+                      onDragEnd={handleDragEnd}
+                    >
+                      <CardContent className="space-y-2 p-4">
+                        <div className="flex items-start justify-between gap-2">
+                          <h4 className="text-sm font-medium">{d.title}</h4>
+                          <div className="flex shrink-0 gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => setEditTarget(d)}
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-destructive"
+                              onClick={() => setDeleteTarget(d)}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <span>{DEMAND_CATEGORY_LABELS[d.category] ?? d.category}</span>
+                          {d.neighborhood && (
+                            <span className="flex items-center gap-1">
+                              <MapPin className="h-3 w-3" />
+                              {d.neighborhood}
+                            </span>
+                          )}
+                        </div>
+                        {d.assigned_to && (
+                          <p className="text-xs text-muted-foreground">
+                            Responsável: {teamMap.get(d.assigned_to) ?? "—"}
+                          </p>
+                        )}
+                        <Badge variant={prioVariant[d.priority]}>
+                          {DEMAND_PRIORITY_LABELS[d.priority] ?? d.priority}
+                        </Badge>
+                        <div className="flex flex-wrap gap-1 pt-1">
+                          {columns
+                            .filter((c) => c.dbStatus !== d.status)
+                            .map((c) => (
+                              <Button
+                                key={c.key}
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 text-xs"
+                                disabled={updateMutation.isPending}
+                                onClick={() => moveDemand(d.id, c.dbStatus)}
+                              >
+                                → {c.title}
+                              </Button>
+                            ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                  {!items.length && (
+                    <p className="text-center text-xs text-muted-foreground py-4">
+                      Nenhuma demanda
+                    </p>
+                  )}
+                </div>
               </div>
-              <div className="space-y-3">
-                {items.map((d) => (
-                  <Card key={d.id} className="shadow-sm">
-                    <CardContent className="space-y-2 p-4">
-                      <h4 className="text-sm font-medium">{d.title}</h4>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <span>{DEMAND_CATEGORY_LABELS[d.category] ?? d.category}</span>
-                        {d.neighborhood && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{d.neighborhood}</span>}
-                      </div>
-                      <Badge variant={prioVariant[d.priority]}>{d.priority}</Badge>
-                      <div className="flex flex-wrap gap-1 pt-1">
-                        {columns.filter((c) => c.dbStatus !== d.status).map((c) => (
-                          <Button key={c.key} variant="ghost" size="sm" className="h-7 text-xs" onClick={() => moveDemand(d.id, c.dbStatus)}>
-                            → {c.title}
-                          </Button>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
+
+      <Dialog open={!!editTarget} onOpenChange={(o) => !o && setEditTarget(null)}>
+        {editTarget && (
+          <DemandFormDialog
+            title="Editar demanda"
+            team={team ?? []}
+            loading={updateMutation.isPending}
+            initial={{
+              title: editTarget.title,
+              category: editTarget.category,
+              status: editTarget.status,
+              priority: editTarget.priority,
+              neighborhood: editTarget.neighborhood ?? "",
+              description: editTarget.description ?? "",
+              assigned_to: editTarget.assigned_to ?? "",
+            }}
+            onSubmit={(values) => {
+              updateMutation.mutate(
+                {
+                  id: editTarget.id,
+                  title: values.title,
+                  category: values.category,
+                  neighborhood: values.neighborhood || null,
+                  description: values.description || null,
+                  status: values.status,
+                  priority: values.priority,
+                  assigned_to: values.assigned_to || null,
+                },
+                { onSuccess: () => setEditTarget(null) },
+              );
+            }}
+          />
+        )}
+      </Dialog>
+
+      <ConfirmDeleteDialog
+        open={!!deleteTarget}
+        onOpenChange={(o) => !o && setDeleteTarget(null)}
+        title="Excluir demanda"
+        description={`Tem certeza que deseja excluir "${deleteTarget?.title}"?`}
+        loading={deleteMutation.isPending}
+        onConfirm={() => {
+          if (deleteTarget) {
+            deleteMutation.mutate(deleteTarget.id, { onSuccess: () => setDeleteTarget(null) });
+          }
+        }}
+      />
     </div>
+  );
+}
+
+function FilterSelect({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  options: { value: string; label: string }[];
+}) {
+  return (
+    <div className="grid gap-2">
+      <Label>{label}</Label>
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((o) => (
+            <SelectItem key={o.value} value={o.value}>
+              {o.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
+type DemandFormValues = {
+  title: string;
+  category: Enums<"demand_category">;
+  status: Enums<"demand_status">;
+  priority: Enums<"demand_priority">;
+  neighborhood: string;
+  description: string;
+  assigned_to: string;
+};
+
+function DemandFormDialog({
+  title,
+  team,
+  loading,
+  initial,
+  onSubmit,
+}: {
+  title: string;
+  team: { user_id: string; profiles: { full_name: string | null } }[];
+  loading?: boolean;
+  initial?: Partial<DemandFormValues>;
+  onSubmit: (values: DemandFormValues) => void;
+}) {
+  const [formTitle, setFormTitle] = useState(initial?.title ?? "");
+  const [category, setCategory] = useState<Enums<"demand_category">>(
+    initial?.category ?? "infraestrutura",
+  );
+  const [status, setStatus] = useState<Enums<"demand_status">>(initial?.status ?? "aberto");
+  const [priority, setPriority] = useState<Enums<"demand_priority">>(initial?.priority ?? "media");
+  const [neighborhood, setNeighborhood] = useState(initial?.neighborhood ?? "");
+  const [description, setDescription] = useState(initial?.description ?? "");
+  const [assignedTo, setAssignedTo] = useState(initial?.assigned_to ?? "");
+
+  return (
+    <DialogContent>
+      <DialogHeader>
+        <DialogTitle>{title}</DialogTitle>
+      </DialogHeader>
+      <div className="grid gap-4">
+        <div className="grid gap-2">
+          <Label>Título</Label>
+          <Input value={formTitle} onChange={(e) => setFormTitle(e.target.value)} />
+        </div>
+        <div className="grid gap-2">
+          <Label>Descrição</Label>
+          <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="grid gap-2">
+            <Label>Categoria</Label>
+            <Select
+              value={category}
+              onValueChange={(v) => setCategory(v as Enums<"demand_category">)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(DEMAND_CATEGORY_LABELS).map(([k, l]) => (
+                  <SelectItem key={k} value={k}>
+                    {l}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid gap-2">
+            <Label>Prioridade</Label>
+            <Select
+              value={priority}
+              onValueChange={(v) => setPriority(v as Enums<"demand_priority">)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(DEMAND_PRIORITY_LABELS).map(([k, l]) => (
+                  <SelectItem key={k} value={k}>
+                    {l}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="grid gap-2">
+            <Label>Bairro</Label>
+            <Input value={neighborhood} onChange={(e) => setNeighborhood(e.target.value)} />
+          </div>
+          <div className="grid gap-2">
+            <Label>Status</Label>
+            <Select value={status} onValueChange={(v) => setStatus(v as Enums<"demand_status">)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(DEMAND_STATUS_LABELS).map(([k, l]) => (
+                  <SelectItem key={k} value={k}>
+                    {l}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <div className="grid gap-2">
+          <Label>Responsável</Label>
+          <Select
+            value={assignedTo || "none"}
+            onValueChange={(v) => setAssignedTo(v === "none" ? "" : v)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Nenhum" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Nenhum</SelectItem>
+              {team.map((m) => (
+                <SelectItem key={m.user_id} value={m.user_id}>
+                  {m.profiles.full_name ?? "Membro"}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      <DialogFooter>
+        <Button
+          disabled={formTitle.trim().length < 3 || loading}
+          onClick={() =>
+            onSubmit({
+              title: formTitle.trim(),
+              category,
+              status,
+              priority,
+              neighborhood,
+              description,
+              assigned_to: assignedTo,
+            })
+          }
+        >
+          {loading ? "Salvando..." : "Salvar"}
+        </Button>
+      </DialogFooter>
+    </DialogContent>
   );
 }
