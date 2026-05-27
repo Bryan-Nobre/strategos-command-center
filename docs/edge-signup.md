@@ -17,7 +17,7 @@ Cadastro de campanha **sem depender** do `auth.signUp` no browser (evita bloquei
 supabase db push
 ```
 
-Ou aplique `05 - signup_edge_rpc.sql` no SQL Editor se já usa migrations remotas.
+Ou aplique `20260522021452_signup_edge_rpc.sql` no SQL Editor se já usa migrations remotas.
 
 ### 2. Edge Function
 

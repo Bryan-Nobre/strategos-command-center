@@ -35,15 +35,27 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useManualGoalsConfig, useSaveManualGoalsConfig } from "@/hooks/use-dashboard";
 import { useTenant } from "@/hooks/use-tenant";
+import { useCrudPermissions } from "@/hooks/use-crud-permissions";
+import { ModuleRouteGuard } from "@/components/auth/PermissionGate";
 import { getLandingPage, updateLandingPage } from "@/services/landing";
 import type { ManualGoalConfig, ManualGoalMetric } from "@/services/dashboard";
+import { queryKeys } from "@/lib/query-keys";
 import { getUserPreferences, updateProfile, upsertUserPreferences } from "@/services/team";
+import { NOTIFICATION_PREF_GROUPS } from "@/lib/notification-pref-meta";
+import {
+  DEFAULT_NOTIFICATION_PREFERENCES,
+  notificationPreferencesToJson,
+  parseNotificationPreferences,
+  type NotificationPrefCategory,
+  type NotificationPreferences,
+} from "@/types/notification-preferences";
 export const Route = createFileRoute("/_app/configuracoes")({
   component: ConfigPage,
 });
 
 function ConfigPage() {
   const { tenantId, activeTenant } = useTenant();
+  const perms = useCrudPermissions("settings");
   const { profile } = useRouteContext({ from: "/_app" });
   const { theme, setTheme } = useTheme();
   const qc = useQueryClient();
@@ -69,6 +81,9 @@ function ConfigPage() {
   const [landingBio, setLandingBio] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
   const [manualGoals, setManualGoals] = useState<ManualGoalConfig[]>([]);
+  const [notificationPrefs, setNotificationPrefs] = useState<NotificationPreferences>(
+    DEFAULT_NOTIFICATION_PREFERENCES,
+  );
 
   useEffect(() => {
     if (landing) {
@@ -77,6 +92,12 @@ function ConfigPage() {
       setWhatsapp(landing.whatsapp ?? "");
     }
   }, [landing]);
+
+  useEffect(() => {
+    if (prefs?.notifications) {
+      setNotificationPrefs(parseNotificationPreferences(prefs.notifications));
+    }
+  }, [prefs?.notifications]);
 
   useEffect(() => {
     if (!goalsConfig) return;
@@ -124,6 +145,7 @@ function ConfigPage() {
     .join("");
 
   return (
+    <ModuleRouteGuard module="settings">
     <div className="space-y-6">
       <PageHeader
         title="Configurações"
@@ -144,22 +166,30 @@ function ConfigPage() {
 
       <Tabs defaultValue="perfil" className="space-y-4">
         <TabsList className="grid h-auto w-full grid-cols-2 gap-2 rounded-lg bg-muted p-2 md:grid-cols-3 xl:grid-cols-5">
+          {perms.canEditProfile && (
           <TabsTrigger value="perfil">
             <User className="mr-2 h-4 w-4" />
             Perfil
           </TabsTrigger>
+          )}
+          {perms.canEditLanding && (
           <TabsTrigger value="landing">
             <ExternalLink className="mr-2 h-4 w-4" />
             Landing
           </TabsTrigger>
+          )}
+          {perms.canEditGoals && (
           <TabsTrigger value="metas">
             <Target className="mr-2 h-4 w-4" />
             Metas
           </TabsTrigger>
+          )}
+          {perms.canEditNotifications && (
           <TabsTrigger value="notificacoes">
             <Bell className="mr-2 h-4 w-4" />
             Notificações
           </TabsTrigger>
+          )}
           <TabsTrigger value="plano">
             <Shield className="mr-2 h-4 w-4" />
             Plano
@@ -199,7 +229,7 @@ function ConfigPage() {
                 <Textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={3} />
               </div>
               <div className="flex justify-end">
-                <Button onClick={() => saveProfile.mutate()} disabled={saveProfile.isPending}>
+                <Button onClick={() => saveProfile.mutate()} disabled={saveProfile.isPending || !perms.canEditProfile}>
                   {saveProfile.isPending ? "Salvando..." : "Salvar alterações"}
                 </Button>
               </div>
@@ -289,7 +319,7 @@ function ConfigPage() {
                 />
               </div>
               <div className="flex justify-end">
-                <Button onClick={() => saveLanding.mutate()} disabled={saveLanding.isPending}>
+                <Button onClick={() => saveLanding.mutate()} disabled={saveLanding.isPending || !perms.canEditLanding}>
                   {saveLanding.isPending ? "Salvando..." : "Salvar landing"}
                 </Button>
               </div>
@@ -424,7 +454,7 @@ function ConfigPage() {
               </div>
               <div className="flex justify-end">
                 <Button
-                  disabled={saveManualGoals.isPending}
+                  disabled={saveManualGoals.isPending || !perms.canEditGoals}
                   onClick={() => saveManualGoals.mutate(manualGoals)}
                 >
                   {saveManualGoals.isPending ? "Salvando..." : "Salvar metas"}
@@ -437,25 +467,59 @@ function ConfigPage() {
         <TabsContent value="notificacoes">
           <Card className="shadow-elegant">
             <CardHeader>
-              <CardTitle>Preferências de notificações</CardTitle>
-              <CardDescription>Ative somente os alertas úteis para sua rotina.</CardDescription>
+              <CardTitle>Notificações na plataforma</CardTitle>
+              <CardDescription>
+                Escolha quais alertas receber no sino do topo. Só aparecem módulos que seu cargo
+                permite acessar — a validação é feita no servidor.
+              </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              {["demands", "polls", "agenda", "weekly_email"].map((key) => (
-                <div key={key} className="flex items-center justify-between rounded-lg border p-4">
-                  <Label className="capitalize">{key.replace("_", " ")}</Label>
-                  <Switch
-                    defaultChecked={
-                      (prefs?.notifications as Record<string, boolean>)?.[key] ?? true
-                    }
-                    onCheckedChange={(checked) => {
-                      const n = {
-                        ...(prefs?.notifications as Record<string, boolean>),
-                        [key]: checked,
-                      };
-                      upsertUserPreferences(tenantId, { notifications: n });
-                    }}
-                  />
+            <CardContent className="space-y-6">
+              {NOTIFICATION_PREF_GROUPS.map((group) => (
+                <div key={group.category} className="space-y-3">
+                  <div>
+                    <h3 className="text-sm font-semibold">{group.title}</h3>
+                    <p className="text-xs text-muted-foreground">{group.description}</p>
+                  </div>
+                  <div className="space-y-2">
+                    {group.fields.map((field) => {
+                      const cat = group.category as NotificationPrefCategory;
+                      const checked =
+                        notificationPrefs[cat][field.key as keyof (typeof notificationPrefs)[typeof cat]];
+                      return (
+                        <div
+                          key={field.key}
+                          className="flex items-start justify-between gap-4 rounded-lg border p-4"
+                        >
+                          <div className="space-y-0.5">
+                            <Label htmlFor={`notif-${group.category}-${field.key}`}>
+                              {field.label}
+                            </Label>
+                            <p className="text-xs text-muted-foreground">{field.description}</p>
+                          </div>
+                          <Switch
+                            id={`notif-${group.category}-${field.key}`}
+                            checked={checked}
+                            disabled={!perms.canEditNotifications}
+                            onCheckedChange={(value) => {
+                              const next: NotificationPreferences = {
+                                ...notificationPrefs,
+                                [cat]: {
+                                  ...notificationPrefs[cat],
+                                  [field.key]: value,
+                                },
+                              };
+                              setNotificationPrefs(next);
+                              void upsertUserPreferences(tenantId, {
+                                notifications: notificationPreferencesToJson(next),
+                              }).then(() => {
+                                void qc.invalidateQueries({ queryKey: queryKeys.prefs(tenantId) });
+                              });
+                            }}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               ))}
             </CardContent>
@@ -479,5 +543,6 @@ function ConfigPage() {
         </TabsContent>
       </Tabs>
     </div>
+    </ModuleRouteGuard>
   );
 }

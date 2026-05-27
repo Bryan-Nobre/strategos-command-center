@@ -23,6 +23,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useTenant } from "@/hooks/use-tenant";
+import { usePlanGate } from "@/hooks/use-plan-gate";
+import { useCrudPermissions } from "@/hooks/use-crud-permissions";
+import { ModuleRouteGuard } from "@/components/auth/PermissionGate";
+import { PlanLimitNotice } from "@/components/common/PlanLimitNotice";
 import { usePollSnapshots, useUpsertPollSnapshot } from "@/hooks/use-dashboard";
 import type { Json } from "@/types/supabase";
 import { LoadingState } from "@/components/common/LoadingState";
@@ -39,8 +43,11 @@ type CrescimentoRow = { mes: string; apoiadores: number };
 
 function PesquisasPage() {
   const { tenantId } = useTenant();
+  const planGate = usePlanGate(tenantId);
+  const perms = useCrudPermissions("polls");
   const { data: polls, isLoading } = usePollSnapshots(tenantId);
   const upsertMutation = useUpsertPollSnapshot(tenantId);
+  const pollsLocked = !planGate.canEditPolls || !perms.canUpdate;
 
   const intencaoSaved = (polls?.find((p) => p.snapshot_type === "intencao_voto")?.data ?? []) as IntencaoRow[];
   const aprovacaoSaved = (polls?.find((p) => p.snapshot_type === "aprovacao_bairro")?.data ?? []) as AprovacaoRow[];
@@ -62,11 +69,16 @@ function PesquisasPage() {
   const hasAnyData = intencaoSaved.length || aprovacaoSaved.length || crescimentoSaved.length;
 
   return (
+    <ModuleRouteGuard module="polls">
     <div className="space-y-8">
       <PageHeader
         title="Pesquisas"
         description="Atualize intenção de voto, aprovação por bairro e crescimento mensal."
       />
+
+      {pollsLocked && (
+        <PlanLimitNotice message="Edição de pesquisas não está disponível no seu plano atual. Os dados existentes permanecem visíveis." />
+      )}
 
       {!hasAnyData && (
         <EmptyState
@@ -100,7 +112,7 @@ function PesquisasPage() {
           <Button
             className="mt-3"
             size="sm"
-            disabled={upsertMutation.isPending}
+            disabled={upsertMutation.isPending || pollsLocked}
             onClick={() =>
               upsertMutation.mutate({
                 snapshotType: "intencao_voto",
@@ -136,7 +148,7 @@ function PesquisasPage() {
           <Button
             className="mt-3"
             size="sm"
-            disabled={upsertMutation.isPending}
+            disabled={upsertMutation.isPending || pollsLocked}
             onClick={() =>
               upsertMutation.mutate({
                 snapshotType: "aprovacao_bairro",
@@ -177,7 +189,7 @@ function PesquisasPage() {
           <Button
             className="mt-3"
             size="sm"
-            disabled={upsertMutation.isPending}
+            disabled={upsertMutation.isPending || pollsLocked}
             onClick={() =>
               upsertMutation.mutate({
                 snapshotType: "crescimento_apoiadores",
@@ -192,6 +204,7 @@ function PesquisasPage() {
         </CardContent>
       </Card>
     </div>
+    </ModuleRouteGuard>
   );
 }
 

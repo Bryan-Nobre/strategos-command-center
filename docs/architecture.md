@@ -45,10 +45,11 @@ Guards de rota: `beforeLoad` + `ensureAppAuth` / `ensureAdminAuth` (SSR com cook
 | Status | CRM |
 |--------|-----|
 | `active` | Liberado |
-| `trial` | Liberado (limites futuros) |
 | `suspended` | Bloqueado — aguardando pagamento |
 | `pending` | Bloqueado — análise |
 | `cancelled` | Bloqueado — encerrado |
+
+Plano comercial (`trial`, `basic`, `pro`…) fica em `tenants.plan` — define limites, não libera/bloqueia o CRM.
 
 ## Super admin
 

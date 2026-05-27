@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -411,6 +411,7 @@ export type Database = {
       team_invitations: {
         Row: {
           created_at: string
+          custom_role_id: string | null
           email: string
           expires_at: string
           id: string
@@ -422,6 +423,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          custom_role_id?: string | null
           email: string
           expires_at?: string
           id?: string
@@ -433,6 +435,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          custom_role_id?: string | null
           email?: string
           expires_at?: string
           id?: string
@@ -443,6 +446,13 @@ export type Database = {
           token?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "team_invitations_custom_role_id_fkey"
+            columns: ["custom_role_id"]
+            isOneToOne: false
+            referencedRelation: "tenant_roles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "team_invitations_tenant_id_fkey"
             columns: ["tenant_id"]
@@ -455,6 +465,7 @@ export type Database = {
       tenant_members: {
         Row: {
           created_at: string
+          custom_role_id: string | null
           id: string
           role: Database["public"]["Enums"]["tenant_role"]
           tenant_id: string
@@ -462,6 +473,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          custom_role_id?: string | null
           id?: string
           role?: Database["public"]["Enums"]["tenant_role"]
           tenant_id: string
@@ -469,6 +481,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          custom_role_id?: string | null
           id?: string
           role?: Database["public"]["Enums"]["tenant_role"]
           tenant_id?: string
@@ -476,7 +489,58 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "tenant_members_custom_role_id_fkey"
+            columns: ["custom_role_id"]
+            isOneToOne: false
+            referencedRelation: "tenant_roles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "tenant_members_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenant_roles: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_full_access: boolean
+          is_system: boolean
+          name: string
+          permissions: Json
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_full_access?: boolean
+          is_system?: boolean
+          name: string
+          permissions?: Json
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_full_access?: boolean
+          is_system?: boolean
+          name?: string
+          permissions?: Json
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_roles_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -516,6 +580,71 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      tenant_notifications: {
+        Row: {
+          action_route: string | null
+          action_search: Json
+          actor_user_id: string | null
+          body: string | null
+          category: string
+          created_at: string
+          dedupe_key: string | null
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          read_at: string | null
+          severity: string
+          tenant_id: string
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          action_route?: string | null
+          action_search?: Json
+          actor_user_id?: string | null
+          body?: string | null
+          category: string
+          created_at?: string
+          dedupe_key?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          read_at?: string | null
+          severity?: string
+          tenant_id: string
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          action_route?: string | null
+          action_search?: Json
+          actor_user_id?: string | null
+          body?: string | null
+          category?: string
+          created_at?: string
+          dedupe_key?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          read_at?: string | null
+          severity?: string
+          tenant_id?: string
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_notifications_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_preferences: {
         Row: {
@@ -564,9 +693,61 @@ export type Database = {
       can_manage_tenant: { Args: { p_tenant_id: string }; Returns: boolean }
       can_write_tenant: { Args: { p_tenant_id: string }; Returns: boolean }
       get_public_landing: { Args: { p_slug: string }; Returns: Json }
+      get_tenant_operational_dashboard: {
+        Args: { p_tenant_id: string }
+        Returns: Json
+      }
       get_tenant_dashboard_metrics: {
         Args: { p_tenant_id: string }
         Returns: Json
+      }
+      get_tenant_plan_usage: {
+        Args: { p_tenant_id: string }
+        Returns: Json
+      }
+      list_plan_limit_definitions_admin: { Args: never; Returns: Json }
+      update_plan_limit_definition: {
+        Args: {
+          p_exports_enabled: boolean
+          p_max_regions: number | null
+          p_max_supporters: number | null
+          p_max_team_members: number | null
+          p_plan: Database["public"]["Enums"]["tenant_plan"]
+          p_polls_enabled: boolean
+        }
+        Returns: Json
+      }
+      get_my_tenant_permissions: { Args: { p_tenant_id: string }; Returns: Json }
+      get_unread_notification_count: { Args: { p_tenant_id: string }; Returns: number }
+      list_my_notifications: {
+        Args: {
+          p_limit?: number
+          p_tenant_id: string
+          p_unread_only?: boolean
+        }
+        Returns: Json
+      }
+      mark_all_notifications_read: { Args: { p_tenant_id: string }; Returns: number }
+      mark_notification_read: { Args: { p_notification_id: string }; Returns: boolean }
+      notify_supporter_import_completed: {
+        Args: { p_count: number; p_tenant_id: string }
+        Returns: string
+      }
+      list_tenant_roles: { Args: { p_tenant_id: string }; Returns: Json }
+      upsert_tenant_role: {
+        Args: {
+          p_description: string
+          p_name: string
+          p_permissions: Json
+          p_role_id: string | null
+          p_tenant_id: string
+        }
+        Returns: Json
+      }
+      delete_tenant_role: { Args: { p_role_id: string }; Returns: undefined }
+      update_member_custom_role: {
+        Args: { p_custom_role_id: string; p_member_id: string }
+        Returns: undefined
       }
       is_super_admin: { Args: never; Returns: boolean }
       log_activity: {
@@ -589,6 +770,14 @@ export type Database = {
           p_slug: string
         }
         Returns: string
+      }
+      search_tenant: {
+        Args: {
+          p_limit_per_module?: number
+          p_query: string
+          p_tenant_id: string
+        }
+        Returns: Json
       }
       setup_politician_tenant: {
         Args: { p_headline?: string; p_slug: string; p_tenant_name: string }
@@ -633,7 +822,7 @@ export type Database = {
         | "leadership"
         | "operator"
         | "viewer"
-      tenant_status: "active" | "suspended" | "pending" | "trial" | "cancelled"
+      tenant_status: "active" | "suspended" | "pending" | "cancelled"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -797,7 +986,7 @@ export const Constants = {
         "operator",
         "viewer",
       ],
-      tenant_status: ["active", "suspended", "pending", "trial", "cancelled"],
+      tenant_status: ["active", "suspended", "pending", "cancelled"],
     },
   },
 } as const

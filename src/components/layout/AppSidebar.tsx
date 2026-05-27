@@ -8,12 +8,12 @@ import {
   BarChart3,
   FileText,
   Settings,
-  Vote,
   Shield,
   LogOut,
   UserRound,
-  Briefcase,
   UsersRound,
+  CircleHelp,
+  ChevronsUpDown,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -29,7 +29,6 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,38 +37,67 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { signOut } from "@/lib/supabase/session";
+import { useTenantPermissions } from "@/hooks/use-tenant-permissions";
+import { useAuth } from "@/contexts/auth-provider";
+import { getSupportWhatsAppUrl } from "@/lib/support-contact";
+import { cn } from "@/lib/utils";
+import type { PermissionModule } from "@/types/permissions";
 
-type NavItem = { title: string; url: string; icon: LucideIcon };
+type NavItem = { title: string; url: string; icon: LucideIcon; module: PermissionModule };
+
+function SidebarBrand({ collapsed }: { collapsed: boolean }) {
+  if (collapsed) {
+    return (
+      <div className="sidebar-brand sidebar-brand--collapsed" aria-label="Strategos CRM">
+        <span className="sidebar-brand-mark">S</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="sidebar-brand">
+      <span className="sidebar-brand-title">STRATEGOS</span>
+      <div className="sidebar-brand-crm-row" aria-hidden>
+        <span className="sidebar-brand-line" />
+        <span className="sidebar-brand-crm">CRM</span>
+        <span className="sidebar-brand-line" />
+      </div>
+      <p className="sidebar-brand-tagline">LIDERANÇA. DADOS. CONQUISTAS.</p>
+    </div>
+  );
+}
 
 const overviewItems: NavItem[] = [
-  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-  { title: "Relatórios", url: "/relatorios", icon: FileText },
-  { title: "Pesquisas", url: "/pesquisas", icon: BarChart3 },
+  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard, module: "dashboard" },
+  { title: "Relatórios", url: "/relatorios", icon: FileText, module: "reports" },
+  { title: "Pesquisas", url: "/pesquisas", icon: BarChart3, module: "polls" },
 ];
 
 const operationItems: NavItem[] = [
-  { title: "Eleitores", url: "/eleitores", icon: Users },
-  { title: "Lideranças", url: "/liderancas", icon: Crown },
-  { title: "Demandas", url: "/demandas", icon: MessageSquareWarning },
-  { title: "Agenda", url: "/agenda", icon: Calendar },
+  { title: "Eleitores", url: "/eleitores", icon: Users, module: "supporters" },
+  { title: "Lideranças", url: "/liderancas", icon: Crown, module: "leaderships" },
+  { title: "Demandas", url: "/demandas", icon: MessageSquareWarning, module: "demands" },
+  { title: "Agenda", url: "/agenda", icon: Calendar, module: "agenda" },
 ];
 
 const adminItems: NavItem[] = [
-  { title: "Configurações", url: "/configuracoes", icon: Settings },
-  { title: "Equipe", url: "/equipe", icon: UsersRound },
+  { title: "Configurações", url: "/configuracoes", icon: Settings, module: "settings" },
+  { title: "Equipe", url: "/equipe", icon: UsersRound, module: "team" },
 ];
 
 export function AppSidebar({ isSuperAdmin = false }: { isSuperAdmin?: boolean }) {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const path = useRouterState({ select: (r) => r.location.pathname });
-  const { profile, activeTenant, membershipRole } = useRouteContext({ strict: false });
+  const { profile, activeTenant } = useRouteContext({ strict: false });
+  const { auth } = useAuth();
+  const tenantId = activeTenant?.id ?? "";
+  const perms = useTenantPermissions(tenantId);
 
-  const roleLabel = membershipRole
-    ? membershipRole === "owner"
-      ? "Administrador"
-      : membershipRole
-    : "Operador";
+  const userEmail = auth.user?.email ?? "";
+  const supportUrl = getSupportWhatsAppUrl(
+    "Olá! Preciso de ajuda com o Strategos CRM.",
+  );
 
   const initials = (profile?.full_name ?? "U")
     .split(" ")
@@ -84,7 +112,10 @@ export function AppSidebar({ isSuperAdmin = false }: { isSuperAdmin?: boolean })
   }
 
   function renderGroup(items: NavItem[]) {
-    return items.map((item) => {
+    const visible = items.filter((item) => perms.isLoading || perms.canRead(item.module));
+    if (visible.length === 0) return null;
+
+    return visible.map((item) => {
       const active = path === item.url || (item.url !== "/dashboard" && path.startsWith(item.url));
       return (
         <SidebarMenuItem key={item.title}>
@@ -92,11 +123,14 @@ export function AppSidebar({ isSuperAdmin = false }: { isSuperAdmin?: boolean })
             asChild
             isActive={active}
             tooltip={item.title}
-            className="strategos-nav-item h-10"
+            className="strategos-nav-item h-10 rounded-lg"
           >
-            <Link to={item.url} className="flex items-center gap-3">
-              <item.icon className="h-5 w-5" />
-              <span>{item.title}</span>
+            <Link
+              to={item.url}
+              className={cn("flex items-center gap-3", collapsed && "justify-center gap-0")}
+            >
+              <item.icon className="h-5 w-5 shrink-0" />
+              <span className={cn(collapsed && "sr-only")}>{item.title}</span>
             </Link>
           </SidebarMenuButton>
         </SidebarMenuItem>
@@ -105,67 +139,38 @@ export function AppSidebar({ isSuperAdmin = false }: { isSuperAdmin?: boolean })
   }
 
   return (
-    <Sidebar collapsible="icon" className="strategos-sidebar transition-theme">
-      <SidebarHeader className="border-b border-sidebar-border px-3 pt-4">
-        <div className="flex items-center gap-3 px-1 py-2">
-          <div
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-white shadow-md"
-            style={{ backgroundImage: "var(--sidebar-logo-gradient)" }}
-          >
-            <Vote className="h-5 w-5" />
-          </div>
-          {!collapsed && (
-            <div className="flex flex-col">
-              <span className="text-sm font-semibold tracking-tight text-sidebar-foreground">
-                Strategos CRM
-              </span>
-              <span className="text-[10px] uppercase tracking-[0.18em] text-sidebar-muted">
-                Inteligência Política
-              </span>
-            </div>
-          )}
-        </div>
-
-        {!collapsed && (
-          <div className="mt-2 space-y-3 pb-3">
-            <div
-              className="rounded-xl border border-sidebar-border p-3 shadow-[0_1px_2px_rgba(6,23,53,0.04)] transition-theme"
-              style={{ backgroundColor: "var(--sidebar-surface)" }}
-            >
-              <p className="text-xs text-sidebar-muted">Campanha</p>
-              <p className="truncate text-sm font-medium text-sidebar-foreground">
-                {activeTenant?.name ?? "Sem campanha"}
-              </p>
-              <div className="mt-2 flex items-center justify-between">
-                <span className="text-xs text-sidebar-muted">
-                  Plano {activeTenant?.plan ?? "trial"}
-                </span>
-                <Badge className="h-5 border-primary/30 bg-primary/15 px-2 text-[10px] uppercase text-primary">
-                  Ativo
-                </Badge>
-              </div>
-            </div>
-          </div>
+    <Sidebar collapsible="icon" className="strategos-sidebar z-40 transition-theme">
+      <SidebarHeader
+        className={cn(
+          "sidebar-logo-shell border-0 pb-4 pt-5",
+          collapsed ? "px-2" : "px-4",
         )}
+      >
+        <Link
+          to="/dashboard"
+          className="flex w-full justify-center transition-opacity hover:opacity-95"
+        >
+          <SidebarBrand collapsed={collapsed} />
+        </Link>
       </SidebarHeader>
 
-      <SidebarContent>
+      <SidebarContent className={cn("gap-1", collapsed ? "px-1" : "px-2")}>
         <SidebarGroup>
-          <SidebarGroupLabel className="text-sidebar-muted/80">Visão Geral</SidebarGroupLabel>
+          <SidebarGroupLabel className="sidebar-group-label">Visão geral</SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>{renderGroup(overviewItems)}</SidebarMenu>
+            <SidebarMenu>{renderGroup(overviewItems) ?? null}</SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
 
         <SidebarGroup>
-          <SidebarGroupLabel className="text-sidebar-muted/80">Operação</SidebarGroupLabel>
+          <SidebarGroupLabel className="sidebar-group-label">Operação</SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>{renderGroup(operationItems)}</SidebarMenu>
+            <SidebarMenu>{renderGroup(operationItems) ?? null}</SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
 
         <SidebarGroup>
-          <SidebarGroupLabel className="text-sidebar-muted/80">Administração</SidebarGroupLabel>
+          <SidebarGroupLabel className="sidebar-group-label">Administração</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {renderGroup(adminItems)}
@@ -173,13 +178,21 @@ export function AppSidebar({ isSuperAdmin = false }: { isSuperAdmin?: boolean })
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     asChild
-                    isActive={path.startsWith("/admin")}
+                    isActive={
+                      path === "/tenants" ||
+                      path === "/plans" ||
+                      path === "/users" ||
+                      path === "/metricas"
+                    }
                     tooltip="Super Admin"
-                    className="strategos-nav-item h-10"
+                    className="strategos-nav-item h-10 rounded-lg"
                   >
-                    <Link to="/admin/tenants" className="flex items-center gap-3">
-                      <Shield className="h-5 w-5" />
-                      <span>Super Admin</span>
+                    <Link
+                      to="/tenants"
+                      className={cn("flex items-center gap-3", collapsed && "justify-center gap-0")}
+                    >
+                      <Shield className="h-5 w-5 shrink-0" />
+                      <span className={cn(collapsed && "sr-only")}>Super Admin</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -189,47 +202,71 @@ export function AppSidebar({ isSuperAdmin = false }: { isSuperAdmin?: boolean })
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-sidebar-border p-3">
+      <SidebarFooter
+        className={cn("mt-auto gap-3 border-0", collapsed ? "items-center p-2" : "p-3")}
+      >
+        <a
+          href={supportUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={cn(
+            "sidebar-help-link flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-theme",
+            collapsed && "justify-center px-2",
+          )}
+          title="Ajuda via WhatsApp"
+        >
+          <CircleHelp className="h-5 w-5 shrink-0" />
+          {!collapsed && <span>Ajuda</span>}
+        </a>
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
               type="button"
-              className="sidebar-profile-card flex w-full items-center gap-3 rounded-xl p-2.5 text-left transition-theme hover:shadow-[0_4px_16px_rgba(6,23,53,0.06)] dark:hover:shadow-none"
+              className={cn(
+                "sidebar-profile-card flex w-full items-center gap-3 rounded-xl p-2.5 text-left transition-theme",
+                collapsed && "sidebar-profile-card--icon-only w-auto justify-center p-0",
+              )}
             >
-              <Avatar className="h-9 w-9">
-                <AvatarFallback className="bg-sidebar-primary text-sidebar-primary-foreground">
+              <Avatar className="h-9 w-9 shrink-0">
+                <AvatarFallback className="sidebar-profile-avatar text-xs">
                   {initials}
                 </AvatarFallback>
               </Avatar>
               {!collapsed && (
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-sidebar-foreground">
-                    {profile?.full_name ?? "Usuário"}
-                  </p>
-                  <p className="truncate text-xs text-sidebar-muted">{roleLabel}</p>
-                </div>
+                <>
+                  <div className="min-w-0 flex-1">
+                    <p className="sidebar-user-name truncate text-sm font-semibold">
+                      {profile?.full_name ?? "Usuário"}
+                    </p>
+                    <p className="sidebar-user-email truncate text-xs">
+                      {userEmail || "Conta da campanha"}
+                    </p>
+                  </div>
+                  <ChevronsUpDown className="sidebar-user-chevron h-4 w-4 shrink-0" aria-hidden />
+                </>
               )}
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
             <DropdownMenuItem asChild>
               <Link to="/configuracoes">
-                <UserRound className="mr-2 h-4 w-4" />
+                <UserRound className="mr-2 h-4 w-4 text-primary" />
                 Perfil
               </Link>
             </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link to="/configuracoes">
-                <Briefcase className="mr-2 h-4 w-4" />
-                Configurações
-              </Link>
-            </DropdownMenuItem>
             <DropdownMenuItem onClick={handleLogout}>
-              <LogOut className="mr-2 h-4 w-4" />
+              <LogOut className="mr-2 h-4 w-4 text-primary" />
               Sair
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+
+        {!collapsed && (
+          <p className="px-1 text-center text-[11px] text-white/70">
+            © 2026. Direitos reservados.
+          </p>
+        )}
       </SidebarFooter>
     </Sidebar>
   );

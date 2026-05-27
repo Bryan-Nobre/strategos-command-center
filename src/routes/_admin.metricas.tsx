@@ -8,7 +8,6 @@ import { queryKeys } from "@/lib/query-keys";
 import { LoadingState } from "@/components/common/LoadingState";
 
 export const Route = createFileRoute("/_admin/metricas")({
-  path: "/metricas",
   component: AdminMetricsPage,
 });
 

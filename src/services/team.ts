@@ -1,19 +1,29 @@
 import { createClient } from "@/lib/supabase/client";
+import type { Json } from "@/types/supabase";
 import type { Enums } from "@/types/supabase";
 
 export type TeamMemberWithProfile = {
   id: string;
   role: Enums<"tenant_role">;
+  customRoleId: string | null;
+  customRoleName: string | null;
   user_id: string;
   profiles: { id: string; full_name: string | null };
 };
+
+function legacyRoleFromCustomName(name: string): Enums<"tenant_role"> {
+  if (name === "Coordenador") return "coordinator";
+  if (name === "Assessor") return "advisor";
+  if (name === "Visualizador") return "viewer";
+  return "operator";
+}
 
 export async function listTeamMembers(tenantId: string): Promise<TeamMemberWithProfile[]> {
   const supabase = createClient();
 
   const { data: members, error: membersError } = await supabase
     .from("tenant_members")
-    .select("id, role, user_id")
+    .select("id, role, user_id, custom_role_id, tenant_roles(name)")
     .eq("tenant_id", tenantId);
 
   if (membersError) throw membersError;
@@ -29,26 +39,40 @@ export async function listTeamMembers(tenantId: string): Promise<TeamMemberWithP
 
   const profileById = new Map((profiles ?? []).map((p) => [p.id, p]));
 
-  return members.map((m) => ({
-    id: m.id,
-    role: m.role,
-    user_id: m.user_id,
-    profiles: profileById.get(m.user_id) ?? { id: m.user_id, full_name: null },
-  }));
+  return members.map((m) => {
+    const roleJoin = m.tenant_roles as { name: string } | null;
+    return {
+      id: m.id,
+      role: m.role,
+      customRoleId: m.custom_role_id,
+      customRoleName: roleJoin?.name ?? null,
+      user_id: m.user_id,
+      profiles: profileById.get(m.user_id) ?? { id: m.user_id, full_name: null },
+    };
+  });
 }
 
 export async function createInvitation(
   tenantId: string,
   email: string,
-  role: Enums<"tenant_role">,
+  customRoleId: string,
+  customRoleName: string,
 ) {
   const supabase = createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  const legacyRole = legacyRoleFromCustomName(customRoleName);
+
   const { data, error } = await supabase
     .from("team_invitations")
-    .insert({ tenant_id: tenantId, email, role, invited_by: user?.id ?? null })
+    .insert({
+      tenant_id: tenantId,
+      email,
+      role: legacyRole,
+      custom_role_id: customRoleId,
+      invited_by: user?.id ?? null,
+    })
     .select("id, email, role, token, expires_at")
     .single();
   if (error) throw error;
@@ -59,11 +83,27 @@ export async function listInvitations(tenantId: string) {
   const supabase = createClient();
   const { data, error } = await supabase
     .from("team_invitations")
-    .select("id, email, role, status, expires_at, created_at, token")
+    .select("id, email, role, status, expires_at, created_at, token, custom_role_id, tenant_roles(name)")
     .eq("tenant_id", tenantId)
     .eq("status", "pending");
   if (error) throw error;
-  return data;
+
+  return (data ?? []).map((inv) => {
+    const roleJoin = inv.tenant_roles as { name: string } | null;
+    return {
+      ...inv,
+      customRoleName: roleJoin?.name ?? null,
+    };
+  });
+}
+
+export async function updateMemberRole(memberId: string, customRoleId: string) {
+  const supabase = createClient();
+  const { error } = await supabase.rpc("update_member_custom_role", {
+    p_member_id: memberId,
+    p_custom_role_id: customRoleId,
+  });
+  if (error) throw error;
 }
 
 export async function acceptInvitation(token: string) {
@@ -106,7 +146,7 @@ export async function getUserPreferences(tenantId: string) {
 
 export async function upsertUserPreferences(
   tenantId: string,
-  payload: { theme?: string; notifications?: Record<string, boolean> },
+  payload: { theme?: string; notifications?: Json },
 ) {
   const supabase = createClient();
   const {

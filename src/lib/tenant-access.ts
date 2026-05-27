@@ -1,9 +1,9 @@
 import type { Enums } from "@/types/supabase";
 import { TENANT_STATUS_LABELS } from "@/types/tenant";
 
-/** CRM liberado para uso operacional (active + trial). Segurança real: RLS/backend. */
+/** CRM liberado para uso operacional. Segurança real: RLS/backend. */
 export function isTenantOperational(tenant: { status: Enums<"tenant_status"> } | null | undefined): boolean {
-  return tenant?.status === "active" || tenant?.status === "trial";
+  return tenant?.status === "active";
 }
 
 export function getTenantAccessMessage(status: Enums<"tenant_status">): {

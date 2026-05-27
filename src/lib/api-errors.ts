@@ -26,8 +26,19 @@ export class ApiTenantError extends Error {
   }
 }
 
+export class ApiPlanLimitError extends Error {
+  readonly status = 403;
+  constructor(message = "Limite do plano atingido.") {
+    super(message);
+    this.name = "ApiPlanLimitError";
+  }
+}
+
 export function mapSupabaseErrorToApiError(error: { message?: string; code?: string; status?: number }): Error {
   const msg = error.message ?? "Erro inesperado";
+  if (msg.startsWith("PLAN_LIMIT:")) {
+    return new ApiPlanLimitError(msg);
+  }
   if (error.code === "PGRST301" || error.status === 401) {
     return new ApiAuthError(msg);
   }

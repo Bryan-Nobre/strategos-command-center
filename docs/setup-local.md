@@ -28,7 +28,7 @@ Preencha `VITE_SUPABASE_URL` (sem `/rest/v1`) e `VITE_SUPABASE_ANON_KEY`.
 supabase db push
 ```
 
-Ordem: `supabase/migrations/01` … `09`.
+Lista completa: [supabase-migrations.md](./supabase-migrations.md). No remoto `politicos-hub`, use `supabase db push` para aplicar apenas migrations pendentes.
 
 4. Configure Auth redirect URLs no Supabase (Authentication → URL Configuration):
 

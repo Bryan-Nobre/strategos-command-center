@@ -40,7 +40,7 @@ Após logout, queries tenant-scoped devem ser removidas (`clearTenantScopedCache
 Se ao logar em B aparecer dado de A por 1 frame:
 
 1. Verifique `queryKeys.*(tenantId)` nos hooks
-2. Confirme RLS no Supabase (`02 - rls_and_helpers.sql`)
+2. Confirme RLS no Supabase (`20260521005925_rls_and_helpers.sql`)
 
 ## SQL de verificação (Supabase SQL Editor)
 

@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Building2, BarChart3, Vote, Users, Shield } from "lucide-react";
+import { Building2, BarChart3, Vote, Users, Shield, CreditCard } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -15,9 +15,10 @@ import {
 import { cn } from "@/lib/utils";
 
 const items = [
-  { title: "Clientes", url: "/admin/tenants", icon: Building2 },
-  { title: "Usuários", url: "/admin/users", icon: Users },
-  { title: "Métricas", url: "/admin/metricas", icon: BarChart3 },
+  { title: "Clientes", url: "/tenants", icon: Building2 },
+  { title: "Planos", url: "/plans", icon: CreditCard },
+  { title: "Usuários", url: "/users", icon: Users },
+  { title: "Métricas", url: "/metricas", icon: BarChart3 },
 ];
 
 export function AdminSidebar() {

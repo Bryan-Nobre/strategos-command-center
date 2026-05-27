@@ -5,6 +5,10 @@ import { Button } from "@/components/ui/button";
 import { ChartCard } from "@/components/common/ChartCard";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { useTenant } from "@/hooks/use-tenant";
+import { usePlanGate } from "@/hooks/use-plan-gate";
+import { useCrudPermissions } from "@/hooks/use-crud-permissions";
+import { ModuleRouteGuard } from "@/components/auth/PermissionGate";
+import { PlanLimitNotice } from "@/components/common/PlanLimitNotice";
 import { useSupporters } from "@/hooks/use-supporters";
 import { useDemands } from "@/hooks/use-demands";
 import { usePollSnapshots } from "@/hooks/use-dashboard";
@@ -20,6 +24,8 @@ export const Route = createFileRoute("/_app/relatorios")({
 
 function RelatoriosPage() {
   const { tenantId, activeTenant } = useTenant();
+  const planGate = usePlanGate(tenantId);
+  const perms = useCrudPermissions("reports");
   const { data: supporters, isLoading } = useSupporters(tenantId);
   const { data: demands } = useDemands(tenantId);
   const { data: polls } = usePollSnapshots(tenantId);
@@ -31,12 +37,20 @@ function RelatoriosPage() {
   const slug = activeTenant?.slug ?? "campanha";
 
   function exportSupporters() {
+    if (!planGate.canExport || !perms.canExport) {
+      toast.error("Exportação não disponível para seu cargo ou plano.");
+      return;
+    }
     const rows = supporters ?? [];
     downloadCsv(buildCsvFilename(slug, "apoiadores"), supportersToCsv(rows));
     toast.success(`${rows.length} apoiador(es) exportado(s)`);
   }
 
   function exportConsolidated() {
+    if (!planGate.canExport || !perms.canExport) {
+      toast.error("Exportação não disponível para seu cargo ou plano.");
+      return;
+    }
     const csv = buildConsolidatedReportCsv(supporters ?? [], demands ?? []);
     downloadCsv(buildCsvFilename(slug, "relatorio-consolidado"), csv);
     toast.success("Relatório consolidado gerado");
@@ -45,23 +59,33 @@ function RelatoriosPage() {
   if (isLoading) return <LoadingState />;
 
   return (
+    <ModuleRouteGuard module="reports">
     <div className="space-y-8">
       <PageHeader
         title="Relatórios"
         description="Exportação e visualização consolidada."
         actions={
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={exportSupporters}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={exportSupporters}
+              disabled={!planGate.canExport || !perms.canExport}
+            >
               <Download className="mr-2 h-4 w-4" />
               Apoiadores CSV
             </Button>
-            <Button size="sm" onClick={exportConsolidated}>
+            <Button size="sm" onClick={exportConsolidated} disabled={!planGate.canExport || !perms.canExport}>
               <Download className="mr-2 h-4 w-4" />
               Relatório consolidado
             </Button>
           </div>
         }
       />
+
+      {!planGate.canExport && (
+        <PlanLimitNotice message="Exportação de relatórios não está disponível no seu plano atual." />
+      )}
 
       <ChartCard
         title="Crescimento"
@@ -92,5 +116,6 @@ function RelatoriosPage() {
         </div>
       </ChartCard>
     </div>
+    </ModuleRouteGuard>
   );
 }

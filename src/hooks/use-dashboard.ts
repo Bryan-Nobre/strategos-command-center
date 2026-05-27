@@ -1,14 +1,27 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { queryKeys } from "@/lib/query-keys";
+import { planLimitUserMessage } from "@/lib/plan-errors";
 import * as dashboardService from "@/services/dashboard";
 import type { Enums, Json } from "@/types/supabase";
 
+export function useOperationalDashboard(tenantId: string) {
+  return useQuery({
+    queryKey: queryKeys.operationalDashboard(tenantId),
+    queryFn: () => dashboardService.getOperationalDashboard(tenantId),
+    enabled: !!tenantId,
+    staleTime: 60_000,
+  });
+}
+
+/** Métricas resumidas — cache compartilhado com a RPC operacional. */
 export function useDashboardMetrics(tenantId: string) {
   return useQuery({
-    queryKey: queryKeys.dashboard(tenantId),
-    queryFn: () => dashboardService.getDashboardMetrics(tenantId),
+    queryKey: queryKeys.operationalDashboard(tenantId),
+    queryFn: () => dashboardService.getOperationalDashboard(tenantId),
     enabled: !!tenantId,
+    staleTime: 60_000,
+    select: (data) => data.metrics,
   });
 }
 
@@ -28,14 +41,6 @@ export function usePollSnapshots(tenantId: string) {
   });
 }
 
-export function useStrategicInsights(tenantId: string) {
-  return useQuery({
-    queryKey: queryKeys.strategicInsights(tenantId),
-    queryFn: () => dashboardService.getStrategicInsights(tenantId),
-    enabled: !!tenantId,
-  });
-}
-
 export function useManualGoalsConfig(tenantId: string) {
   return useQuery({
     queryKey: queryKeys.weeklyGoalsConfig(tenantId),
@@ -51,11 +56,10 @@ export function useSaveManualGoalsConfig(tenantId: string) {
       dashboardService.saveManualGoalsConfig(tenantId, goals),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.weeklyGoalsConfig(tenantId) });
-      qc.invalidateQueries({ queryKey: queryKeys.strategicInsights(tenantId) });
-      qc.invalidateQueries({ queryKey: queryKeys.dashboard(tenantId) });
+      qc.invalidateQueries({ queryKey: queryKeys.operationalDashboard(tenantId) });
       toast.success("Metas salvas");
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(planLimitUserMessage(e)),
   });
 }
 
@@ -75,6 +79,6 @@ export function useUpsertPollSnapshot(tenantId: string) {
       qc.invalidateQueries({ queryKey: queryKeys.pollSnapshots(tenantId) });
       toast.success("Pesquisa salva");
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(planLimitUserMessage(e)),
   });
 }

@@ -63,6 +63,6 @@ WHERE id = '<uuid-do-usuario>';
 
 ## Migrations
 
-Arquivos em `supabase/migrations/` (ordem `01` → `04`). **Já aplicadas** no projeto remoto `politicos-hub` — não é necessário rodar de novo nesse banco.
+Arquivos em `supabase/migrations/` (padrão `<timestamp>_nome.sql`). As migrations iniciais **já estão aplicadas** no remoto `politicos-hub`; pode haver pendente `20260527120000_operational_dashboard_rpc`.
 
-Só execute `supabase db push` se for um **projeto Supabase novo** ou banco local vazio. Detalhes em [supabase/migrations/README.md](../supabase/migrations/README.md).
+Execute `supabase db push` para aplicar pendentes ou em **projeto Supabase novo**. Detalhes em [supabase-migrations.md](./supabase-migrations.md).

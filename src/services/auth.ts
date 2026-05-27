@@ -11,7 +11,7 @@ export async function completePoliticianOnboarding(payload: {
   const { data: tenantId, error } = await supabase.rpc("setup_politician_tenant", {
     p_tenant_name: payload.tenantName,
     p_slug: payload.slug,
-    p_headline: payload.headline ?? null,
+    p_headline: payload.headline ?? undefined,
   });
   if (error) throw error;
   return { tenantId: tenantId as string };

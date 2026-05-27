@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { Plus, Calendar as CalIcon, MapPin, Pencil, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Plus, Calendar as CalIcon, MapPin, Pencil, Trash2, Search } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { EmptyState } from "@/components/common/EmptyState";
 import { ConfirmDeleteDialog } from "@/components/common/ConfirmDeleteDialog";
@@ -20,6 +20,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useTenant } from "@/hooks/use-tenant";
+import { useCrudPermissions } from "@/hooks/use-crud-permissions";
+import { ModuleRouteGuard } from "@/components/auth/PermissionGate";
 import {
   useAgendaEvents,
   useCreateAgendaEvent,
@@ -28,8 +30,17 @@ import {
 } from "@/hooks/use-agenda";
 import { LoadingState } from "@/components/common/LoadingState";
 import type { Enums } from "@/types/supabase";
+import { DEEP_LINK_HIGHLIGHT_CLASS } from "@/lib/search-deep-link";
+import {
+  parseAgendaSearch,
+  serializeAgendaSearch,
+  type AgendaListSearch,
+} from "@/lib/list-search/agenda";
+import { useSyncedListSearch } from "@/hooks/use-synced-list-search";
+import { ListUrlActions } from "@/components/common/ListUrlActions";
 
 export const Route = createFileRoute("/_app/agenda")({
+  validateSearch: (search: Record<string, unknown>): AgendaListSearch => parseAgendaSearch(search),
   component: AgendaPage,
 });
 
@@ -37,29 +48,88 @@ type EventRow = NonNullable<ReturnType<typeof useAgendaEvents>["data"]>[number];
 
 function AgendaPage() {
   const { tenantId } = useTenant();
+  const urlSearch = Route.useSearch();
+  const highlightId = urlSearch.id;
+  const { localText: query, setLocalText: setQuery, setSearch } = useSyncedListSearch({
+    search: urlSearch,
+    serialize: serializeAgendaSearch,
+  });
+
   const { data: events, isLoading } = useAgendaEvents(tenantId);
   const createMutation = useCreateAgendaEvent(tenantId);
   const updateMutation = useUpdateAgendaEvent(tenantId);
   const deleteMutation = useDeleteAgendaEvent(tenantId);
+  const perms = useCrudPermissions("agenda");
 
-  const [date, setDate] = useState<Date | undefined>(new Date());
+  const selectedDateStr =
+    urlSearch.data ?? new Date().toISOString().slice(0, 10);
+  const date = useMemo(() => new Date(`${selectedDateStr}T12:00:00`), [selectedDateStr]);
+
+  const highlightRef = useRef<HTMLDivElement>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<EventRow | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<EventRow | null>(null);
 
+  useEffect(() => {
+    if (!highlightId || !events?.length) return;
+    const target = events.find((e) => e.id === highlightId);
+    if (target?.event_date && target.event_date !== urlSearch.data) {
+      setSearch({ ...urlSearch, data: target.event_date });
+    }
+  }, [highlightId, events, urlSearch, setSearch]);
+
+  const visibleEvents = useMemo(() => {
+    const all = events ?? [];
+    const q = query.toLowerCase();
+
+    if (highlightId) {
+      const target = all.find((e) => e.id === highlightId);
+      if (target) {
+        const matchesQuery =
+          !q ||
+          [target.title, target.location, target.description].some((f) =>
+            f?.toLowerCase().includes(q),
+          );
+        return matchesQuery ? [target] : [];
+      }
+    }
+
+    const byDate = all.filter((ev) => ev.event_date === selectedDateStr);
+
+    if (!q) return byDate;
+
+    return byDate.filter((ev) =>
+      [ev.title, ev.location, ev.description].some((f) => f?.toLowerCase().includes(q)),
+    );
+  }, [events, highlightId, query, selectedDateStr]);
+
+  useEffect(() => {
+    if (highlightId && highlightRef.current) {
+      highlightRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [highlightId, visibleEvents]);
+
+  function onSelectDate(d: Date | undefined) {
+    if (!d) return;
+    const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    setSearch({ ...serializeAgendaSearch(urlSearch), data: iso, busca: query || undefined, id: highlightId });
+  }
+
+  function clearFilters() {
+    setQuery("");
+    setSearch({ data: selectedDateStr });
+  }
+
   if (isLoading) return <LoadingState />;
 
-  const selectedDateStr = date?.toISOString().slice(0, 10);
-  const visibleEvents = selectedDateStr
-    ? (events ?? []).filter((ev) => ev.event_date === selectedDateStr)
-    : events ?? [];
-
   return (
+    <ModuleRouteGuard module="agenda">
     <div className="space-y-8">
       <PageHeader
         title="Agenda política"
         description="Reuniões, eventos, caminhadas e visitas."
         actions={
+          perms.canCreate ? (
           <Dialog open={createOpen} onOpenChange={setCreateOpen}>
             <DialogTrigger asChild>
               <Button size="sm">
@@ -76,13 +146,27 @@ function AgendaPage() {
               }}
             />
           </Dialog>
+          ) : null
         }
       />
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="relative flex-1 max-w-md">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Buscar evento, local..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        {(query.trim() || highlightId) && <ListUrlActions onClear={clearFilters} />}
+      </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="shadow-elegant lg:col-span-1">
           <CardContent className="p-4">
-            <Calendar mode="single" selected={date} onSelect={setDate} className="rounded-md" />
+            <Calendar mode="single" selected={date} onSelect={onSelectDate} className="rounded-md" />
           </CardContent>
         </Card>
         <div className="space-y-3 lg:col-span-2">
@@ -91,8 +175,8 @@ function AgendaPage() {
               icon={CalIcon}
               title="Nenhum evento agendado"
               description="Cadastre reuniões, caminhadas e visitas da campanha."
-              actionLabel="Novo evento"
-              onAction={() => setCreateOpen(true)}
+              actionLabel={perms.canCreate ? "Novo evento" : undefined}
+              onAction={perms.canCreate ? () => setCreateOpen(true) : undefined}
             />
           ) : !visibleEvents.length ? (
             <EmptyState
@@ -104,7 +188,14 @@ function AgendaPage() {
             />
           ) : (
             visibleEvents.map((ev) => (
-              <Card key={ev.id} className="shadow-sm">
+              <Card
+                key={ev.id}
+                ref={ev.id === highlightId ? highlightRef : undefined}
+                className={[
+                  "shadow-sm",
+                  ev.id === highlightId ? DEEP_LINK_HIGHLIGHT_CLASS : "",
+                ].join(" ")}
+              >
                 <CardContent className="flex items-start justify-between gap-4 p-4">
                   <div className="flex items-start gap-4">
                     <div className="flex h-12 w-12 flex-col items-center justify-center rounded-lg bg-primary/10 text-primary">
@@ -127,9 +218,12 @@ function AgendaPage() {
                     </div>
                   </div>
                   <div className="flex shrink-0 gap-1">
+                    {perms.canUpdate && (
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditTarget(ev)}>
                       <Pencil className="h-4 w-4" />
                     </Button>
+                    )}
+                    {perms.canDelete && (
                     <Button
                       variant="ghost"
                       size="icon"
@@ -138,6 +232,7 @@ function AgendaPage() {
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -172,6 +267,7 @@ function AgendaPage() {
         }}
       />
     </div>
+    </ModuleRouteGuard>
   );
 }
 

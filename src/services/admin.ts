@@ -143,7 +143,7 @@ export async function getPlatformMetrics() {
   const clientTenantIds = clientTenants.map((t) => t.id);
 
   const totalTenants = clientTenants.length;
-  const activeTenants = clientTenants.filter((t) => t.status === "active" || t.status === "trial").length;
+  const activeTenants = clientTenants.filter((t) => t.status === "active").length;
   const suspendedTenants = clientTenants.filter((t) => t.status === "suspended").length;
   const pendingTenants = clientTenants.filter((t) => t.status === "pending").length;
 

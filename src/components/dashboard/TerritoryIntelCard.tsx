@@ -24,11 +24,13 @@ export function TerritoryIntelCard({
   description,
   territories,
   variant,
+  canViewTerritoryLink = true,
 }: {
   title: string;
   description: string;
   territories: EnrichedTerritory[];
   variant: "critical" | "promising";
+  canViewTerritoryLink?: boolean;
 }) {
   return (
     <Card>
@@ -66,11 +68,13 @@ export function TerritoryIntelCard({
                 </>
               )}
             </p>
-            <Button variant="ghost" size="sm" className="mt-3 h-8 px-2 text-xs" asChild>
-              <Link to="/eleitores" search={{ bairro: t.neighborhood }}>
-                Ver território
-              </Link>
-            </Button>
+            {canViewTerritoryLink && (
+              <Button variant="ghost" size="sm" className="mt-3 h-8 px-2 text-xs" asChild>
+                <Link to="/eleitores" search={{ bairro: t.neighborhood }}>
+                  Ver território
+                </Link>
+              </Button>
+            )}
           </div>
         ))}
         {!territories.length && (

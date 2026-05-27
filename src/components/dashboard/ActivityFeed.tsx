@@ -15,14 +15,31 @@ function iconForEntity(type: string | null | undefined) {
   return Activity;
 }
 
-export function ActivityFeed({ activities }: { activities: ActivityRow[] }) {
+export function ActivityFeed({
+  activities,
+  isLoading,
+}: {
+  activities: ActivityRow[];
+  isLoading?: boolean;
+}) {
   return (
     <Card>
       <CardHeader className="pb-4">
         <CardTitle>Atividades recentes</CardTitle>
       </CardHeader>
       <CardContent className="space-y-1 pb-6">
-        {activities.map((a) => {
+        {isLoading &&
+          Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="flex gap-3 px-2 py-2.5">
+              <div className="h-9 w-9 shrink-0 animate-pulse rounded-xl bg-muted" />
+              <div className="flex-1 space-y-2">
+                <div className="h-4 w-full animate-pulse rounded bg-muted" />
+                <div className="h-3 w-24 animate-pulse rounded bg-muted" />
+              </div>
+            </div>
+          ))}
+        {!isLoading &&
+          activities.map((a) => {
           const Icon = iconForEntity(a.entity_type);
           const at = new Date(a.created_at);
           return (
@@ -44,7 +61,7 @@ export function ActivityFeed({ activities }: { activities: ActivityRow[] }) {
             </div>
           );
         })}
-        {!activities.length && (
+        {!isLoading && !activities.length && (
           <p className="py-4 text-sm text-muted-foreground">Nenhuma atividade registrada ainda.</p>
         )}
       </CardContent>

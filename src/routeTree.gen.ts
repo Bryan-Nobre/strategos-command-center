@@ -28,7 +28,10 @@ import { Route as AppConfiguracoesRouteImport } from './routes/_app.configuracoe
 import { Route as AppAgendaRouteImport } from './routes/_app.agenda'
 import { Route as AdminUsersRouteImport } from './routes/_admin.users'
 import { Route as AdminTenantsRouteImport } from './routes/_admin.tenants'
+import { Route as AdminPlansRouteImport } from './routes/_admin.plans'
 import { Route as AdminMetricasRouteImport } from './routes/_admin.metricas'
+import { Route as AppEquipeIndexRouteImport } from './routes/_app.equipe.index'
+import { Route as AppEquipeCargosRouteImport } from './routes/_app.equipe.cargos'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -123,10 +126,25 @@ const AdminTenantsRoute = AdminTenantsRouteImport.update({
   path: '/tenants',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminPlansRoute = AdminPlansRouteImport.update({
+  id: '/plans',
+  path: '/plans',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminMetricasRoute = AdminMetricasRouteImport.update({
   id: '/metricas',
   path: '/metricas',
   getParentRoute: () => AdminRoute,
+} as any)
+const AppEquipeIndexRoute = AppEquipeIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppEquipeRoute,
+} as any)
+const AppEquipeCargosRoute = AppEquipeCargosRouteImport.update({
+  id: '/cargos',
+  path: '/cargos',
+  getParentRoute: () => AppEquipeRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -134,6 +152,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/metricas': typeof AdminMetricasRoute
+  '/plans': typeof AdminPlansRoute
   '/tenants': typeof AdminTenantsRoute
   '/users': typeof AdminUsersRoute
   '/agenda': typeof AppAgendaRoute
@@ -141,19 +160,22 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AppDashboardRoute
   '/demandas': typeof AppDemandasRoute
   '/eleitores': typeof AppEleitoresRoute
-  '/equipe': typeof AppEquipeRoute
+  '/equipe': typeof AppEquipeRouteWithChildren
   '/liderancas': typeof AppLiderancasRoute
   '/pesquisas': typeof AppPesquisasRoute
   '/relatorios': typeof AppRelatoriosRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/invite/$token': typeof InviteTokenRoute
   '/p/$slug': typeof PSlugRoute
+  '/equipe/cargos': typeof AppEquipeCargosRoute
+  '/equipe/': typeof AppEquipeIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/metricas': typeof AdminMetricasRoute
+  '/plans': typeof AdminPlansRoute
   '/tenants': typeof AdminTenantsRoute
   '/users': typeof AdminUsersRoute
   '/agenda': typeof AppAgendaRoute
@@ -161,13 +183,14 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AppDashboardRoute
   '/demandas': typeof AppDemandasRoute
   '/eleitores': typeof AppEleitoresRoute
-  '/equipe': typeof AppEquipeRoute
   '/liderancas': typeof AppLiderancasRoute
   '/pesquisas': typeof AppPesquisasRoute
   '/relatorios': typeof AppRelatoriosRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/invite/$token': typeof InviteTokenRoute
   '/p/$slug': typeof PSlugRoute
+  '/equipe/cargos': typeof AppEquipeCargosRoute
+  '/equipe': typeof AppEquipeIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -177,6 +200,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/_admin/metricas': typeof AdminMetricasRoute
+  '/_admin/plans': typeof AdminPlansRoute
   '/_admin/tenants': typeof AdminTenantsRoute
   '/_admin/users': typeof AdminUsersRoute
   '/_app/agenda': typeof AppAgendaRoute
@@ -184,13 +208,15 @@ export interface FileRoutesById {
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/demandas': typeof AppDemandasRoute
   '/_app/eleitores': typeof AppEleitoresRoute
-  '/_app/equipe': typeof AppEquipeRoute
+  '/_app/equipe': typeof AppEquipeRouteWithChildren
   '/_app/liderancas': typeof AppLiderancasRoute
   '/_app/pesquisas': typeof AppPesquisasRoute
   '/_app/relatorios': typeof AppRelatoriosRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/invite/$token': typeof InviteTokenRoute
   '/p/$slug': typeof PSlugRoute
+  '/_app/equipe/cargos': typeof AppEquipeCargosRoute
+  '/_app/equipe/': typeof AppEquipeIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -199,6 +225,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/signup'
     | '/metricas'
+    | '/plans'
     | '/tenants'
     | '/users'
     | '/agenda'
@@ -213,12 +240,15 @@ export interface FileRouteTypes {
     | '/auth/callback'
     | '/invite/$token'
     | '/p/$slug'
+    | '/equipe/cargos'
+    | '/equipe/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/login'
     | '/signup'
     | '/metricas'
+    | '/plans'
     | '/tenants'
     | '/users'
     | '/agenda'
@@ -226,13 +256,14 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/demandas'
     | '/eleitores'
-    | '/equipe'
     | '/liderancas'
     | '/pesquisas'
     | '/relatorios'
     | '/auth/callback'
     | '/invite/$token'
     | '/p/$slug'
+    | '/equipe/cargos'
+    | '/equipe'
   id:
     | '__root__'
     | '/'
@@ -241,6 +272,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/signup'
     | '/_admin/metricas'
+    | '/_admin/plans'
     | '/_admin/tenants'
     | '/_admin/users'
     | '/_app/agenda'
@@ -255,6 +287,8 @@ export interface FileRouteTypes {
     | '/auth/callback'
     | '/invite/$token'
     | '/p/$slug'
+    | '/_app/equipe/cargos'
+    | '/_app/equipe/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -403,6 +437,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminTenantsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/_admin/plans': {
+      id: '/_admin/plans'
+      path: '/plans'
+      fullPath: '/plans'
+      preLoaderRoute: typeof AdminPlansRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/_admin/metricas': {
       id: '/_admin/metricas'
       path: '/metricas'
@@ -410,22 +451,52 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminMetricasRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/_app/equipe/': {
+      id: '/_app/equipe/'
+      path: '/'
+      fullPath: '/equipe/'
+      preLoaderRoute: typeof AppEquipeIndexRouteImport
+      parentRoute: typeof AppEquipeRoute
+    }
+    '/_app/equipe/cargos': {
+      id: '/_app/equipe/cargos'
+      path: '/cargos'
+      fullPath: '/equipe/cargos'
+      preLoaderRoute: typeof AppEquipeCargosRouteImport
+      parentRoute: typeof AppEquipeRoute
+    }
   }
 }
 
 interface AdminRouteChildren {
   AdminMetricasRoute: typeof AdminMetricasRoute
+  AdminPlansRoute: typeof AdminPlansRoute
   AdminTenantsRoute: typeof AdminTenantsRoute
   AdminUsersRoute: typeof AdminUsersRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
   AdminMetricasRoute: AdminMetricasRoute,
+  AdminPlansRoute: AdminPlansRoute,
   AdminTenantsRoute: AdminTenantsRoute,
   AdminUsersRoute: AdminUsersRoute,
 }
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
+
+interface AppEquipeRouteChildren {
+  AppEquipeCargosRoute: typeof AppEquipeCargosRoute
+  AppEquipeIndexRoute: typeof AppEquipeIndexRoute
+}
+
+const AppEquipeRouteChildren: AppEquipeRouteChildren = {
+  AppEquipeCargosRoute: AppEquipeCargosRoute,
+  AppEquipeIndexRoute: AppEquipeIndexRoute,
+}
+
+const AppEquipeRouteWithChildren = AppEquipeRoute._addFileChildren(
+  AppEquipeRouteChildren,
+)
 
 interface AppRouteChildren {
   AppAgendaRoute: typeof AppAgendaRoute
@@ -433,7 +504,7 @@ interface AppRouteChildren {
   AppDashboardRoute: typeof AppDashboardRoute
   AppDemandasRoute: typeof AppDemandasRoute
   AppEleitoresRoute: typeof AppEleitoresRoute
-  AppEquipeRoute: typeof AppEquipeRoute
+  AppEquipeRoute: typeof AppEquipeRouteWithChildren
   AppLiderancasRoute: typeof AppLiderancasRoute
   AppPesquisasRoute: typeof AppPesquisasRoute
   AppRelatoriosRoute: typeof AppRelatoriosRoute
@@ -445,7 +516,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppDashboardRoute: AppDashboardRoute,
   AppDemandasRoute: AppDemandasRoute,
   AppEleitoresRoute: AppEleitoresRoute,
-  AppEquipeRoute: AppEquipeRoute,
+  AppEquipeRoute: AppEquipeRouteWithChildren,
   AppLiderancasRoute: AppLiderancasRoute,
   AppPesquisasRoute: AppPesquisasRoute,
   AppRelatoriosRoute: AppRelatoriosRoute,

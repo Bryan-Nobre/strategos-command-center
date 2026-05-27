@@ -65,6 +65,10 @@ import {
 } from "@/hooks/use-supporters";
 import { useLeaderships } from "@/hooks/use-leaderships";
 import { useDashboardMetrics } from "@/hooks/use-dashboard";
+import { usePlanGate } from "@/hooks/use-plan-gate";
+import { useCrudPermissions } from "@/hooks/use-crud-permissions";
+import { ModuleRouteGuard } from "@/components/auth/PermissionGate";
+import { PlanLimitNotice } from "@/components/common/PlanLimitNotice";
 import { LoadingState } from "@/components/common/LoadingState";
 import {
   SupporterFormFields,
@@ -83,15 +87,21 @@ import {
   getSupporterImportTemplateCsv,
 } from "@/lib/csv/supporters-csv";
 import { toast } from "sonner";
-
-type EleitoresSearch = {
-  bairro?: string;
-};
+import { DEEP_LINK_HIGHLIGHT_CLASS } from "@/lib/search-deep-link";
+import {
+  eleitoresSearchToFilterState,
+  filterStateToEleitoresSearch,
+  parseEleitoresSearch,
+  serializeEleitoresSearch,
+  type EleitoresListSearch,
+} from "@/lib/list-search/eleitores";
+import { countActiveFilters } from "@/lib/list-search/utils";
+import { useSyncedListSearch } from "@/hooks/use-synced-list-search";
+import { ListUrlActions } from "@/components/common/ListUrlActions";
 
 export const Route = createFileRoute("/_app/eleitores")({
-  validateSearch: (search: Record<string, unknown>): EleitoresSearch => ({
-    bairro: typeof search.bairro === "string" && search.bairro ? search.bairro : undefined,
-  }),
+  validateSearch: (search: Record<string, unknown>): EleitoresListSearch =>
+    parseEleitoresSearch(search),
   component: EleitoresPage,
 });
 
@@ -106,26 +116,26 @@ type SupporterRow = NonNullable<ReturnType<typeof useSupporters>["data"]>[number
 
 function EleitoresPage() {
   const { tenantId, activeTenant } = useTenant();
-  const { bairro: bairroFromUrl } = Route.useSearch();
-  const [query, setQuery] = useState("");
+  const urlSearch = Route.useSearch();
+  const highlightId = urlSearch.id;
+  const filters = eleitoresSearchToFilterState(urlSearch);
+  const { localText: query, setLocalText: setQuery, setSearch } = useSyncedListSearch({
+    search: urlSearch,
+    serialize: serializeEleitoresSearch,
+  });
+
+  const highlightRef = useRef<HTMLTableRowElement>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<SupporterRow | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<SupporterRow | null>(null);
   const importRef = useRef<HTMLInputElement>(null);
 
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [neighborhoodFilter, setNeighborhoodFilter] = useState<string>("all");
-  const [leadershipFilter, setLeadershipFilter] = useState<string>("all");
-  const [supportFilter, setSupportFilter] = useState<string>("all");
-  const [tagFilter, setTagFilter] = useState("");
-
   useEffect(() => {
-    if (bairroFromUrl) {
-      setNeighborhoodFilter(bairroFromUrl);
+    if (urlSearch.bairro || urlSearch.status || urlSearch.lideranca || urlSearch.apoio || urlSearch.tag) {
       setFiltersOpen(true);
     }
-  }, [bairroFromUrl]);
+  }, [urlSearch.bairro, urlSearch.status, urlSearch.lideranca, urlSearch.apoio, urlSearch.tag]);
 
   const { data: supporters, isLoading } = useSupporters(tenantId);
   const { data: leaderships } = useLeaderships(tenantId);
@@ -134,6 +144,8 @@ function EleitoresPage() {
   const updateMutation = useUpdateSupporter(tenantId);
   const deleteMutation = useDeleteSupporter(tenantId);
   const importMutation = useImportSupporters(tenantId);
+  const planGate = usePlanGate(tenantId);
+  const perms = useCrudPermissions("supporters");
 
   const leadershipMap = useMemo(
     () => new Map((leaderships ?? []).map((l) => [l.id, l.name])),
@@ -164,15 +176,16 @@ function EleitoresPage() {
         [e.name, e.phone, e.neighborhood, e.city, ...(e.tags ?? [])].some((f) =>
           f?.toLowerCase().includes(q),
         );
-      const matchesStatus = statusFilter === "all" || e.status === statusFilter;
+      const matchesStatus = filters.status === "all" || e.status === filters.status;
       const matchesNeighborhood =
-        neighborhoodFilter === "all" || e.neighborhood === neighborhoodFilter;
+        filters.bairro === "all" || e.neighborhood === filters.bairro;
       const matchesLeadership =
-        leadershipFilter === "all" ||
-        (leadershipFilter === "none" ? !e.leadership_id : e.leadership_id === leadershipFilter);
-      const matchesSupport = supportFilter === "all" || e.support_level === supportFilter;
+        filters.lideranca === "all" ||
+        (filters.lideranca === "none" ? !e.leadership_id : e.leadership_id === filters.lideranca);
+      const matchesSupport = filters.apoio === "all" || e.support_level === filters.apoio;
       const matchesTag =
-        !tagFilter || (e.tags ?? []).some((t) => t.toLowerCase().includes(tagFilter.toLowerCase()));
+        !filters.tag ||
+        (e.tags ?? []).some((t) => t.toLowerCase().includes(filters.tag.toLowerCase()));
       return (
         matchesQuery &&
         matchesStatus &&
@@ -185,22 +198,33 @@ function EleitoresPage() {
   }, [
     supporters,
     query,
-    statusFilter,
-    neighborhoodFilter,
-    leadershipFilter,
-    supportFilter,
-    tagFilter,
+    filters.status,
+    filters.bairro,
+    filters.lideranca,
+    filters.apoio,
+    filters.tag,
   ]);
 
-  const activeFilterCount = [
-    statusFilter !== "all",
-    neighborhoodFilter !== "all",
-    leadershipFilter !== "all",
-    supportFilter !== "all",
-    !!tagFilter,
-  ].filter(Boolean).length;
+  useEffect(() => {
+    if (highlightId && highlightRef.current) {
+      highlightRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [highlightId, filtered]);
+
+  const activeFilterCount = countActiveFilters([
+    filters.status !== "all",
+    filters.bairro !== "all",
+    filters.lideranca !== "all",
+    filters.apoio !== "all",
+    !!filters.tag,
+    !!query.trim(),
+  ]);
 
   function handleExport() {
+    if (!planGate.canExport) {
+      toast.error("Exportação não disponível no seu plano atual.");
+      return;
+    }
     const slug = activeTenant?.slug ?? "campanha";
     const csv = supportersToCsv(filtered);
     downloadCsv(buildCsvFilename(slug, "apoiadores"), csv);
@@ -219,12 +243,16 @@ function EleitoresPage() {
         toast.error("Nenhuma linha válida para importar.");
         return;
       }
-      importMutation.mutate(
-        rows.map((r) => ({
-          ...r,
-          support_level: r.support_level ?? undefined,
-        })),
-      );
+      const parsed = rows.map((r) => ({
+        ...r,
+        support_level: r.support_level ?? undefined,
+      }));
+      const { rows: toImport, skipped } = planGate.sliceImportRows(parsed);
+      if (!toImport.length) {
+        toast.error("Limite de apoiadores do plano atingido. Nenhuma linha importada.");
+        return;
+      }
+      importMutation.mutate({ rows: toImport, skipped });
     };
     reader.readAsText(file, "UTF-8");
   }
@@ -234,28 +262,54 @@ function EleitoresPage() {
     downloadCsv(buildCsvFilename(slug, "modelo-importacao"), getSupporterImportTemplateCsv());
   }
 
+  function patchFilter(patch: Partial<typeof filters>) {
+    const next = { ...filters, ...patch };
+    setSearch(filterStateToEleitoresSearch(next, highlightId));
+  }
+
   function clearFilters() {
-    setStatusFilter("all");
-    setNeighborhoodFilter("all");
-    setLeadershipFilter("all");
-    setSupportFilter("all");
-    setTagFilter("");
+    setQuery("");
+    setSearch(
+      filterStateToEleitoresSearch({
+        busca: "",
+        status: "all",
+        bairro: "all",
+        lideranca: "all",
+        apoio: "all",
+        tag: "",
+      }),
+    );
   }
 
   if (isLoading) return <LoadingState />;
 
   return (
+    <ModuleRouteGuard module="supporters">
     <div className="space-y-8">
       <PageHeader
         title="Eleitores"
-        description="Gerencie sua base de apoiadores cadastrados."
+        description={
+          planGate.supporterUsageLabel()
+            ? `Gerencie sua base de apoiadores. Uso do plano: ${planGate.supporterUsageLabel()}.`
+            : "Gerencie sua base de apoiadores cadastrados."
+        }
         actions={
           <>
-            <Button variant="outline" size="sm" onClick={handleExport}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExport}
+              disabled={!planGate.canExport || !perms.canExport}
+            >
               <Download className="mr-2 h-4 w-4" />
               Exportar
             </Button>
-            <Button variant="outline" size="sm" onClick={() => importRef.current?.click()}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => importRef.current?.click()}
+              disabled={!planGate.canAddSupporters() || !perms.canImport}
+            >
               <Upload className="mr-2 h-4 w-4" />
               Importar
             </Button>
@@ -275,7 +329,7 @@ function EleitoresPage() {
             />
             <Dialog open={createOpen} onOpenChange={setCreateOpen}>
               <DialogTrigger asChild>
-                <Button size="sm">
+                <Button size="sm" disabled={!planGate.canAddSupporters() || !perms.canCreate}>
                   <Plus className="mr-2 h-4 w-4" />
                   Novo eleitor
                 </Button>
@@ -303,6 +357,10 @@ function EleitoresPage() {
           </>
         }
       />
+
+      {!planGate.canAddSupporters() && (
+        <PlanLimitNotice message="Limite de apoiadores do plano atingido. Novos cadastros e importações estão bloqueados até upgrade ou redução da base." />
+      )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard
@@ -365,7 +423,7 @@ function EleitoresPage() {
                 <div className="mt-6 grid gap-4">
                   <div className="grid gap-2">
                     <Label>Status político</Label>
-                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <Select value={filters.status} onValueChange={(v) => patchFilter({ status: v })}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -381,7 +439,7 @@ function EleitoresPage() {
                   </div>
                   <div className="grid gap-2">
                     <Label>Bairro</Label>
-                    <Select value={neighborhoodFilter} onValueChange={setNeighborhoodFilter}>
+                    <Select value={filters.bairro} onValueChange={(v) => patchFilter({ bairro: v })}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -397,7 +455,7 @@ function EleitoresPage() {
                   </div>
                   <div className="grid gap-2">
                     <Label>Liderança</Label>
-                    <Select value={leadershipFilter} onValueChange={setLeadershipFilter}>
+                    <Select value={filters.lideranca} onValueChange={(v) => patchFilter({ lideranca: v })}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -414,7 +472,7 @@ function EleitoresPage() {
                   </div>
                   <div className="grid gap-2">
                     <Label>Grau de apoio</Label>
-                    <Select value={supportFilter} onValueChange={setSupportFilter}>
+                    <Select value={filters.apoio} onValueChange={(v) => patchFilter({ apoio: v })}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -430,7 +488,10 @@ function EleitoresPage() {
                   </div>
                   <div className="grid gap-2">
                     <Label>Tag</Label>
-                    <Select value={tagFilter || "all"} onValueChange={(v) => setTagFilter(v === "all" ? "" : v)}>
+                    <Select
+                      value={filters.tag || "all"}
+                      onValueChange={(v) => patchFilter({ tag: v === "all" ? "" : v })}
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Qualquer tag" />
                       </SelectTrigger>
@@ -447,6 +508,7 @@ function EleitoresPage() {
                   <Button variant="outline" onClick={clearFilters}>
                     Limpar filtros
                   </Button>
+                  <ListUrlActions onClear={clearFilters} showClear={false} />
                 </div>
               </SheetContent>
             </Sheet>
@@ -481,7 +543,11 @@ function EleitoresPage() {
                 </TableHeader>
                 <TableBody>
                   {filtered.map((e) => (
-                    <TableRow key={e.id}>
+                    <TableRow
+                      key={e.id}
+                      ref={e.id === highlightId ? highlightRef : undefined}
+                      className={e.id === highlightId ? DEEP_LINK_HIGHLIGHT_CLASS : undefined}
+                    >
                       <TableCell className="font-medium">{e.name}</TableCell>
                       <TableCell className="text-muted-foreground">{e.phone ?? "—"}</TableCell>
                       <TableCell>
@@ -525,17 +591,21 @@ function EleitoresPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => setEditTarget(e)}>
-                              <Pencil className="mr-2 h-4 w-4" />
-                              Editar
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="text-destructive"
-                              onClick={() => setDeleteTarget(e)}
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Excluir
-                            </DropdownMenuItem>
+                            {perms.canUpdate && (
+                              <DropdownMenuItem onClick={() => setEditTarget(e)}>
+                                <Pencil className="mr-2 h-4 w-4" />
+                                Editar
+                              </DropdownMenuItem>
+                            )}
+                            {perms.canDelete && (
+                              <DropdownMenuItem
+                                className="text-destructive"
+                                onClick={() => setDeleteTarget(e)}
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Excluir
+                              </DropdownMenuItem>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -593,5 +663,6 @@ function EleitoresPage() {
         }}
       />
     </div>
+    </ModuleRouteGuard>
   );
 }

@@ -12,7 +12,7 @@
 ## P0 Tenant e onboarding
 
 - [x] Signup → tenant suspended (migration 08)
-- [x] Status: active, trial, suspended, pending, cancelled (migration 09)
+- [x] Status: active, suspended, pending, cancelled (plano trial em `tenant_plan`)
 - [x] Tela conta suspensa / cancelada
 - [x] Plan limits preparados (`src/types/tenant.ts`)
 - [x] membershipRole no contexto
@@ -39,7 +39,7 @@
 
 ## Manual (você)
 
-- [ ] Aplicar migration `09` no Supabase remoto
+- [x] Aplicar migrations operacionais (`20260527120000`, `20260528120000`)
 - [ ] Rodar smoke test com 2 campanhas
 - [ ] Reiniciar `pnpm dev` após pull
 

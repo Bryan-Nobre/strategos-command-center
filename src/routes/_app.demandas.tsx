@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState, type DragEvent as ReactDragEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type DragEvent as ReactDragEvent } from "react";
 import {
   Plus,
   MapPin,
@@ -9,6 +9,7 @@ import {
   Filter,
   Pencil,
   Trash2,
+  Search,
 } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { EmptyState } from "@/components/common/EmptyState";
@@ -43,6 +44,8 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { useTenant } from "@/hooks/use-tenant";
+import { useCrudPermissions } from "@/hooks/use-crud-permissions";
+import { ModuleRouteGuard } from "@/components/auth/PermissionGate";
 import { useDemands, useCreateDemand, useUpdateDemand, useDeleteDemand } from "@/hooks/use-demands";
 import { useTeamMembers } from "@/hooks/use-team";
 import { LoadingState } from "@/components/common/LoadingState";
@@ -52,18 +55,21 @@ import {
   DEMAND_STATUS_LABELS,
 } from "@/types/domain";
 import type { Enums } from "@/types/supabase";
-
-type DemandasSearch = {
-  bairro?: string;
-  semResponsavel?: string;
-};
+import { DEEP_LINK_HIGHLIGHT_CLASS } from "@/lib/search-deep-link";
+import {
+  demandasSearchToFilterState,
+  filterStateToDemandasSearch,
+  parseDemandasSearch,
+  serializeDemandasSearch,
+  type DemandasListSearch,
+} from "@/lib/list-search/demandas";
+import { countActiveFilters } from "@/lib/list-search/utils";
+import { useSyncedListSearch } from "@/hooks/use-synced-list-search";
+import { ListUrlActions } from "@/components/common/ListUrlActions";
 
 export const Route = createFileRoute("/_app/demandas")({
-  validateSearch: (search: Record<string, unknown>): DemandasSearch => ({
-    bairro: typeof search.bairro === "string" && search.bairro ? search.bairro : undefined,
-    semResponsavel:
-      search.semResponsavel === "1" || search.semResponsavel === "true" ? "1" : undefined,
-  }),
+  validateSearch: (search: Record<string, unknown>): DemandasListSearch =>
+    parseDemandasSearch(search),
   component: DemandasPage,
 });
 
@@ -104,33 +110,37 @@ type DemandRow = NonNullable<ReturnType<typeof useDemands>["data"]>[number];
 
 function DemandasPage() {
   const { tenantId } = useTenant();
-  const { bairro: bairroFromUrl, semResponsavel } = Route.useSearch();
+  const urlSearch = Route.useSearch();
+  const highlightId = urlSearch.id;
+  const filters = demandasSearchToFilterState(urlSearch);
+  const { localText: query, setLocalText: setQuery, setSearch } = useSyncedListSearch({
+    search: urlSearch,
+    serialize: serializeDemandasSearch,
+  });
+
   const { data: demands, isLoading } = useDemands(tenantId);
   const { data: team } = useTeamMembers(tenantId);
   const createMutation = useCreateDemand(tenantId);
   const updateMutation = useUpdateDemand(tenantId);
   const deleteMutation = useDeleteDemand(tenantId);
+  const perms = useCrudPermissions("demands");
 
   const [createOpen, setCreateOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<DemandRow | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<DemandRow | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
-
-  const [categoryFilter, setCategoryFilter] = useState("all");
-  const [neighborhoodFilter, setNeighborhoodFilter] = useState("all");
-  const [assigneeFilter, setAssigneeFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const highlightRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (bairroFromUrl) {
-      setNeighborhoodFilter(bairroFromUrl);
+    if (
+      urlSearch.bairro ||
+      urlSearch.responsavel ||
+      urlSearch.categoria ||
+      urlSearch.status
+    ) {
       setFiltersOpen(true);
     }
-    if (semResponsavel) {
-      setAssigneeFilter("none");
-      setFiltersOpen(true);
-    }
-  }, [bairroFromUrl, semResponsavel]);
+  }, [urlSearch.bairro, urlSearch.responsavel, urlSearch.categoria, urlSearch.status]);
 
   const [dragOverStatus, setDragOverStatus] = useState<Enums<"demand_status"> | null>(null);
   const [draggedDemandId, setDraggedDemandId] = useState<string | null>(null);
@@ -149,23 +159,58 @@ function DemandasPage() {
   }, [demands]);
 
   const filtered = useMemo(() => {
+    const q = query.toLowerCase();
     return (demands ?? []).filter((d) => {
-      const matchCategory = categoryFilter === "all" || d.category === categoryFilter;
+      const matchQuery =
+        !q ||
+        [d.title, d.neighborhood, d.description].some((f) => f?.toLowerCase().includes(q));
+      const matchCategory = filters.categoria === "all" || d.category === filters.categoria;
       const matchNeighborhood =
-        neighborhoodFilter === "all" || d.neighborhood === neighborhoodFilter;
+        filters.bairro === "all" || d.neighborhood === filters.bairro;
       const matchAssignee =
-        assigneeFilter === "all" ||
-        (assigneeFilter === "none" ? !d.assigned_to : d.assigned_to === assigneeFilter);
-      const matchStatus = statusFilter === "all" || d.status === statusFilter;
-      return matchCategory && matchNeighborhood && matchAssignee && matchStatus;
+        filters.responsavel === "all" ||
+        (filters.responsavel === "none" ? !d.assigned_to : d.assigned_to === filters.responsavel);
+      const matchStatus = filters.status === "all" || d.status === filters.status;
+      return matchQuery && matchCategory && matchNeighborhood && matchAssignee && matchStatus;
     });
-  }, [demands, categoryFilter, neighborhoodFilter, assigneeFilter, statusFilter]);
+  }, [demands, query, filters.categoria, filters.bairro, filters.responsavel, filters.status]);
+
+  useEffect(() => {
+    if (highlightId && highlightRef.current) {
+      highlightRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [highlightId, filtered]);
 
   const grouped = {
     aberto: filtered.filter((d) => d.status === "aberto"),
     andamento: filtered.filter((d) => d.status === "em_andamento"),
     resolvido: filtered.filter((d) => d.status === "resolvido"),
   };
+
+  function patchFilter(patch: Partial<typeof filters>) {
+    setSearch(filterStateToDemandasSearch({ ...filters, ...patch }, highlightId));
+  }
+
+  function clearFilters() {
+    setQuery("");
+    setSearch(
+      filterStateToDemandasSearch({
+        busca: "",
+        bairro: "all",
+        categoria: "all",
+        responsavel: "all",
+        status: "all",
+      }),
+    );
+  }
+
+  const activeFilterCount = countActiveFilters([
+    filters.categoria !== "all",
+    filters.bairro !== "all",
+    filters.responsavel !== "all",
+    filters.status !== "all",
+    !!query.trim(),
+  ]);
 
   if (isLoading) return <LoadingState />;
 
@@ -186,6 +231,7 @@ function DemandasPage() {
   }
 
   function handleDrop(e: ReactDragEvent, status: Enums<"demand_status">) {
+    if (!perms.canUpdate) return;
     e.preventDefault();
     const idFromTransfer = e.dataTransfer.getData("text/plain");
     const id = idFromTransfer || draggedDemandId;
@@ -195,17 +241,32 @@ function DemandasPage() {
   }
 
   return (
+    <ModuleRouteGuard module="demands">
     <div className="space-y-8">
       <PageHeader
         title="Demandas da população"
         description="Kanban de solicitações por status."
         actions={
           <>
+            <div className="relative hidden min-w-[200px] sm:block">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Buscar título, bairro..."
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                className="h-9 pl-9"
+              />
+            </div>
             <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
               <SheetTrigger asChild>
                 <Button variant="outline" size="sm">
                   <Filter className="mr-2 h-4 w-4" />
                   Filtros
+                  {activeFilterCount > 0 && (
+                    <Badge variant="secondary" className="ml-2 h-5 px-1.5">
+                      {activeFilterCount}
+                    </Badge>
+                  )}
                 </Button>
               </SheetTrigger>
               <SheetContent>
@@ -216,8 +277,8 @@ function DemandasPage() {
                 <div className="mt-6 grid gap-4">
                   <FilterSelect
                     label="Categoria"
-                    value={categoryFilter}
-                    onChange={setCategoryFilter}
+                    value={filters.categoria}
+                    onChange={(v) => patchFilter({ categoria: v })}
                     options={[
                       { value: "all", label: "Todas" },
                       ...Object.entries(DEMAND_CATEGORY_LABELS).map(([k, l]) => ({
@@ -228,8 +289,8 @@ function DemandasPage() {
                   />
                   <FilterSelect
                     label="Bairro"
-                    value={neighborhoodFilter}
-                    onChange={setNeighborhoodFilter}
+                    value={filters.bairro}
+                    onChange={(v) => patchFilter({ bairro: v })}
                     options={[
                       { value: "all", label: "Todos" },
                       ...neighborhoods.map((n) => ({ value: n, label: n })),
@@ -237,8 +298,8 @@ function DemandasPage() {
                   />
                   <FilterSelect
                     label="Responsável"
-                    value={assigneeFilter}
-                    onChange={setAssigneeFilter}
+                    value={filters.responsavel}
+                    onChange={(v) => patchFilter({ responsavel: v })}
                     options={[
                       { value: "all", label: "Todos" },
                       { value: "none", label: "Sem responsável" },
@@ -250,8 +311,8 @@ function DemandasPage() {
                   />
                   <FilterSelect
                     label="Status"
-                    value={statusFilter}
-                    onChange={setStatusFilter}
+                    value={filters.status}
+                    onChange={(v) => patchFilter({ status: v })}
                     options={[
                       { value: "all", label: "Todos" },
                       ...Object.entries(DEMAND_STATUS_LABELS).map(([k, l]) => ({
@@ -260,16 +321,19 @@ function DemandasPage() {
                       })),
                     ]}
                   />
+                  <ListUrlActions onClear={clearFilters} />
                 </div>
               </SheetContent>
             </Sheet>
             <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+              {perms.canCreate && (
               <DialogTrigger asChild>
                 <Button size="sm">
                   <Plus className="mr-2 h-4 w-4" />
                   Nova demanda
                 </Button>
               </DialogTrigger>
+              )}
               <DemandFormDialog
                 title="Nova demanda"
                 team={team ?? []}
@@ -294,13 +358,23 @@ function DemandasPage() {
         }
       />
 
+      <div className="relative sm:hidden">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          placeholder="Buscar título, bairro..."
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          className="pl-9"
+        />
+      </div>
+
       {!demands?.length ? (
         <EmptyState
           icon={AlertCircle}
           title="Nenhuma demanda registrada"
           description="Cadastre solicitações da população para acompanhar no kanban."
-          actionLabel="Nova demanda"
-          onAction={() => setCreateOpen(true)}
+          actionLabel={perms.canCreate ? "Nova demanda" : undefined}
+          onAction={perms.canCreate ? () => setCreateOpen(true) : undefined}
         />
       ) : (
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
@@ -314,9 +388,8 @@ function DemandasPage() {
                   dragOverStatus === col.dbStatus ? "ring-2 ring-primary/50" : "",
                 ].join(" ")}
                 onDragOver={(e) => {
-                  // Permite drop no navegador.
                   e.preventDefault();
-                  if (updateMutation.isPending) return;
+                  if (updateMutation.isPending || !perms.canUpdate) return;
                   setDragOverStatus(col.dbStatus);
                   e.dataTransfer.dropEffect = "move";
                 }}
@@ -338,12 +411,14 @@ function DemandasPage() {
                   {items.map((d) => (
                     <Card
                       key={d.id}
+                      ref={d.id === highlightId ? highlightRef : undefined}
                       className={[
                         "shadow-sm",
                         draggedDemandId === d.id ? "opacity-70" : "",
-                        "cursor-grab",
+                        d.id === highlightId ? DEEP_LINK_HIGHLIGHT_CLASS : "",
+                        perms.canUpdate ? "cursor-grab" : "",
                       ].join(" ")}
-                      draggable={!updateMutation.isPending}
+                      draggable={perms.canUpdate && !updateMutation.isPending}
                       onDragStart={(e) => handleDragStart(e, d.id)}
                       onDragEnd={handleDragEnd}
                     >
@@ -351,6 +426,7 @@ function DemandasPage() {
                         <div className="flex items-start justify-between gap-2">
                           <h4 className="text-sm font-medium">{d.title}</h4>
                           <div className="flex shrink-0 gap-1">
+                            {perms.canUpdate && (
                             <Button
                               variant="ghost"
                               size="icon"
@@ -359,6 +435,8 @@ function DemandasPage() {
                             >
                               <Pencil className="h-3.5 w-3.5" />
                             </Button>
+                            )}
+                            {perms.canDelete && (
                             <Button
                               variant="ghost"
                               size="icon"
@@ -367,6 +445,7 @@ function DemandasPage() {
                             >
                               <Trash2 className="h-3.5 w-3.5" />
                             </Button>
+                            )}
                           </div>
                         </div>
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -464,6 +543,7 @@ function DemandasPage() {
         }}
       />
     </div>
+    </ModuleRouteGuard>
   );
 }
 

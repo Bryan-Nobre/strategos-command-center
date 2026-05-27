@@ -9,9 +9,11 @@ export function createServerSupabaseClient(request: Request) {
   return createServerClient<Database>(getSupabaseUrl(), getSupabaseAnonKey(), {
     cookies: {
       getAll() {
-        return parseCookieHeader(cookieHeader);
+        return (parseCookieHeader(cookieHeader) ?? [])
+          .filter((c) => typeof c.value === "string")
+          .map((c) => ({ name: c.name, value: c.value as string }));
       },
-      setAll() {
+      setAll(_cookies) {
         // Escrita de cookies no SSR é feita pelo cliente após login
       },
     },

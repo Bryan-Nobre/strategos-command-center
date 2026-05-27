@@ -51,13 +51,13 @@ export async function ensurePublicAuthRedirect(
 
   if (target === "login" && auth.session) {
     throw redirect({
-      to: auth.profile?.platform_role === "super_admin" ? "/admin/tenants" : "/dashboard",
+      to: auth.profile?.platform_role === "super_admin" ? "/tenants" : "/dashboard",
     });
   }
 
   if (target === "signup" && auth.session) {
     if (auth.profile?.platform_role === "super_admin") {
-      throw redirect({ to: "/admin/tenants" });
+      throw redirect({ to: "/tenants" });
     }
     if (auth.activeTenant) {
       throw redirect({ to: "/dashboard" });
@@ -66,7 +66,7 @@ export async function ensurePublicAuthRedirect(
 
   if (target === "index") {
     if (auth.session && auth.profile?.platform_role === "super_admin") {
-      throw redirect({ to: "/admin/tenants" });
+      throw redirect({ to: "/tenants" });
     }
     if (auth.session && auth.activeTenant) {
       throw redirect({ to: "/dashboard" });

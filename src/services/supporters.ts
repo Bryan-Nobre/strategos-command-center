@@ -66,11 +66,23 @@ export type SupporterImportRow = {
   support_level?: TablesInsert<"supporters">["support_level"];
 };
 
-export async function importSupporters(tenantId: string, rows: SupporterImportRow[]) {
+export type ImportSupportersResult = {
+  imported: number;
+  skipped: number;
+};
+
+export async function importSupporters(
+  tenantId: string,
+  rows: SupporterImportRow[],
+): Promise<ImportSupportersResult> {
   const supabase = createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  if (!rows.length) {
+    return { imported: 0, skipped: 0 };
+  }
 
   const payload = rows.map((r) => ({
     tenant_id: tenantId,
@@ -87,11 +99,13 @@ export async function importSupporters(tenantId: string, rows: SupporterImportRo
   const { data, error } = await supabase.from("supporters").insert(payload).select("id");
   if (error) throw error;
 
+  const imported = data?.length ?? 0;
+
   await supabase.rpc("log_activity", {
     p_tenant_id: tenantId,
-    p_message: `Importação: ${data?.length ?? 0} apoiadores`,
+    p_message: `Importação: ${imported} apoiadores`,
     p_entity_type: "supporter",
   });
 
-  return data?.length ?? 0;
+  return { imported, skipped: 0 };
 }

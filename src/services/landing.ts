@@ -36,11 +36,11 @@ export async function registerFromLanding(
   const { data, error } = await supabase.rpc("register_supporter_from_landing", {
     p_slug: slug,
     p_name: payload.name,
-    p_phone: payload.phone ?? null,
-    p_neighborhood: payload.neighborhood ?? null,
-    p_city: payload.city ?? null,
-    p_interest: payload.interest ?? null,
-    p_notes: payload.notes ?? null,
+    p_phone: payload.phone ?? undefined,
+    p_neighborhood: payload.neighborhood ?? undefined,
+    p_city: payload.city ?? undefined,
+    p_interest: payload.interest ?? undefined,
+    p_notes: payload.notes ?? undefined,
   });
   if (error) throw error;
   return data as string;

@@ -1,111 +1,75 @@
-import { Bell, LogOut, Search } from "lucide-react";
+import { useCallback, useState } from "react";
+import { Search } from "lucide-react";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useRouterState, useRouteContext } from "@tanstack/react-router";
-import { signOut } from "@/lib/supabase/session";
 import { resolveRouteMeta } from "@/lib/navigation-meta";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  GlobalSearchDialog,
+  useGlobalSearchShortcut,
+} from "@/components/search/GlobalSearchDialog";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { useTenantPermissions } from "@/hooks/use-tenant-permissions";
+import { buildSearchPlaceholder } from "@/lib/search-module-meta";
 
 export function AppNavbar() {
   const path = useRouterState({ select: (r) => r.location.pathname });
-  const { profile, activeTenant } = useRouteContext({ strict: false });
+  const { activeTenant } = useRouteContext({ strict: false });
   const meta = resolveRouteMeta(path);
-  const Icon = meta.icon;
+  const [searchOpen, setSearchOpen] = useState(false);
+  const openSearch = useCallback(() => setSearchOpen(true), []);
 
-  const initials = (profile?.full_name ?? "U")
-    .split(" ")
-    .map((n) => n[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
-
-  async function handleLogout() {
-    await signOut();
-    window.location.href = "/login";
-  }
+  const tenantId = activeTenant?.id ?? "";
+  const { permissions } = useTenantPermissions(tenantId);
+  const searchPlaceholder = buildSearchPlaceholder(permissions);
+  useGlobalSearchShortcut(openSearch, !!tenantId);
 
   return (
-    <header className="strategos-topbar transition-theme sticky top-0 z-30 px-4 md:px-6">
-      <div className="flex h-[4.25rem] items-center gap-3 lg:gap-6">
-        {/* Esquerda — contexto da página */}
-        <div className="flex min-w-0 flex-1 items-center gap-3">
-          <SidebarTrigger className="-ml-1 shrink-0" />
-          <div className="topbar-section-icon hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl sm:flex">
-            <Icon className="h-[1.125rem] w-[1.125rem]" />
-          </div>
-          <div className="min-w-0">
+    <>
+      <GlobalSearchDialog tenantId={tenantId} open={searchOpen} onOpenChange={setSearchOpen} />
+      <header className="strategos-topbar transition-theme sticky top-0 z-30">
+        <div className="strategos-topbar-row">
+          {/* Esquerda — até o limite */}
+          <div className="topbar-left">
+            <SidebarTrigger className="topbar-icon-btn shrink-0" />
             <p className="topbar-title truncate">{meta.title}</p>
-            <p className="topbar-subtitle truncate">{meta.subtitle}</p>
-            {activeTenant?.name && (
-              <p className="mt-0.5 hidden truncate text-[11px] text-muted-foreground/80 xl:block">
-                {activeTenant.name}
-              </p>
-            )}
           </div>
-        </div>
 
-        {/* Centro — busca premium */}
-        <div className="hidden flex-[1.2] justify-center px-2 lg:flex">
-          <div className="strategos-search relative w-full max-w-[32rem]">
-            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <input
-              type="search"
-              placeholder="Buscar eleitor, liderança, demanda..."
-              className="strategos-search-input h-10 w-full rounded-xl pl-11 pr-4 text-sm outline-none transition-theme placeholder:text-muted-foreground"
-              aria-label="Buscar na campanha"
-            />
-          </div>
-        </div>
-
-        {/* Direita — ações e usuário */}
-        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-          <div className="relative lg:hidden">
-            <Button variant="ghost" size="icon" aria-label="Buscar">
-              <Search className="h-4 w-4" />
-            </Button>
-          </div>
-          <ThemeToggle />
-          <Button variant="ghost" size="icon" className="relative" aria-label="Notificações">
-            <Bell className="h-4 w-4" />
-          </Button>
-          <div className="topbar-divider mx-1 hidden h-8 w-px sm:block" aria-hidden />
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
+          {/* Centro — busca geral */}
+          <div className="topbar-center hidden lg:block">
+            <div className="strategos-search relative w-full">
+              <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <button
                 type="button"
-                className="topbar-user-card flex items-center gap-2.5 rounded-xl py-1.5 pl-1.5 pr-3 transition-theme"
+                onClick={openSearch}
+                className="strategos-search-input flex h-9 w-full items-center rounded-lg pl-10 pr-[4.5rem] text-left text-sm outline-none transition-theme"
+                aria-label="Buscar na campanha"
               >
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback className="bg-primary text-xs text-primary-foreground">
-                    {initials}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="hidden min-w-0 text-left leading-tight md:block">
-                  <div className="max-w-[8.5rem] truncate text-sm font-semibold text-foreground">
-                    {profile?.full_name ?? "Usuário"}
-                  </div>
-                  <div className="max-w-[8.5rem] truncate text-[11px] text-muted-foreground">
-                    {activeTenant?.name ?? "Campanha"}
-                  </div>
-                </div>
+                <span className="truncate text-muted-foreground">{searchPlaceholder}</span>
               </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem onClick={handleLogout}>
-                <LogOut className="mr-2 h-4 w-4" />
-                Sair
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+              <kbd className="pointer-events-none absolute right-2.5 top-1/2 hidden -translate-y-1/2 items-center rounded border border-border/80 bg-muted/50 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground sm:flex">
+                Ctrl+K
+              </kbd>
+            </div>
+          </div>
+
+          {/* Direita — até o limite */}
+          <div className="topbar-right">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="topbar-icon-btn lg:hidden"
+              aria-label="Buscar"
+              onClick={openSearch}
+            >
+              <Search className="h-4 w-4" />
+            </Button>
+            <ThemeToggle className="topbar-icon-btn" />
+            {tenantId ? <NotificationBell className="topbar-icon-btn" /> : null}
+          </div>
         </div>
-      </div>
-    </header>
+      </header>
+    </>
   );
 }

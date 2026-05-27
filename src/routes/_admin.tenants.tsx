@@ -1,9 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ExternalLink, Search } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { listAllTenants, updateTenant, TENANT_STATUS_LABELS } from "@/services/admin";
+import { TENANT_PLAN_LABELS } from "@/types/tenant";
 import { queryKeys } from "@/lib/query-keys";
 import { LoadingState } from "@/components/common/LoadingState";
 import { EmptyState } from "@/components/common/EmptyState";
@@ -12,44 +13,62 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import type { Enums } from "@/types/supabase";
+import {
+  adminTenantsApiFilters,
+  parseAdminTenantsSearch,
+  serializeAdminTenantsSearch,
+  type AdminTenantsListSearch,
+} from "@/lib/list-search/admin-tenants";
+import { countActiveFilters } from "@/lib/list-search/utils";
+import { useSyncedListSearch } from "@/hooks/use-synced-list-search";
+import { ListUrlActions } from "@/components/common/ListUrlActions";
 
 export const Route = createFileRoute("/_admin/tenants")({
-  path: "/tenants",
+  validateSearch: (search: Record<string, unknown>): AdminTenantsListSearch =>
+    parseAdminTenantsSearch(search),
   component: AdminTenantsPage,
 });
 
 const statusBadgeVariant = (status: Enums<"tenant_status">) => {
-  if (status === "active" || status === "trial") return "default" as const;
+  if (status === "active") return "default" as const;
   if (status === "suspended" || status === "pending") return "secondary" as const;
   return "outline" as const;
 };
 
 function AdminTenantsPage() {
   const qc = useQueryClient();
-  const [statusFilter, setStatusFilter] = useState<Enums<"tenant_status"> | "all">("all");
-  const [planFilter, setPlanFilter] = useState<Enums<"tenant_plan"> | "all">("all");
-  const [search, setSearch] = useState("");
+  const urlSearch = Route.useSearch();
+  const { localText: search, setLocalText: setSearch, setSearch: replaceSearch } =
+    useSyncedListSearch({
+      search: urlSearch,
+      serialize: serializeAdminTenantsSearch,
+    });
 
-  const filters = useMemo(
-    () => ({
-      status: statusFilter === "all" ? undefined : statusFilter,
-      plan: planFilter === "all" ? undefined : planFilter,
-    }),
-    [statusFilter, planFilter],
-  );
+  const apiFilters = adminTenantsApiFilters(urlSearch);
 
   const { data: tenants, isLoading } = useQuery({
-    queryKey: queryKeys.adminTenants(filters),
-    queryFn: () => listAllTenants(filters),
+    queryKey: queryKeys.adminTenants(apiFilters),
+    queryFn: () => listAllTenants(apiFilters),
   });
 
   const mutation = useMutation({
-    mutationFn: ({ id, status, plan }: { id: string; status?: Enums<"tenant_status">; plan?: Enums<"tenant_plan"> }) =>
-      updateTenant(id, { status, plan }),
+    mutationFn: ({
+      id,
+      status,
+      plan,
+    }: {
+      id: string;
+      status?: Enums<"tenant_status">;
+      plan?: Enums<"tenant_plan">;
+    }) => updateTenant(id, { status, plan }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin-tenants"] });
       qc.invalidateQueries({ queryKey: queryKeys.adminMetrics() });
@@ -58,11 +77,38 @@ function AdminTenantsPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const filtered = (tenants ?? []).filter((t) => {
-    const q = search.toLowerCase();
-    if (!q) return true;
-    return [t.name, t.slug].some((s) => s.toLowerCase().includes(q));
-  });
+  const filtered = useMemo(() => {
+    const q = (urlSearch.busca ?? "").toLowerCase();
+    if (!q) return tenants ?? [];
+    return (tenants ?? []).filter((t) =>
+      [t.name, t.slug].some((s) => s.toLowerCase().includes(q)),
+    );
+  }, [tenants, urlSearch.busca]);
+
+  const statusFilter = urlSearch.status ?? "all";
+  const planFilter = urlSearch.plano ?? "all";
+
+  const activeFilterCount = countActiveFilters([
+    statusFilter !== "all",
+    planFilter !== "all",
+    !!search.trim(),
+  ]);
+
+  function patchFilters(patch: Partial<AdminTenantsListSearch>) {
+    replaceSearch(
+      serializeAdminTenantsSearch({
+        busca: urlSearch.busca,
+        status: urlSearch.status,
+        plano: urlSearch.plano,
+        ...patch,
+      }),
+    );
+  }
+
+  function clearFilters() {
+    setSearch("");
+    replaceSearch({});
+  }
 
   if (isLoading) return <LoadingState />;
 
@@ -70,7 +116,7 @@ function AdminTenantsPage() {
     <div className="space-y-8">
       <PageHeader
         title="Clientes"
-        description="Novos cadastros entram como Suspensos. Após pagamento, altere para Ativo ou Trial."
+        description="Novos cadastros entram suspensos. Após pagamento, altere o status para Ativo e ajuste o plano comercial (Trial, Basic, Pro…)."
       />
 
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
@@ -83,25 +129,43 @@ function AdminTenantsPage() {
             className="pl-9"
           />
         </div>
-        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}>
-          <SelectTrigger className="w-40"><SelectValue placeholder="Status" /></SelectTrigger>
+        <Select
+          value={statusFilter}
+          onValueChange={(v) =>
+            patchFilters({ status: v === "all" ? undefined : (v as Enums<"tenant_status">) })
+          }
+        >
+          <SelectTrigger className="w-40">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos status</SelectItem>
             {(Object.keys(TENANT_STATUS_LABELS) as Enums<"tenant_status">[]).map((s) => (
-              <SelectItem key={s} value={s}>{TENANT_STATUS_LABELS[s]}</SelectItem>
+              <SelectItem key={s} value={s}>
+                {TENANT_STATUS_LABELS[s]}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
-        <Select value={planFilter} onValueChange={(v) => setPlanFilter(v as typeof planFilter)}>
-          <SelectTrigger className="w-36"><SelectValue placeholder="Plano" /></SelectTrigger>
+        <Select
+          value={planFilter}
+          onValueChange={(v) =>
+            patchFilters({ plano: v === "all" ? undefined : (v as Enums<"tenant_plan">) })
+          }
+        >
+          <SelectTrigger className="w-36">
+            <SelectValue placeholder="Plano" />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos planos</SelectItem>
-            <SelectItem value="trial">Trial</SelectItem>
-            <SelectItem value="basic">Basic</SelectItem>
-            <SelectItem value="pro">Pro</SelectItem>
-            <SelectItem value="enterprise">Enterprise</SelectItem>
+            {(Object.keys(TENANT_PLAN_LABELS) as Enums<"tenant_plan">[]).map((p) => (
+              <SelectItem key={p} value={p}>
+                {TENANT_PLAN_LABELS[p]}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
+        {activeFilterCount > 0 && <ListUrlActions onClear={clearFilters} />}
       </div>
 
       <div className="space-y-3">
@@ -122,7 +186,8 @@ function AdminTenantsPage() {
                   </Badge>
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  /{t.slug} · Plano {t.plan} · {t.member_count} usuários · {t.supporter_count} apoiadores
+                  /{t.slug} · Plano {TENANT_PLAN_LABELS[t.plan] ?? t.plan} · {t.member_count}{" "}
+                  usuários · {t.supporter_count} apoiadores
                 </div>
                 <div className="text-xs text-muted-foreground">
                   Criado em {new Date(t.created_at).toLocaleDateString("pt-BR")}
@@ -131,32 +196,42 @@ function AdminTenantsPage() {
               <div className="flex flex-wrap items-center gap-2">
                 <Select
                   value={t.status}
-                  onValueChange={(v) => mutation.mutate({ id: t.id, status: v as Enums<"tenant_status"> })}
+                  onValueChange={(v) =>
+                    mutation.mutate({ id: t.id, status: v as Enums<"tenant_status"> })
+                  }
                 >
-                  <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="w-36">
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="active">Ativo</SelectItem>
-                    <SelectItem value="trial">Trial</SelectItem>
-                    <SelectItem value="suspended">Suspenso</SelectItem>
-                    <SelectItem value="pending">Pendente</SelectItem>
-                    <SelectItem value="cancelled">Cancelado</SelectItem>
+                    {(Object.keys(TENANT_STATUS_LABELS) as Enums<"tenant_status">[]).map((s) => (
+                      <SelectItem key={s} value={s}>
+                        {TENANT_STATUS_LABELS[s]}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 <Select
                   value={t.plan}
-                  onValueChange={(v) => mutation.mutate({ id: t.id, plan: v as Enums<"tenant_plan"> })}
+                  onValueChange={(v) =>
+                    mutation.mutate({ id: t.id, plan: v as Enums<"tenant_plan"> })
+                  }
                 >
-                  <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="w-28">
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="trial">Trial</SelectItem>
-                    <SelectItem value="basic">Basic</SelectItem>
-                    <SelectItem value="pro">Pro</SelectItem>
-                    <SelectItem value="enterprise">Enterprise</SelectItem>
+                    {(Object.keys(TENANT_PLAN_LABELS) as Enums<"tenant_plan">[]).map((p) => (
+                      <SelectItem key={p} value={p}>
+                        {TENANT_PLAN_LABELS[p]}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 <Button variant="outline" size="sm" asChild>
                   <a href={`/p/${t.slug}`} target="_blank" rel="noreferrer">
-                    <ExternalLink className="mr-2 h-4 w-4" />Landing
+                    <ExternalLink className="mr-2 h-4 w-4" />
+                    Landing
                   </a>
                 </Button>
               </div>

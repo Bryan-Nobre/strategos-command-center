@@ -1,4 +1,5 @@
 import { createFileRoute, useRouteContext } from "@tanstack/react-router";
+import { useMemo } from "react";
 import { Users, Crown, Vote, MessageSquareWarning, Target } from "lucide-react";
 import {
   Area,
@@ -27,14 +28,16 @@ import { NextActionsCard } from "@/components/dashboard/NextActionsCard";
 import { TerritoryIntelCard } from "@/components/dashboard/TerritoryIntelCard";
 import { PoliticalPipeline } from "@/components/dashboard/PoliticalPipeline";
 import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
-import { useTenant } from "@/hooks/use-tenant";
 import {
-  useDashboardMetrics,
-  useActivities,
-  usePollSnapshots,
-  useStrategicInsights,
-} from "@/hooks/use-dashboard";
-import { LoadingState } from "@/components/common/LoadingState";
+  DashboardBlockSkeleton,
+  DashboardChartSkeleton,
+  DashboardMetricsSkeleton,
+} from "@/components/dashboard/DashboardSectionSkeleton";
+import { useTenant } from "@/hooks/use-tenant";
+import { useTenantPermissions } from "@/hooks/use-tenant-permissions";
+import { ModuleRouteGuard } from "@/components/auth/PermissionGate";
+import { canAccessDashboardRoute } from "@/lib/dashboard-link-permissions";
+import { useOperationalDashboard, useActivities, usePollSnapshots } from "@/hooks/use-dashboard";
 import { greetingLabel } from "@/services/dashboard-intelligence";
 import { narrativeApproval, narrativeGrowth, narrativeIntention } from "@/lib/chart-narratives";
 
@@ -53,10 +56,14 @@ const PALETTE = [
 function DashboardPage() {
   const { tenantId } = useTenant();
   const { profile } = useRouteContext({ from: "/_app" });
-  const { data: metrics, isLoading: mLoading } = useDashboardMetrics(tenantId);
-  const { data: activities } = useActivities(tenantId);
-  const { data: polls } = usePollSnapshots(tenantId);
-  const { data: insights, isLoading: insightsLoading } = useStrategicInsights(tenantId);
+  const { permissions } = useTenantPermissions(tenantId);
+  const { data: operational, isLoading: opLoading, isError: opError } =
+    useOperationalDashboard(tenantId);
+  const { data: activities, isLoading: activitiesLoading } = useActivities(tenantId);
+  const { data: polls, isLoading: pollsLoading } = usePollSnapshots(tenantId);
+
+  const metrics = operational?.metrics;
+  const insights = operational?.insights;
 
   const crescimento = (polls?.find((p) => p.snapshot_type === "crescimento_apoiadores")?.data ??
     []) as { mes: string; apoiadores: number }[];
@@ -70,19 +77,52 @@ function DashboardPage() {
   }[];
   const funnel = (metrics?.funnel ?? {}) as Record<string, number>;
 
-  if (mLoading) return <LoadingState label="Carregando central operacional..." />;
-
   const greeting = greetingLabel(profile?.full_name);
-  const briefing = insights?.briefingSentence ?? "Carregando inteligência operacional...";
+  const briefing =
+    insights?.briefingSentence ??
+    (opLoading ? "Carregando inteligência operacional..." : "Central operacional indisponível.");
   const pills = insights?.operational.pills ?? [];
   const strip = insights?.operational.strip ?? [];
   const kpi = insights?.operational.kpi;
 
+  const filteredAlerts = useMemo(
+    () =>
+      (insights?.alerts ?? []).filter((alert) =>
+        canAccessDashboardRoute(permissions, alert.actionTo),
+      ),
+    [insights?.alerts, permissions],
+  );
+
+  const filteredNextActions = useMemo(
+    () =>
+      (insights?.operational.nextActions ?? []).filter((action) =>
+        canAccessDashboardRoute(permissions, action.href),
+      ),
+    [insights?.operational.nextActions, permissions],
+  );
+
+  const canViewTerritoryLink = canAccessDashboardRoute(permissions, "/eleitores");
+
   return (
+    <ModuleRouteGuard module="dashboard">
     <div className="dashboard-section">
       <OperationalHeader greeting={greeting} briefing={briefing} pills={pills} />
 
-      {!insightsLoading && insights && (
+      {opError && (
+        <div className="rounded-2xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+          Não foi possível carregar a central operacional. Tente atualizar a página.
+        </div>
+      )}
+
+      {opLoading && (
+        <>
+          <DashboardBlockSkeleton rows={2} />
+          <DashboardMetricsSkeleton />
+          <DashboardBlockSkeleton rows={2} />
+        </>
+      )}
+
+      {!opLoading && insights && (
         <>
           {strip.length > 0 && <OperationalStrip items={strip} />}
 
@@ -90,7 +130,7 @@ function DashboardPage() {
             <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
               Alertas operacionais
             </h2>
-            <ActionableAlerts alerts={insights.alerts} />
+            <ActionableAlerts alerts={filteredAlerts} />
           </section>
 
           <DailySummaryCard metrics={insights.operational.dailySummary} />
@@ -135,7 +175,7 @@ function DashboardPage() {
 
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
             <div className="lg:col-span-2">
-              <NextActionsCard actions={insights.operational.nextActions} />
+              <NextActionsCard actions={filteredNextActions} />
             </div>
           </div>
 
@@ -149,146 +189,164 @@ function DashboardPage() {
                 description="Prioridade imediata de campo"
                 territories={insights.criticalTerritories}
                 variant="critical"
+                canViewTerritoryLink={canViewTerritoryLink}
               />
               <TerritoryIntelCard
                 title="Territórios promissores"
                 description="Regiões para acelerar conversão"
                 territories={insights.promisingTerritories}
                 variant="promising"
+                canViewTerritoryLink={canViewTerritoryLink}
               />
             </div>
           </section>
+
+          <PoliticalPipeline funnel={funnel} />
+
+          <Card>
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Target className="h-4 w-4" />
+                Metas personalizadas
+              </CardTitle>
+              <CardDescription>Planejado vs realizado no período de cada meta</CardDescription>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 gap-4 pb-6 md:grid-cols-3">
+              {insights.weeklyGoals.map((goal) => (
+                <div key={goal.id} className="rounded-xl border border-border/80 bg-muted/20 p-4">
+                  <p className="text-sm font-medium">{goal.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {goal.startDate} até {goal.endDate}
+                  </p>
+                  <p className="mt-2 text-lg font-semibold text-heading dark:text-foreground">
+                    {goal.value} / {goal.target}
+                  </p>
+                  <Badge
+                    variant={
+                      goal.status === "no_ritmo"
+                        ? "secondary"
+                        : goal.status === "risco"
+                          ? "outline"
+                          : "destructive"
+                    }
+                    className="mt-2"
+                  >
+                    {goal.status === "no_ritmo"
+                      ? "No ritmo"
+                      : goal.status === "risco"
+                        ? "Em risco"
+                        : "Atrasado"}
+                  </Badge>
+                </div>
+              ))}
+              {!insights.weeklyGoals.length && (
+                <p className="text-sm text-muted-foreground md:col-span-3">
+                  Sem metas cadastradas. Configure em Configurações → Metas.
+                </p>
+              )}
+            </CardContent>
+          </Card>
         </>
       )}
 
-      <PoliticalPipeline funnel={funnel} />
-
-      {insights && (
-        <Card>
-          <CardHeader className="pb-4">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Target className="h-4 w-4" />
-              Metas personalizadas
-            </CardTitle>
-            <CardDescription>Planejado vs realizado no período de cada meta</CardDescription>
-          </CardHeader>
-          <CardContent className="grid grid-cols-1 gap-4 pb-6 md:grid-cols-3">
-            {insights.weeklyGoals.map((goal) => (
-              <div key={goal.id} className="rounded-xl border border-border/80 bg-muted/20 p-4">
-                <p className="text-sm font-medium">{goal.name}</p>
-                <p className="text-xs text-muted-foreground">
-                  {goal.startDate} até {goal.endDate}
-                </p>
-                <p className="mt-2 text-lg font-semibold text-heading dark:text-foreground">
-                  {goal.value} / {goal.target}
-                </p>
-                <Badge
-                  variant={
-                    goal.status === "no_ritmo"
-                      ? "secondary"
-                      : goal.status === "risco"
-                        ? "outline"
-                        : "destructive"
-                  }
-                  className="mt-2"
-                >
-                  {goal.status === "no_ritmo"
-                    ? "No ritmo"
-                    : goal.status === "risco"
-                      ? "Em risco"
-                      : "Atrasado"}
-                </Badge>
-              </div>
-            ))}
-            {!insights.weeklyGoals.length && (
-              <p className="text-sm text-muted-foreground md:col-span-3">
-                Sem metas cadastradas. Configure em Configurações → Metas.
-              </p>
-            )}
-          </CardContent>
-        </Card>
+      {!opLoading && !insights && !opError && (
+        <PoliticalPipeline funnel={funnel} />
       )}
 
       <section className="space-y-3">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
           Análise e pesquisas
         </h2>
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3">
-          <ChartCard
-            title="Crescimento de apoiadores"
-            description="Evolução mensal (dados de Pesquisas)"
-            narrative={narrativeGrowth(crescimento) ?? "Atualize os dados em Pesquisas."}
-          >
-            <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={crescimento}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                  <XAxis dataKey="mes" fontSize={12} tickLine={false} axisLine={false} />
-                  <YAxis fontSize={12} tickLine={false} axisLine={false} />
-                  <Tooltip />
-                  <Area
-                    type="monotone"
-                    dataKey="apoiadores"
-                    stroke="var(--chart-2)"
-                    fill="var(--chart-2)"
-                    fillOpacity={0.2}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </ChartCard>
-          <ChartCard
-            title="Intenção de voto"
-            description="Pesquisa estimulada"
-            narrative={narrativeIntention(intencao) ?? "Cadastre a pesquisa em Pesquisas."}
-          >
-            <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={intencao}
-                    dataKey="valor"
-                    nameKey="candidato"
-                    innerRadius={55}
-                    outerRadius={90}
-                  >
-                    {intencao.map((_, i) => (
-                      <Cell key={i} fill={PALETTE[i % PALETTE.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </ChartCard>
-        </div>
+        {pollsLoading ? (
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3">
+            <DashboardChartSkeleton />
+            <DashboardChartSkeleton />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3">
+            <ChartCard
+              title="Crescimento de apoiadores"
+              description="Evolução mensal (dados de Pesquisas)"
+              narrative={narrativeGrowth(crescimento) ?? "Atualize os dados em Pesquisas."}
+            >
+              <div className="h-72">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={crescimento}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                    <XAxis dataKey="mes" fontSize={12} tickLine={false} axisLine={false} />
+                    <YAxis fontSize={12} tickLine={false} axisLine={false} />
+                    <Tooltip />
+                    <Area
+                      type="monotone"
+                      dataKey="apoiadores"
+                      stroke="var(--chart-2)"
+                      fill="var(--chart-2)"
+                      fillOpacity={0.2}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </ChartCard>
+            <ChartCard
+              title="Intenção de voto"
+              description="Pesquisa estimulada"
+              narrative={narrativeIntention(intencao) ?? "Cadastre a pesquisa em Pesquisas."}
+            >
+              <div className="h-72">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={intencao}
+                      dataKey="valor"
+                      nameKey="candidato"
+                      innerRadius={55}
+                      outerRadius={90}
+                    >
+                      {intencao.map((_, i) => (
+                        <Cell key={i} fill={PALETTE[i % PALETTE.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </ChartCard>
+          </div>
+        )}
       </section>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2 xl:col-span-2">
-          <ChartCard
-            title="Aprovação por bairro"
-            description="Índice por região"
-            narrative={
-              narrativeApproval(aprovacao) ?? "Preencha aprovação por bairro em Pesquisas."
-            }
-          >
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={aprovacao}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="bairro" fontSize={12} />
-                  <YAxis fontSize={12} />
-                  <Tooltip />
-                  <Bar dataKey="aprovacao" fill="var(--chart-1)" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </ChartCard>
-        </div>
-        <ActivityFeed activities={activities ?? []} />
+        {pollsLoading ? (
+          <div className="lg:col-span-2 xl:col-span-2">
+            <DashboardChartSkeleton />
+          </div>
+        ) : (
+          <div className="lg:col-span-2 xl:col-span-2">
+            <ChartCard
+              title="Aprovação por bairro"
+              description="Índice por região"
+              narrative={
+                narrativeApproval(aprovacao) ?? "Preencha aprovação por bairro em Pesquisas."
+              }
+            >
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={aprovacao}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="bairro" fontSize={12} />
+                    <YAxis fontSize={12} />
+                    <Tooltip />
+                    <Bar dataKey="aprovacao" fill="var(--chart-1)" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </ChartCard>
+          </div>
+        )}
+        <ActivityFeed activities={activities ?? []} isLoading={activitiesLoading} />
       </div>
     </div>
+    </ModuleRouteGuard>
   );
 }

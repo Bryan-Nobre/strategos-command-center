@@ -2,7 +2,7 @@ import type { AuthContext } from "@/lib/supabase/session";
 import { isTenantOperational } from "@/lib/tenant-access";
 
 export type PostAuthDestination =
-  | { to: "/admin/tenants" }
+  | { to: "/tenants" }
   | { to: "/signup" }
   | { to: "/dashboard" };
 
@@ -11,7 +11,7 @@ export type PostAuthDestination =
  */
 export function resolvePostAuthDestination(auth: AuthContext): PostAuthDestination {
   if (auth.profile?.platform_role === "super_admin") {
-    return { to: "/admin/tenants" };
+    return { to: "/tenants" };
   }
 
   if (!auth.activeTenant || auth.tenants.length === 0) {

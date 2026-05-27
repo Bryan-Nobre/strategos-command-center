@@ -41,7 +41,7 @@ function LoginPage() {
       } else {
         toast.success("Login realizado com sucesso!");
       }
-      navigate({ to: dest.to as "/dashboard" | "/signup" | "/admin/tenants" });
+      navigate({ to: dest.to as "/dashboard" | "/signup" | "/tenants" });
     } catch (err) {
       toast.error(getAuthErrorMessage(err));
     } finally {

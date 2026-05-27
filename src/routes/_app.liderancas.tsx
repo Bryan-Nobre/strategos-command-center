@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Plus, Crown, Users, Pencil, Trash2, Eye } from "lucide-react";
+import { Plus, Crown, Users, Pencil, Trash2, Eye, Search } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { EmptyState } from "@/components/common/EmptyState";
 import { ConfirmDeleteDialog } from "@/components/common/ConfirmDeleteDialog";
@@ -25,8 +25,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTenant } from "@/hooks/use-tenant";
+import { useCrudPermissions } from "@/hooks/use-crud-permissions";
+import { ModuleRouteGuard } from "@/components/auth/PermissionGate";
 import {
   useLeaderships,
   useCreateLeadership,
@@ -36,8 +38,18 @@ import {
 import { useSupportersByLeadership } from "@/hooks/use-supporters";
 import { LoadingState } from "@/components/common/LoadingState";
 import { SUPPORTER_STATUS_LABELS, SUPPORT_LEVEL_LABELS } from "@/types/domain";
+import { DEEP_LINK_HIGHLIGHT_CLASS } from "@/lib/search-deep-link";
+import {
+  parseLiderancasSearch,
+  serializeLiderancasSearch,
+  type LiderancasListSearch,
+} from "@/lib/list-search/liderancas";
+import { useSyncedListSearch } from "@/hooks/use-synced-list-search";
+import { ListUrlActions } from "@/components/common/ListUrlActions";
 
 export const Route = createFileRoute("/_app/liderancas")({
+  validateSearch: (search: Record<string, unknown>): LiderancasListSearch =>
+    parseLiderancasSearch(search),
   component: LiderancasPage,
 });
 
@@ -45,10 +57,20 @@ type LeadershipRow = NonNullable<ReturnType<typeof useLeaderships>["data"]>[numb
 
 function LiderancasPage() {
   const { tenantId } = useTenant();
+  const urlSearch = Route.useSearch();
+  const highlightId = urlSearch.id;
+  const { localText: query, setLocalText: setQuery, setSearch } = useSyncedListSearch({
+    search: urlSearch,
+    serialize: serializeLiderancasSearch,
+  });
+
   const { data: list, isLoading } = useLeaderships(tenantId);
   const createMutation = useCreateLeadership(tenantId);
   const updateMutation = useUpdateLeadership(tenantId);
   const deleteMutation = useDeleteLeadership(tenantId);
+  const perms = useCrudPermissions("leaderships");
+
+  const highlightRef = useRef<HTMLDivElement>(null);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<LeadershipRow | null>(null);
@@ -63,6 +85,24 @@ function LiderancasPage() {
   const [editRegion, setEditRegion] = useState("");
   const [editVotes, setEditVotes] = useState("0");
 
+  const filteredList = useMemo(() => {
+    const q = query.toLowerCase();
+    return (list ?? []).filter(
+      (l) => !q || [l.name, l.region].some((f) => f?.toLowerCase().includes(q)),
+    );
+  }, [list, query]);
+
+  useEffect(() => {
+    if (highlightId && highlightRef.current) {
+      highlightRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [highlightId, filteredList]);
+
+  function clearFilters() {
+    setQuery("");
+    setSearch({});
+  }
+
   if (isLoading) return <LoadingState />;
 
   function openEdit(l: LeadershipRow) {
@@ -73,11 +113,13 @@ function LiderancasPage() {
   }
 
   return (
+    <ModuleRouteGuard module="leaderships">
     <div className="space-y-8">
       <PageHeader
         title="Lideranças"
         description="Gerencie lideranças políticas e sua capilaridade regional."
         actions={
+          perms.canCreate ? (
           <Dialog open={createOpen} onOpenChange={setCreateOpen}>
             <DialogTrigger asChild>
               <Button size="sm">
@@ -134,21 +176,48 @@ function LiderancasPage() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+          ) : null
         }
       />
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="relative flex-1 max-w-md">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Buscar nome ou região..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        {(query.trim() || highlightId) && <ListUrlActions onClear={clearFilters} />}
+      </div>
 
       {!(list?.length) ? (
         <EmptyState
           icon={Crown}
           title="Nenhuma liderança cadastrada"
           description="Cadastre lideranças para organizar apoiadores por referência política."
-          actionLabel="Nova liderança"
-          onAction={() => setCreateOpen(true)}
+          actionLabel={perms.canCreate ? "Nova liderança" : undefined}
+          onAction={perms.canCreate ? () => setCreateOpen(true) : undefined}
+        />
+      ) : !filteredList.length ? (
+        <EmptyState
+          icon={Crown}
+          title="Nenhuma liderança encontrada"
+          description="Ajuste a busca ou cadastre uma nova liderança."
         />
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {(list ?? []).map((l) => (
-            <Card key={l.id} className="shadow-elegant">
+          {filteredList.map((l) => (
+            <Card
+              key={l.id}
+              ref={l.id === highlightId ? highlightRef : undefined}
+              className={[
+                "shadow-elegant",
+                l.id === highlightId ? DEEP_LINK_HIGHLIGHT_CLASS : "",
+              ].join(" ")}
+            >
               <CardContent className="p-5">
                 <div className="mb-3 flex items-start justify-between">
                   <div className="flex items-center gap-2">
@@ -162,9 +231,12 @@ function LiderancasPage() {
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setViewTarget(l)}>
                       <Eye className="h-4 w-4" />
                     </Button>
+                    {perms.canUpdate && (
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(l)}>
                       <Pencil className="h-4 w-4" />
                     </Button>
+                    )}
+                    {perms.canDelete && (
                     <Button
                       variant="ghost"
                       size="icon"
@@ -173,6 +245,7 @@ function LiderancasPage() {
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
+                    )}
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3 text-sm">
@@ -267,6 +340,7 @@ function LiderancasPage() {
         }}
       />
     </div>
+    </ModuleRouteGuard>
   );
 }
 

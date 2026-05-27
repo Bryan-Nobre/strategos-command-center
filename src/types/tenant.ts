@@ -5,7 +5,6 @@ export type TenantStatus = Enums<"tenant_status">;
 
 export const TENANT_STATUS_LABELS: Record<TenantStatus, string> = {
   active: "Ativo",
-  trial: "Trial",
   suspended: "Suspenso",
   pending: "Pendente",
   cancelled: "Cancelado",
@@ -13,7 +12,19 @@ export const TENANT_STATUS_LABELS: Record<TenantStatus, string> = {
 
 export type TenantPlan = Enums<"tenant_plan">;
 
-/** Limites por plano — billing/feature flags futuros (UX apenas). */
+/** Plano comercial (limites, trial de produto). Distinto de tenant_status. */
+export const TENANT_PLAN_LABELS: Record<TenantPlan, string> = {
+  trial: "Trial",
+  basic: "Basic",
+  pro: "Pro",
+  enterprise: "Enterprise",
+};
+
+/**
+ * Limites por plano (espelho estático para referência/fallback).
+ * Fonte de verdade: `plan_limit_definitions` + RPC `get_tenant_plan_usage` no PostgreSQL.
+ * Edição admin: `/admin/plans` (RPC `update_plan_limit_definition`).
+ */
 export type PlanLimits = {
   maxSupporters: number;
   maxTeamMembers: number;

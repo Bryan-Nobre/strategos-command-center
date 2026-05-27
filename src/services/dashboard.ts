@@ -1,14 +1,7 @@
 import { createClient } from "@/lib/supabase/client";
+import { mapOperationalDashboardPayload } from "@/lib/dashboard-mapper";
 import type { Enums, Json } from "@/types/supabase";
-import {
-  buildBriefingSentence,
-  buildOperationalAlerts,
-  buildOperationalBrief,
-  enrichTerritories,
-  type EnrichedTerritory,
-  type OperationalAlert,
-  type OperationalBrief,
-} from "@/services/dashboard-intelligence";
+import type { EnrichedTerritory, OperationalAlert, OperationalBrief } from "@/services/dashboard-intelligence";
 
 export type { EnrichedTerritory, OperationalAlert, OperationalBrief };
 
@@ -21,13 +14,60 @@ export type DashboardMetrics = {
   funnel: Record<string, number> | null;
 };
 
-export async function getDashboardMetrics(tenantId: string): Promise<DashboardMetrics> {
+export type TerritoryInsight = {
+  neighborhood: string;
+  supporters: number;
+  strongSupportPct: number;
+  undecidedPct: number;
+  oppositionPct: number;
+  openDemands: number;
+  score: number;
+};
+
+export type WeeklyGoal = {
+  id: string;
+  name: string;
+  metric: ManualGoalMetric;
+  startDate: string;
+  endDate: string;
+  target: number;
+  value: number;
+  status: "no_ritmo" | "risco" | "atrasado";
+};
+
+export type ManualGoalMetric = "new_supporters" | "resolved_demands" | "new_strong_supporters";
+
+export type ManualGoalConfig = {
+  id: string;
+  name: string;
+  metric: ManualGoalMetric;
+  startDate: string;
+  endDate: string;
+  target: number;
+};
+
+export type StrategicInsights = {
+  criticalTerritories: EnrichedTerritory[];
+  promisingTerritories: EnrichedTerritory[];
+  weeklyGoals: WeeklyGoal[];
+  alerts: OperationalAlert[];
+  operational: OperationalBrief;
+  briefingSentence: string;
+};
+
+export type OperationalDashboard = {
+  metrics: DashboardMetrics;
+  insights: StrategicInsights;
+};
+
+/** Dashboard operacional — agregação e regras no servidor (RLS + RPC). */
+export async function getOperationalDashboard(tenantId: string): Promise<OperationalDashboard> {
   const supabase = createClient();
-  const { data, error } = await supabase.rpc("get_tenant_dashboard_metrics", {
+  const { data, error } = await supabase.rpc("get_tenant_operational_dashboard", {
     p_tenant_id: tenantId,
   });
   if (error) throw error;
-  return data as DashboardMetrics;
+  return mapOperationalDashboardPayload(data);
 }
 
 export async function listActivities(tenantId: string, limit = 10) {
@@ -95,53 +135,6 @@ export async function upsertPollSnapshot(
     .single();
   if (error) throw error;
   return row.id;
-}
-
-export type TerritoryInsight = {
-  neighborhood: string;
-  supporters: number;
-  strongSupportPct: number;
-  undecidedPct: number;
-  oppositionPct: number;
-  openDemands: number;
-  score: number;
-};
-
-export type WeeklyGoal = {
-  id: string;
-  name: string;
-  metric: ManualGoalMetric;
-  startDate: string;
-  endDate: string;
-  target: number;
-  value: number;
-  status: "no_ritmo" | "risco" | "atrasado";
-};
-
-export type ManualGoalMetric = "new_supporters" | "resolved_demands" | "new_strong_supporters";
-
-export type ManualGoalConfig = {
-  id: string;
-  name: string;
-  metric: ManualGoalMetric;
-  startDate: string;
-  endDate: string;
-  target: number;
-};
-
-export type StrategicInsights = {
-  criticalTerritories: EnrichedTerritory[];
-  promisingTerritories: EnrichedTerritory[];
-  weeklyGoals: WeeklyGoal[];
-  alerts: OperationalAlert[];
-  operational: OperationalBrief;
-  briefingSentence: string;
-};
-
-function calcStatus(value: number, target: number): WeeklyGoal["status"] {
-  if (value >= target) return "no_ritmo";
-  if (value >= target * 0.7) return "risco";
-  return "atrasado";
 }
 
 const DEFAULT_MANUAL_GOALS: ManualGoalConfig[] = [];
@@ -235,166 +228,4 @@ export async function saveManualGoalsConfig(
     created_by: user?.id ?? null,
   });
   if (error) throw error;
-}
-
-function isBetweenDates(isoDateTime: string | null, startDate: string, endDate: string): boolean {
-  if (!isoDateTime) return false;
-  const day = isoDateTime.slice(0, 10);
-  return day >= startDate && day <= endDate;
-}
-
-/** Inteligência operacional calculada no cliente; segurança real continua no backend/RLS. */
-export async function getStrategicInsights(tenantId: string): Promise<StrategicInsights> {
-  const supabase = createClient();
-  const configuredGoals = await getManualGoalsConfig(tenantId);
-
-  const [{ data: supporters, error: sErr }, { data: demands, error: dErr }] = await Promise.all([
-    supabase
-      .from("supporters")
-      .select("id, neighborhood, status, support_level, created_at")
-      .eq("tenant_id", tenantId),
-    supabase
-      .from("demands")
-      .select("id, neighborhood, status, created_at, updated_at, assigned_to")
-      .eq("tenant_id", tenantId),
-  ]);
-  if (sErr) throw sErr;
-  if (dErr) throw dErr;
-
-  const byNeighborhood = new Map<
-    string,
-    {
-      supporters: number;
-      strong: number;
-      undecided: number;
-      opposition: number;
-      openDemands: number;
-    }
-  >();
-
-  for (const s of supporters ?? []) {
-    const key = s.neighborhood?.trim() || "Sem bairro";
-    const current = byNeighborhood.get(key) ?? {
-      supporters: 0,
-      strong: 0,
-      undecided: 0,
-      opposition: 0,
-      openDemands: 0,
-    };
-    current.supporters += 1;
-    if (s.support_level === "forte") current.strong += 1;
-    if (s.support_level === "indeciso" || s.status === "indeciso") current.undecided += 1;
-    if (s.status === "oposicao") current.opposition += 1;
-    byNeighborhood.set(key, current);
-  }
-
-  for (const d of demands ?? []) {
-    if (d.status !== "resolvido") {
-      const key = d.neighborhood?.trim() || "Sem bairro";
-      const current = byNeighborhood.get(key) ?? {
-        supporters: 0,
-        strong: 0,
-        undecided: 0,
-        opposition: 0,
-        openDemands: 0,
-      };
-      current.openDemands += 1;
-      byNeighborhood.set(key, current);
-    }
-  }
-
-  const territoryRows: TerritoryInsight[] = [...byNeighborhood.entries()]
-    .map(([neighborhood, stats]) => {
-      const base = Math.max(stats.supporters, 1);
-      const strongSupportPct = Math.round((stats.strong / base) * 100);
-      const undecidedPct = Math.round((stats.undecided / base) * 100);
-      const oppositionPct = Math.round((stats.opposition / base) * 100);
-      const score = strongSupportPct - undecidedPct - oppositionPct - stats.openDemands * 3;
-      return {
-        neighborhood,
-        supporters: stats.supporters,
-        strongSupportPct,
-        undecidedPct,
-        oppositionPct,
-        openDemands: stats.openDemands,
-        score,
-      };
-    })
-    .filter((row) => row.supporters > 0);
-
-  const enriched = enrichTerritories(territoryRows);
-  const criticalTerritories = [...enriched].sort((a, b) => a.score - b.score).slice(0, 5);
-  const promisingTerritories = [...enriched].sort((a, b) => b.score - a.score).slice(0, 5);
-
-  const weeklyGoals: WeeklyGoal[] = configuredGoals.map((goal) => {
-    let value = 0;
-    if (goal.metric === "new_supporters") {
-      value =
-        supporters?.filter((s) => isBetweenDates(s.created_at, goal.startDate, goal.endDate))
-          .length ?? 0;
-    } else if (goal.metric === "resolved_demands") {
-      value =
-        demands?.filter(
-          (d) =>
-            d.status === "resolvido" && isBetweenDates(d.updated_at, goal.startDate, goal.endDate),
-        ).length ?? 0;
-    } else if (goal.metric === "new_strong_supporters") {
-      value =
-        supporters?.filter(
-          (s) =>
-            s.support_level === "forte" &&
-            isBetweenDates(s.created_at, goal.startDate, goal.endDate),
-        ).length ?? 0;
-    }
-    return {
-      id: goal.id,
-      name: goal.name,
-      metric: goal.metric,
-      startDate: goal.startDate,
-      endDate: goal.endDate,
-      target: goal.target,
-      value,
-      status: calcStatus(value, Math.max(goal.target, 1)),
-    };
-  });
-
-  const alerts = buildOperationalAlerts(criticalTerritories);
-
-  const unassignedOpen =
-    demands?.filter((d) => d.status !== "resolvido" && !d.assigned_to).length ?? 0;
-
-  if (unassignedOpen >= 3) {
-    alerts.unshift({
-      id: "unassigned-demands",
-      severity: "alta",
-      title: `${unassignedOpen} demandas sem responsável`,
-      description: "Demandas abertas aguardam definição de encarregado.",
-      suggestion: "Distribua responsáveis para destravar o fluxo operacional.",
-      actionLabel: "Ver demandas",
-      actionTo: "/demandas",
-      actionSearch: { semResponsavel: "1" },
-    });
-  }
-
-  const operational = buildOperationalBrief(
-    supporters ?? [],
-    demands ?? [],
-    alerts,
-    criticalTerritories.length,
-    criticalTerritories[0],
-    promisingTerritories[0],
-    weeklyGoals,
-    unassignedOpen,
-  );
-
-  const briefingSentence = buildBriefingSentence(operational.briefingParts);
-
-  return {
-    criticalTerritories,
-    promisingTerritories,
-    weeklyGoals,
-    alerts,
-    operational,
-    briefingSentence,
-  };
 }
