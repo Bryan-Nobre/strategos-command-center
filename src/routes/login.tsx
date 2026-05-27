@@ -1,17 +1,15 @@
 import { createFileRoute, Link, useNavigate, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
-import { Vote } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Eye, EyeOff, Loader2, Lock, Mail } from "lucide-react";
 import { signInWithPassword } from "@/services/auth";
 import { getAuthErrorMessage } from "@/lib/supabase/errors";
 import { ensurePublicAuthRedirect } from "@/lib/supabase/auth-route";
 import { resolvePostAuthDestination, shouldShowSuspendedNotice } from "@/lib/auth/navigation";
 import { useAuth } from "@/contexts/auth-provider";
 import { toast } from "sonner";
-import { ThemeToggle } from "@/components/theme/ThemeToggle";
+import { LoginBrandPanel } from "@/components/auth/LoginBrandPanel";
+
+const LOGO_DARK = "/brand/strategos-logo-dark.png";
 
 export const Route = createFileRoute("/login")({
   beforeLoad: async ({ context }) => {
@@ -26,6 +24,7 @@ function LoginPage() {
   const { refreshAuth } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -49,53 +48,103 @@ function LoginPage() {
     }
   }
 
+  function handleForgotPassword(e: React.MouseEvent) {
+    e.preventDefault();
+    toast.info("Recuperação de senha estará disponível em breve.");
+  }
+
   return (
-    <div className="relative flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="absolute right-4 top-4">
-        <ThemeToggle />
-      </div>
-      <Card className="w-full max-w-md shadow-elegant">
-        <CardHeader className="text-center">
-          <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <Vote className="h-6 w-6" />
-          </div>
-          <CardTitle>Strategos CRM</CardTitle>
-          <CardDescription>Entre na sua conta de campanha</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">E-mail</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
+    <div className="login-split">
+      <LoginBrandPanel />
+
+      <main className="login-split__panel">
+        <div className="login-split__panel-inner">
+          <header className="login-split__header">
+            <img
+              src={LOGO_DARK}
+              alt="Strategos CRM"
+              className="login-split__header-logo"
+              width={88}
+              height={88}
+              decoding="async"
+            />
+            <h1 className="login-split__title">Bem vindo!</h1>
+            <p className="login-split__subtitle">
+              Sistema de inteligência política e gestão de campanha.
+            </p>
+          </header>
+
+          <form onSubmit={handleSubmit} className="login-split__form">
+            <div className="login-split__field">
+              <div className="login-split__input-wrap">
+                <Mail className="login-split__input-icon" aria-hidden />
+                <input
+                  id="email"
+                  type="email"
+                  autoComplete="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="login-split__input"
+                  placeholder="Insira seu e-mail"
+                  required
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Senha</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
+
+            <div className="login-split__field">
+              <div className="login-split__input-wrap">
+                <Lock className="login-split__input-icon" aria-hidden />
+                <input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="login-split__input login-split__input--password"
+                  placeholder="Insira sua senha"
+                  required
+                />
+                <button
+                  type="button"
+                  className="login-split__toggle-pw"
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" aria-hidden />
+                  ) : (
+                    <Eye className="h-4 w-4" aria-hidden />
+                  )}
+                </button>
+              </div>
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Entrando..." : "Entrar"}
-            </Button>
+
+            <div className="login-split__forgot">
+              <button type="button" className="login-split__forgot-link" onClick={handleForgotPassword}>
+                Esqueci a senha
+              </button>
+            </div>
+
+            <button type="submit" className="login-split__submit" disabled={loading}>
+              {loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                  Entrando…
+                </>
+              ) : (
+                "Entrar"
+              )}
+            </button>
           </form>
-          <p className="mt-4 text-center text-sm text-muted-foreground">
-            Não tem conta?{" "}
-            <Link to="/signup" className="font-medium text-primary hover:underline">
+
+          <p className="login-split__signup">
+            Ainda não tem uma campanha?{" "}
+            <Link to="/signup" className="login-split__signup-link">
               Criar campanha
             </Link>
           </p>
-        </CardContent>
-      </Card>
+        </div>
+      </main>
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Moon, Sun, Monitor } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,13 +18,21 @@ const options: { value: Theme; label: string; icon: typeof Sun }[] = [
 
 export function ThemeToggle({ className }: { className?: string }) {
   const { theme, resolvedTheme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
+
   const ActiveIcon = resolvedTheme === "dark" ? Moon : Sun;
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" className={className} aria-label="Alternar tema">
-          <ActiveIcon className="h-4 w-4" />
+          {mounted ? (
+            <ActiveIcon className="h-4 w-4" />
+          ) : (
+            <Sun className="h-4 w-4 opacity-0" aria-hidden />
+          )}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">

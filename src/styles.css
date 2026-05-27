@@ -1729,4 +1729,369 @@
       border-top: 1px solid rgba(6, 23, 53, 0.07);
     }
   }
+
+  /* —— Login (split brand + form) —— */
+  .login-split {
+    display: flex;
+    min-height: 100dvh;
+    width: 100%;
+  }
+
+  .login-split__brand {
+    position: relative;
+    display: none;
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background: #07723d;
+  }
+
+  @media (min-width: 900px) {
+    .login-split__brand {
+      display: flex;
+    }
+  }
+
+  .login-split__brand-decor {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  .login-split__decor-icon {
+    position: absolute;
+    color: #044d29;
+    opacity: 0.38;
+  }
+
+  .login-split__decor-icon--1 {
+    top: 8%;
+    left: 6%;
+    width: 3.25rem;
+    height: 3.25rem;
+    transform: rotate(-14deg);
+  }
+
+  .login-split__decor-icon--2 {
+    top: 22%;
+    right: 8%;
+    width: 4rem;
+    height: 4rem;
+    transform: rotate(11deg);
+  }
+
+  .login-split__decor-icon--3 {
+    bottom: 28%;
+    left: 10%;
+    width: 3.5rem;
+    height: 3.5rem;
+    transform: rotate(8deg);
+  }
+
+  .login-split__decor-icon--4 {
+    top: 48%;
+    right: 5%;
+    width: 3.75rem;
+    height: 3.75rem;
+    transform: rotate(-9deg);
+  }
+
+  .login-split__decor-icon--5 {
+    bottom: 12%;
+    right: 14%;
+    width: 3.25rem;
+    height: 3.25rem;
+    transform: rotate(16deg);
+  }
+
+  .login-split__decor-icon--6 {
+    top: 62%;
+    left: 4%;
+    width: 2.75rem;
+    height: 2.75rem;
+    transform: rotate(-18deg);
+  }
+
+  .login-split__decor-icon--7 {
+    top: 14%;
+    left: 38%;
+    width: 2.5rem;
+    height: 2.5rem;
+    transform: rotate(6deg);
+    opacity: 0.28;
+  }
+
+  .login-split__decor-icon--8 {
+    bottom: 8%;
+    left: 32%;
+    width: 3rem;
+    height: 3rem;
+    transform: rotate(-11deg);
+    opacity: 0.32;
+  }
+
+  .login-split__brand-inner {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    width: 100%;
+    max-width: 28rem;
+    align-items: center;
+    justify-content: center;
+    padding: 2.5rem 2rem;
+  }
+
+  .login-split__brand-logo {
+    width: 100%;
+    max-width: 26rem;
+    height: auto;
+    object-fit: contain;
+  }
+
+  .login-split__panel {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+    background: #ffffff;
+    padding: 2rem 1.25rem;
+  }
+
+  @media (min-width: 900px) {
+    .login-split__panel {
+      flex: 1;
+      padding: 2.5rem;
+    }
+  }
+
+  .login-split__panel-inner {
+    width: 100%;
+    max-width: 22rem;
+  }
+
+  .login-split__header {
+    margin-bottom: 2rem;
+    text-align: center;
+  }
+
+  .login-split__header-logo {
+    margin: 0 auto 1.5rem;
+    height: 5rem;
+    width: auto;
+    max-width: 12rem;
+    object-fit: contain;
+  }
+
+  @media (min-width: 640px) {
+    .login-split__header-logo {
+      height: 5.5rem;
+      max-width: 14rem;
+    }
+  }
+
+  .login-split__title {
+    font-size: 1.625rem;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    color: #0a1628;
+  }
+
+  .login-split__subtitle {
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: #64748b;
+  }
+
+  .login-split__form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .login-split__input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .login-split__input-icon {
+    position: absolute;
+    left: 1rem;
+    height: 1.125rem;
+    width: 1.125rem;
+    color: #94a3b8;
+    pointer-events: none;
+  }
+
+  .login-split__input {
+    height: 3rem;
+    width: 100%;
+    border-radius: 9999px;
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    padding: 0 1rem 0 2.75rem;
+    font-size: 0.9375rem;
+    color: #0f172a;
+    outline: none;
+    transition:
+      border-color 0.2s ease,
+      box-shadow 0.2s ease;
+  }
+
+  .login-split__input--password {
+    padding-right: 2.75rem;
+  }
+
+  .login-split__input::placeholder {
+    color: #94a3b8;
+  }
+
+  .login-split__input:hover {
+    border-color: #cbd5e1;
+  }
+
+  .login-split__input:focus {
+    border-color: #07723d;
+    box-shadow: 0 0 0 3px rgba(7, 114, 61, 0.12);
+  }
+
+  .login-split__toggle-pw {
+    position: absolute;
+    right: 0.875rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.25rem;
+    color: #94a3b8;
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: color 0.2s ease;
+  }
+
+  .login-split__toggle-pw:hover {
+    color: #475569;
+  }
+
+  .login-split__forgot {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: -0.25rem;
+  }
+
+  .login-split__forgot-link {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: #07723d;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    text-decoration: none;
+    transition: color 0.2s ease;
+  }
+
+  .login-split__forgot-link:hover {
+    color: #055a30;
+    text-decoration: underline;
+  }
+
+  .login-split__submit {
+    display: inline-flex;
+    height: 3rem;
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    border: none;
+    border-radius: 9999px;
+    background: #07723d;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: #ffffff;
+    cursor: pointer;
+    transition:
+      background 0.2s ease,
+      transform 0.2s ease,
+      box-shadow 0.2s ease;
+  }
+
+  .login-split__submit:hover:not(:disabled) {
+    background: #055a30;
+    transform: translateY(-1px);
+    box-shadow: 0 8px 24px rgba(7, 114, 61, 0.28);
+  }
+
+  .login-split__submit:disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
+  }
+
+  .login-split__signup {
+    margin-top: 1.75rem;
+    text-align: center;
+    font-size: 0.875rem;
+    color: #64748b;
+  }
+
+  .login-split__signup-link {
+    font-weight: 600;
+    color: #07723d;
+    text-decoration: none;
+    transition: color 0.2s ease;
+  }
+
+  .login-split__signup-link:hover {
+    color: #055a30;
+    text-decoration: underline;
+  }
+
+  /* Mobile: faixa verde com logo no topo */
+  @media (max-width: 899px) {
+    .login-split {
+      flex-direction: column;
+    }
+
+    .login-split__brand {
+      display: flex;
+      flex: none;
+      min-height: 10.5rem;
+      padding: 1.5rem 1rem;
+    }
+
+    .login-split__brand-inner {
+      max-width: 18rem;
+      padding: 0 1rem;
+    }
+
+    .login-split__brand-logo {
+      max-width: 15rem;
+    }
+
+    .login-split__decor-icon {
+      opacity: 0.28;
+    }
+
+    .login-split__decor-icon--1,
+    .login-split__decor-icon--2 {
+      width: 2.25rem;
+      height: 2.25rem;
+    }
+
+    .login-split__decor-icon--7,
+    .login-split__decor-icon--8 {
+      display: none;
+    }
+
+    .login-split__panel {
+      flex: 1;
+      padding: 2rem 1.25rem 2.5rem;
+    }
+  }
 }

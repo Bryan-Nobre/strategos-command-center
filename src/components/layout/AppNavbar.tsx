@@ -3,7 +3,7 @@ import { Search } from "lucide-react";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
-import { useRouterState, useRouteContext } from "@tanstack/react-router";
+import { useMatch, useRouterState, useRouteContext } from "@tanstack/react-router";
 import { resolveRouteMeta } from "@/lib/navigation-meta";
 import {
   GlobalSearchDialog,
@@ -15,12 +15,13 @@ import { buildSearchPlaceholder } from "@/lib/search-module-meta";
 
 export function AppNavbar() {
   const path = useRouterState({ select: (r) => r.location.pathname });
+  const appRoute = useMatch({ from: "/_app", shouldThrow: false });
   const { activeTenant } = useRouteContext({ strict: false });
   const meta = resolveRouteMeta(path);
   const [searchOpen, setSearchOpen] = useState(false);
   const openSearch = useCallback(() => setSearchOpen(true), []);
 
-  const tenantId = activeTenant?.id ?? "";
+  const tenantId = appRoute ? (activeTenant?.id ?? "") : "";
   const { permissions } = useTenantPermissions(tenantId);
   const searchPlaceholder = buildSearchPlaceholder(permissions);
   useGlobalSearchShortcut(openSearch, !!tenantId);
@@ -66,7 +67,7 @@ export function AppNavbar() {
               <Search className="h-4 w-4" />
             </Button>
             <ThemeToggle className="topbar-icon-btn" />
-            {tenantId ? <NotificationBell className="topbar-icon-btn" /> : null}
+            {tenantId ? <NotificationBell tenantId={tenantId} className="topbar-icon-btn" /> : null}
           </div>
         </div>
       </header>

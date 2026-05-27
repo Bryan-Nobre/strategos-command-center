@@ -25,11 +25,14 @@ type ThemeContextValue = {
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
+function readResolvedThemeFromDom(): ResolvedTheme {
+  if (typeof document === "undefined") return "light";
+  return document.documentElement.classList.contains("dark") ? "dark" : "light";
+}
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>(() => readStoredTheme());
-  const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>(() =>
-    resolveTheme(readStoredTheme()),
-  );
+  const [theme, setThemeState] = useState<Theme>("system");
+  const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>("light");
 
   const setTheme = useCallback((next: Theme) => {
     setThemeState(next);
@@ -40,9 +43,19 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    const stored = readStoredTheme();
+    setThemeState(stored);
+    setResolvedTheme(readResolvedThemeFromDom());
+    applyTheme(stored);
+  }, []);
+
+  useEffect(() => {
+    if (theme === "system") return;
     applyTheme(theme);
     setResolvedTheme(resolveTheme(theme));
+  }, [theme]);
 
+  useEffect(() => {
     if (theme !== "system") return;
 
     const media = window.matchMedia("(prefers-color-scheme: dark)");

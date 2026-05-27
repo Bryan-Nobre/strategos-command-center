@@ -10,7 +10,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { useTenant } from "@/hooks/use-tenant";
 import {
   useMarkAllNotificationsRead,
   useMarkNotificationRead,
@@ -37,9 +36,13 @@ function formatWhen(iso: string) {
   return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
 }
 
-export function NotificationBell({ className }: { className?: string }) {
+type NotificationBellProps = {
+  tenantId: string;
+  className?: string;
+};
+
+export function NotificationBell({ tenantId, className }: NotificationBellProps) {
   const navigate = useNavigate();
-  const { tenantId } = useTenant();
   const { data: count = 0 } = useUnreadNotificationCount(tenantId, !!tenantId);
   const { data: items = [], isLoading, isFetching } = useNotifications(tenantId, !!tenantId);
   const markRead = useMarkNotificationRead(tenantId);
