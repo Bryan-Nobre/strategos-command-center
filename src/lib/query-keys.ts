@@ -11,6 +11,10 @@ export const queryKeys = {
   weeklyGoalsConfig: (tenantId: string) => ["weekly-goals-config", tenantId] as const,
   activities: (tenantId: string) => ["activities", tenantId] as const,
   pollSnapshots: (tenantId: string) => ["poll_snapshots", tenantId] as const,
+  reportsSummary: (
+    tenantId: string,
+    filters: Record<string, string | null | undefined>,
+  ) => ["reports-summary", tenantId, filters] as const,
   supporters: (tenantId: string) => ["supporters", tenantId] as const,
   leaderships: (tenantId: string) => ["leaderships", tenantId] as const,
   demands: (tenantId: string) => ["demands", tenantId] as const,
@@ -44,6 +48,7 @@ export function isTenantScopedQueryKey(key: readonly unknown[]): boolean {
     "weekly-goals-config",
     "activities",
     "poll_snapshots",
+    "reports-summary",
     "supporters",
     "leaderships",
     "demands",

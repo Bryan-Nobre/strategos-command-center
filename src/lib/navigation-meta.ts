@@ -51,7 +51,7 @@ const APP_ROUTES: Record<string, RouteMeta> = {
   },
   relatorios: {
     title: "Relatórios",
-    subtitle: "Exportação e consolidação de dados",
+    subtitle: "Central analítica e exportação executiva",
     icon: FileText,
   },
   configuracoes: {

@@ -697,6 +697,21 @@ export type Database = {
         Args: { p_tenant_id: string }
         Returns: Json
       }
+      get_tenant_reports_summary: {
+        Args: {
+          p_tenant_id: string
+          p_from: string
+          p_to: string
+          p_neighborhood?: string
+          p_city?: string
+          p_source?: string
+          p_status?: string
+          p_support_level?: string
+          p_leadership_id?: string
+          p_assigned_to?: string
+        }
+        Returns: Json
+      }
       get_tenant_dashboard_metrics: {
         Args: { p_tenant_id: string }
         Returns: Json

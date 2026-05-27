@@ -1,57 +1,31 @@
 import { createFileRoute, useRouteContext } from "@tanstack/react-router";
 import { useMemo } from "react";
-import { Users, Crown, Vote, MessageSquareWarning, Target } from "lucide-react";
-import {
-  Area,
-  AreaChart,
-  Bar,
-  BarChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-  Pie,
-  PieChart,
-  Cell,
-  Legend,
-} from "recharts";
-import { MetricCard } from "@/components/common/MetricCard";
-import { ChartCard } from "@/components/common/ChartCard";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { OperationalHeader } from "@/components/dashboard/OperationalHeader";
-import { OperationalStrip } from "@/components/dashboard/OperationalStrip";
-import { ActionableAlerts } from "@/components/dashboard/ActionableAlerts";
-import { DailySummaryCard } from "@/components/dashboard/DailySummaryCard";
-import { NextActionsCard } from "@/components/dashboard/NextActionsCard";
-import { TerritoryIntelCard } from "@/components/dashboard/TerritoryIntelCard";
-import { PoliticalPipeline } from "@/components/dashboard/PoliticalPipeline";
-import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
-import {
-  DashboardBlockSkeleton,
-  DashboardChartSkeleton,
-  DashboardMetricsSkeleton,
-} from "@/components/dashboard/DashboardSectionSkeleton";
+import { Users, Crown, Vote, MessageSquareWarning } from "lucide-react";
+import { ModuleRouteGuard } from "@/components/auth/PermissionGate";
+import { DashboardHero } from "@/components/dashboard/DashboardHero";
+import { DashboardPriorities } from "@/components/dashboard/DashboardPriorities";
+import { DashboardKpiStrip } from "@/components/dashboard/DashboardKpiStrip";
+import { DashboardTerritoryMap } from "@/components/dashboard/DashboardTerritoryMap";
+import { DashboardGoalsAtRisk } from "@/components/dashboard/DashboardGoalsAtRisk";
+import { DashboardPipelineSlim } from "@/components/dashboard/DashboardPipelineSlim";
+import { DashboardAnalyticsSection } from "@/components/dashboard/DashboardAnalyticsSection";
+import { DashboardActivityTimeline } from "@/components/dashboard/DashboardActivityTimeline";
+import { DashboardWarRoomSkeleton } from "@/components/dashboard/DashboardWarRoomSkeleton";
 import { useTenant } from "@/hooks/use-tenant";
 import { useTenantPermissions } from "@/hooks/use-tenant-permissions";
-import { ModuleRouteGuard } from "@/components/auth/PermissionGate";
 import { canAccessDashboardRoute } from "@/lib/dashboard-link-permissions";
+import {
+  buildDailyPriorities,
+  pillsToBadges,
+  pickHeroHighlight,
+  resolveHeroCtas,
+} from "@/lib/dashboard-compose";
 import { useOperationalDashboard, useActivities, usePollSnapshots } from "@/hooks/use-dashboard";
 import { greetingLabel } from "@/services/dashboard-intelligence";
-import { narrativeApproval, narrativeGrowth, narrativeIntention } from "@/lib/chart-narratives";
 
 export const Route = createFileRoute("/_app/dashboard")({
   component: DashboardPage,
 });
-
-const PALETTE = [
-  "var(--chart-1)",
-  "var(--chart-2)",
-  "var(--chart-3)",
-  "var(--chart-4)",
-  "var(--chart-5)",
-];
 
 function DashboardPage() {
   const { tenantId } = useTenant();
@@ -65,8 +39,6 @@ function DashboardPage() {
   const metrics = operational?.metrics;
   const insights = operational?.insights;
 
-  const crescimento = (polls?.find((p) => p.snapshot_type === "crescimento_apoiadores")?.data ??
-    []) as { mes: string; apoiadores: number }[];
   const intencao = (polls?.find((p) => p.snapshot_type === "intencao_voto")?.data ?? []) as {
     candidato: string;
     valor: number;
@@ -80,10 +52,11 @@ function DashboardPage() {
   const greeting = greetingLabel(profile?.full_name);
   const briefing =
     insights?.briefingSentence ??
-    (opLoading ? "Carregando inteligência operacional..." : "Central operacional indisponível.");
-  const pills = insights?.operational.pills ?? [];
-  const strip = insights?.operational.strip ?? [];
-  const kpi = insights?.operational.kpi;
+    (opLoading
+      ? "Carregando inteligência operacional da campanha…"
+      : opError
+        ? "Não foi possível carregar o painel operacional. Tente atualizar a página."
+        : "Central operacional indisponível no momento.");
 
   const filteredAlerts = useMemo(
     () =>
@@ -101,252 +74,118 @@ function DashboardPage() {
     [insights?.operational.nextActions, permissions],
   );
 
+  const priorities = useMemo(
+    () => buildDailyPriorities(filteredAlerts, filteredNextActions, 3),
+    [filteredAlerts, filteredNextActions],
+  );
+
   const canViewTerritoryLink = canAccessDashboardRoute(permissions, "/eleitores");
+
+  const critical = insights?.criticalTerritories ?? [];
+  const promising = insights?.promisingTerritories ?? [];
+
+  const heroHighlight = useMemo(
+    () => pickHeroHighlight(critical, promising, filteredAlerts),
+    [critical, promising, filteredAlerts],
+  );
+
+  const heroCtas = useMemo(
+    () => resolveHeroCtas(critical, promising, filteredAlerts, filteredNextActions, canViewTerritoryLink),
+    [critical, promising, filteredAlerts, filteredNextActions, canViewTerritoryLink],
+  );
+
+  const heroBadges = useMemo(
+    () => pillsToBadges(insights?.operational.pills ?? [], 3),
+    [insights?.operational.pills],
+  );
+
+  const kpiItems = useMemo(
+    () => [
+      {
+        label: "Apoiadores",
+        value: String(metrics?.total_supporters ?? 0),
+        icon: Users,
+        context: insights?.operational.kpi.supporters,
+        tone: "primary" as const,
+      },
+      {
+        label: "Apoio forte",
+        value: String(metrics?.strong_support ?? 0),
+        icon: Vote,
+        context: insights?.operational.kpi.strongSupport,
+        tone: "primary" as const,
+      },
+      {
+        label: "Lideranças",
+        value: String(metrics?.leaderships ?? 0),
+        icon: Crown,
+        context: insights?.operational.kpi.leaderships,
+        tone: "primary" as const,
+      },
+      {
+        label: "Demandas abertas",
+        value: String(metrics?.open_demands ?? 0),
+        icon: MessageSquareWarning,
+        context: insights?.operational.kpi.openDemands,
+        tone: "warning" as const,
+      },
+    ],
+    [metrics, insights?.operational.kpi],
+  );
 
   return (
     <ModuleRouteGuard module="dashboard">
-    <div className="dashboard-section">
-      <OperationalHeader greeting={greeting} briefing={briefing} pills={pills} />
+      <div className="dashboard-war-room mx-auto w-full max-w-7xl">
+        {opLoading && <DashboardWarRoomSkeleton />}
 
-      {opError && (
-        <div className="rounded-2xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
-          Não foi possível carregar a central operacional. Tente atualizar a página.
-        </div>
-      )}
+        {!opLoading && (
+          <>
+            <DashboardHero
+              greeting={greeting}
+              briefing={briefing}
+              alertLine={heroHighlight.alertLine}
+              opportunityLine={heroHighlight.opportunityLine}
+              badges={heroBadges}
+              dailyPulse={insights?.operational.dailySummary ?? []}
+              primaryCta={heroCtas.primary}
+              secondaryCta={heroCtas.secondary}
+            />
 
-      {opLoading && (
-        <>
-          <DashboardBlockSkeleton rows={2} />
-          <DashboardMetricsSkeleton />
-          <DashboardBlockSkeleton rows={2} />
-        </>
-      )}
-
-      {!opLoading && insights && (
-        <>
-          {strip.length > 0 && <OperationalStrip items={strip} />}
-
-          <section className="space-y-3">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              Alertas operacionais
-            </h2>
-            <ActionableAlerts alerts={filteredAlerts} />
-          </section>
-
-          <DailySummaryCard metrics={insights.operational.dailySummary} />
-
-          <section className="space-y-3">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              Indicadores principais
-            </h2>
-            <div className="dashboard-metrics-grid">
-              <MetricCard
-                label="Apoiadores"
-                value={String(metrics?.total_supporters ?? 0)}
-                icon={Users}
-                tone="primary"
-                featured
-                context={kpi?.supporters}
-              />
-              <MetricCard
-                label="Apoio forte"
-                value={String(metrics?.strong_support ?? 0)}
-                icon={Vote}
-                tone="accent"
-                context={kpi?.strongSupport}
-              />
-              <MetricCard
-                label="Lideranças"
-                value={String(metrics?.leaderships ?? 0)}
-                icon={Crown}
-                tone="success"
-                featured
-                context={kpi?.leaderships}
-              />
-              <MetricCard
-                label="Demandas abertas"
-                value={String(metrics?.open_demands ?? 0)}
-                icon={MessageSquareWarning}
-                tone="warning"
-                context={kpi?.openDemands}
-              />
-            </div>
-          </section>
-
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-            <div className="lg:col-span-2">
-              <NextActionsCard actions={filteredNextActions} />
-            </div>
-          </div>
-
-          <section className="space-y-3">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              Inteligência territorial
-            </h2>
-            <div className="dashboard-insights-grid">
-              <TerritoryIntelCard
-                title="Territórios críticos"
-                description="Prioridade imediata de campo"
-                territories={insights.criticalTerritories}
-                variant="critical"
-                canViewTerritoryLink={canViewTerritoryLink}
-              />
-              <TerritoryIntelCard
-                title="Territórios promissores"
-                description="Regiões para acelerar conversão"
-                territories={insights.promisingTerritories}
-                variant="promising"
-                canViewTerritoryLink={canViewTerritoryLink}
-              />
-            </div>
-          </section>
-
-          <PoliticalPipeline funnel={funnel} />
-
-          <Card>
-            <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <Target className="h-4 w-4" />
-                Metas personalizadas
-              </CardTitle>
-              <CardDescription>Planejado vs realizado no período de cada meta</CardDescription>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 gap-4 pb-6 md:grid-cols-3">
-              {insights.weeklyGoals.map((goal) => (
-                <div key={goal.id} className="rounded-xl border border-border/80 bg-muted/20 p-4">
-                  <p className="text-sm font-medium">{goal.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {goal.startDate} até {goal.endDate}
-                  </p>
-                  <p className="mt-2 text-lg font-semibold text-heading dark:text-foreground">
-                    {goal.value} / {goal.target}
-                  </p>
-                  <Badge
-                    variant={
-                      goal.status === "no_ritmo"
-                        ? "secondary"
-                        : goal.status === "risco"
-                          ? "outline"
-                          : "destructive"
-                    }
-                    className="mt-2"
-                  >
-                    {goal.status === "no_ritmo"
-                      ? "No ritmo"
-                      : goal.status === "risco"
-                        ? "Em risco"
-                        : "Atrasado"}
-                  </Badge>
-                </div>
-              ))}
-              {!insights.weeklyGoals.length && (
-                <p className="text-sm text-muted-foreground md:col-span-3">
-                  Sem metas cadastradas. Configure em Configurações → Metas.
-                </p>
+            <div className="dashboard-war-room-stack">
+              {insights && (
+                <>
+                  <DashboardPriorities items={priorities} sectionIndex={1} />
+                  <DashboardKpiStrip items={kpiItems} sectionIndex={2} />
+                  <DashboardGoalsAtRisk goals={insights.weeklyGoals} sectionIndex={3} />
+                  <DashboardTerritoryMap
+                    critical={critical}
+                    promising={promising}
+                    canViewTerritoryLink={canViewTerritoryLink}
+                    sectionIndex={4}
+                  />
+                  <DashboardPipelineSlim funnel={funnel} sectionIndex={5} />
+                </>
               )}
-            </CardContent>
-          </Card>
-        </>
-      )}
 
-      {!opLoading && !insights && !opError && (
-        <PoliticalPipeline funnel={funnel} />
-      )}
+              {!insights && !opError && (
+                <DashboardPipelineSlim funnel={funnel} sectionIndex={1} />
+              )}
 
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          Análise e pesquisas
-        </h2>
-        {pollsLoading ? (
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3">
-            <DashboardChartSkeleton />
-            <DashboardChartSkeleton />
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3">
-            <ChartCard
-              title="Crescimento de apoiadores"
-              description="Evolução mensal (dados de Pesquisas)"
-              narrative={narrativeGrowth(crescimento) ?? "Atualize os dados em Pesquisas."}
-            >
-              <div className="h-72">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={crescimento}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                    <XAxis dataKey="mes" fontSize={12} tickLine={false} axisLine={false} />
-                    <YAxis fontSize={12} tickLine={false} axisLine={false} />
-                    <Tooltip />
-                    <Area
-                      type="monotone"
-                      dataKey="apoiadores"
-                      stroke="var(--chart-2)"
-                      fill="var(--chart-2)"
-                      fillOpacity={0.2}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            </ChartCard>
-            <ChartCard
-              title="Intenção de voto"
-              description="Pesquisa estimulada"
-              narrative={narrativeIntention(intencao) ?? "Cadastre a pesquisa em Pesquisas."}
-            >
-              <div className="h-72">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={intencao}
-                      dataKey="valor"
-                      nameKey="candidato"
-                      innerRadius={55}
-                      outerRadius={90}
-                    >
-                      {intencao.map((_, i) => (
-                        <Cell key={i} fill={PALETTE[i % PALETTE.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                    <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-            </ChartCard>
-          </div>
+              <DashboardAnalyticsSection
+                intencao={intencao}
+                aprovacao={aprovacao}
+                isLoading={pollsLoading}
+                sectionIndex={insights ? 6 : 2}
+              />
+              <DashboardActivityTimeline
+                activities={activities ?? []}
+                isLoading={activitiesLoading}
+                sectionIndex={insights ? 7 : 3}
+              />
+            </div>
+          </>
         )}
-      </section>
-
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {pollsLoading ? (
-          <div className="lg:col-span-2 xl:col-span-2">
-            <DashboardChartSkeleton />
-          </div>
-        ) : (
-          <div className="lg:col-span-2 xl:col-span-2">
-            <ChartCard
-              title="Aprovação por bairro"
-              description="Índice por região"
-              narrative={
-                narrativeApproval(aprovacao) ?? "Preencha aprovação por bairro em Pesquisas."
-              }
-            >
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={aprovacao}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <XAxis dataKey="bairro" fontSize={12} />
-                    <YAxis fontSize={12} />
-                    <Tooltip />
-                    <Bar dataKey="aprovacao" fill="var(--chart-1)" radius={[6, 6, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </ChartCard>
-          </div>
-        )}
-        <ActivityFeed activities={activities ?? []} isLoading={activitiesLoading} />
       </div>
-    </div>
     </ModuleRouteGuard>
   );
 }
