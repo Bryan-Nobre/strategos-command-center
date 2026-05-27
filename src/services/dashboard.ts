@@ -1,5 +1,16 @@
 import { createClient } from "@/lib/supabase/client";
 import type { Enums, Json } from "@/types/supabase";
+import {
+  buildBriefingSentence,
+  buildOperationalAlerts,
+  buildOperationalBrief,
+  enrichTerritories,
+  type EnrichedTerritory,
+  type OperationalAlert,
+  type OperationalBrief,
+} from "@/services/dashboard-intelligence";
+
+export type { EnrichedTerritory, OperationalAlert, OperationalBrief };
 
 export type DashboardMetrics = {
   total_supporters: number;
@@ -23,7 +34,7 @@ export async function listActivities(tenantId: string, limit = 10) {
   const supabase = createClient();
   const { data, error } = await supabase
     .from("activities")
-    .select("id, message, created_at")
+    .select("id, message, created_at, entity_type")
     .eq("tenant_id", tenantId)
     .order("created_at", { ascending: false })
     .limit(limit);
@@ -118,18 +129,13 @@ export type ManualGoalConfig = {
   target: number;
 };
 
-export type OperationalAlert = {
-  id: string;
-  severity: "alta" | "media";
-  title: string;
-  description: string;
-};
-
 export type StrategicInsights = {
-  criticalTerritories: TerritoryInsight[];
-  promisingTerritories: TerritoryInsight[];
+  criticalTerritories: EnrichedTerritory[];
+  promisingTerritories: EnrichedTerritory[];
   weeklyGoals: WeeklyGoal[];
   alerts: OperationalAlert[];
+  operational: OperationalBrief;
+  briefingSentence: string;
 };
 
 function calcStatus(value: number, target: number): WeeklyGoal["status"] {
@@ -249,7 +255,7 @@ export async function getStrategicInsights(tenantId: string): Promise<StrategicI
       .eq("tenant_id", tenantId),
     supabase
       .from("demands")
-      .select("id, neighborhood, status, created_at, updated_at")
+      .select("id, neighborhood, status, created_at, updated_at, assigned_to")
       .eq("tenant_id", tenantId),
   ]);
   if (sErr) throw sErr;
@@ -316,8 +322,9 @@ export async function getStrategicInsights(tenantId: string): Promise<StrategicI
     })
     .filter((row) => row.supporters > 0);
 
-  const criticalTerritories = [...territoryRows].sort((a, b) => a.score - b.score).slice(0, 5);
-  const promisingTerritories = [...territoryRows].sort((a, b) => b.score - a.score).slice(0, 5);
+  const enriched = enrichTerritories(territoryRows);
+  const criticalTerritories = [...enriched].sort((a, b) => a.score - b.score).slice(0, 5);
+  const promisingTerritories = [...enriched].sort((a, b) => b.score - a.score).slice(0, 5);
 
   const weeklyGoals: WeeklyGoal[] = configuredGoals.map((goal) => {
     let value = 0;
@@ -351,38 +358,43 @@ export async function getStrategicInsights(tenantId: string): Promise<StrategicI
     };
   });
 
-  const alerts: OperationalAlert[] = [];
-  for (const t of criticalTerritories) {
-    if (t.oppositionPct >= 25) {
-      alerts.push({
-        id: `opp-${t.neighborhood}`,
-        severity: "alta",
-        title: `Oposição alta em ${t.neighborhood}`,
-        description: `${t.oppositionPct}% da base local está em oposição.`,
-      });
-    }
-    if (t.openDemands >= 8) {
-      alerts.push({
-        id: `dem-${t.neighborhood}`,
-        severity: "media",
-        title: `Acúmulo de demandas em ${t.neighborhood}`,
-        description: `${t.openDemands} demandas abertas aguardando encaminhamento.`,
-      });
-    }
-    if (t.undecidedPct >= 35) {
-      alerts.push({
-        id: `und-${t.neighborhood}`,
-        severity: "media",
-        title: `Indecisão crítica em ${t.neighborhood}`,
-        description: `${t.undecidedPct}% da base local ainda está indecisa.`,
-      });
-    }
+  const alerts = buildOperationalAlerts(criticalTerritories);
+
+  const unassignedOpen =
+    demands?.filter((d) => d.status !== "resolvido" && !d.assigned_to).length ?? 0;
+
+  if (unassignedOpen >= 3) {
+    alerts.unshift({
+      id: "unassigned-demands",
+      severity: "alta",
+      title: `${unassignedOpen} demandas sem responsável`,
+      description: "Demandas abertas aguardam definição de encarregado.",
+      suggestion: "Distribua responsáveis para destravar o fluxo operacional.",
+      actionLabel: "Ver demandas",
+      actionTo: "/demandas",
+      actionSearch: { semResponsavel: "1" },
+    });
   }
+
+  const operational = buildOperationalBrief(
+    supporters ?? [],
+    demands ?? [],
+    alerts,
+    criticalTerritories.length,
+    criticalTerritories[0],
+    promisingTerritories[0],
+    weeklyGoals,
+    unassignedOpen,
+  );
+
+  const briefingSentence = buildBriefingSentence(operational.briefingParts);
 
   return {
     criticalTerritories,
     promisingTerritories,
     weeklyGoals,
-    alerts: alerts.slice(0, 6),
+    alerts,
+    operational,
+    briefingSentence,
   };
 }

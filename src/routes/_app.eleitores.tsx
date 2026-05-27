@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Plus,
   Search,
@@ -84,7 +84,14 @@ import {
 } from "@/lib/csv/supporters-csv";
 import { toast } from "sonner";
 
+type EleitoresSearch = {
+  bairro?: string;
+};
+
 export const Route = createFileRoute("/_app/eleitores")({
+  validateSearch: (search: Record<string, unknown>): EleitoresSearch => ({
+    bairro: typeof search.bairro === "string" && search.bairro ? search.bairro : undefined,
+  }),
   component: EleitoresPage,
 });
 
@@ -99,6 +106,7 @@ type SupporterRow = NonNullable<ReturnType<typeof useSupporters>["data"]>[number
 
 function EleitoresPage() {
   const { tenantId, activeTenant } = useTenant();
+  const { bairro: bairroFromUrl } = Route.useSearch();
   const [query, setQuery] = useState("");
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
@@ -111,6 +119,13 @@ function EleitoresPage() {
   const [leadershipFilter, setLeadershipFilter] = useState<string>("all");
   const [supportFilter, setSupportFilter] = useState<string>("all");
   const [tagFilter, setTagFilter] = useState("");
+
+  useEffect(() => {
+    if (bairroFromUrl) {
+      setNeighborhoodFilter(bairroFromUrl);
+      setFiltersOpen(true);
+    }
+  }, [bairroFromUrl]);
 
   const { data: supporters, isLoading } = useSupporters(tenantId);
   const { data: leaderships } = useLeaderships(tenantId);
@@ -295,6 +310,7 @@ function EleitoresPage() {
           value={String(metrics?.total_supporters ?? 0)}
           icon={Users}
           tone="primary"
+          featured
         />
         <MetricCard
           label="Apoio forte"
@@ -313,6 +329,7 @@ function EleitoresPage() {
           value={String(metrics?.leaderships ?? 0)}
           icon={Crown}
           tone="accent"
+          featured
         />
       </div>
 

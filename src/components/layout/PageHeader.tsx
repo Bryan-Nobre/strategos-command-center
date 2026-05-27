@@ -1,13 +1,29 @@
 import { ReactNode } from "react";
+import { cn } from "@/lib/utils";
 
 export function PageHeader({
-  title, description, actions,
-}: { title: string; description?: string; actions?: ReactNode }) {
+  title,
+  description,
+  actions,
+  showTitle = false,
+}: {
+  title: string;
+  description?: string;
+  actions?: ReactNode;
+  /** Título já aparece na topbar; ative só para duplicar no conteúdo */
+  showTitle?: boolean;
+}) {
+  if (!showTitle && !description && !actions) return null;
+
   return (
-    <div className="flex flex-col gap-3 border-b border-border pb-6 sm:flex-row sm:items-end sm:justify-between">
+    <div className="flex flex-col gap-3 border-b border-border/80 pb-6 sm:flex-row sm:items-end sm:justify-between">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">{title}</h1>
-        {description && <p className="mt-1 text-sm text-muted-foreground">{description}</p>}
+        {showTitle && <h1 className="page-heading text-2xl tracking-tight sm:text-3xl">{title}</h1>}
+        {description && (
+          <p className={cn("text-sm text-muted-foreground", showTitle && "mt-1.5")}>
+            {description}
+          </p>
+        )}
       </div>
       {actions && <div className="flex items-center gap-2">{actions}</div>}
     </div>

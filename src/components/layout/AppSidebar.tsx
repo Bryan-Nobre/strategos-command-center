@@ -129,7 +129,7 @@ export function AppSidebar({ isSuperAdmin = false }: { isSuperAdmin?: boolean })
         {!collapsed && (
           <div className="mt-2 space-y-3 pb-3">
             <div
-              className="rounded-xl border border-sidebar-border p-3 transition-theme"
+              className="rounded-xl border border-sidebar-border p-3 shadow-[0_1px_2px_rgba(6,23,53,0.04)] transition-theme"
               style={{ backgroundColor: "var(--sidebar-surface)" }}
             >
               <p className="text-xs text-sidebar-muted">Campanha</p>
@@ -194,7 +194,7 @@ export function AppSidebar({ isSuperAdmin = false }: { isSuperAdmin?: boolean })
           <DropdownMenuTrigger asChild>
             <button
               type="button"
-              className="flex w-full items-center gap-3 rounded-xl border border-sidebar-border bg-sidebar-accent p-2 text-left transition-theme hover:opacity-90"
+              className="sidebar-profile-card flex w-full items-center gap-3 rounded-xl p-2.5 text-left transition-theme hover:shadow-[0_4px_16px_rgba(6,23,53,0.06)] dark:hover:shadow-none"
             >
               <Avatar className="h-9 w-9">
                 <AvatarFallback className="bg-sidebar-primary text-sidebar-primary-foreground">

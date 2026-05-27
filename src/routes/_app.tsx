@@ -36,7 +36,7 @@ function AppLayout() {
           <AppSidebar isSuperAdmin={profile?.platform_role === "super_admin"} />
           <SidebarInset className="flex min-w-0 flex-1 flex-col">
             <AppNavbar />
-            <main className="flex-1 px-4 py-6 md:px-8 md:py-8">
+            <main className="flex-1 px-4 py-7 md:px-8 md:py-9">
               <Outlet />
             </main>
           </SidebarInset>

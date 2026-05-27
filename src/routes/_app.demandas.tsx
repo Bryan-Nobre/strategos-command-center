@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState, type DragEvent as ReactDragEvent } from "react";
+import { useEffect, useMemo, useState, type DragEvent as ReactDragEvent } from "react";
 import {
   Plus,
   MapPin,
@@ -53,7 +53,17 @@ import {
 } from "@/types/domain";
 import type { Enums } from "@/types/supabase";
 
+type DemandasSearch = {
+  bairro?: string;
+  semResponsavel?: string;
+};
+
 export const Route = createFileRoute("/_app/demandas")({
+  validateSearch: (search: Record<string, unknown>): DemandasSearch => ({
+    bairro: typeof search.bairro === "string" && search.bairro ? search.bairro : undefined,
+    semResponsavel:
+      search.semResponsavel === "1" || search.semResponsavel === "true" ? "1" : undefined,
+  }),
   component: DemandasPage,
 });
 
@@ -94,6 +104,7 @@ type DemandRow = NonNullable<ReturnType<typeof useDemands>["data"]>[number];
 
 function DemandasPage() {
   const { tenantId } = useTenant();
+  const { bairro: bairroFromUrl, semResponsavel } = Route.useSearch();
   const { data: demands, isLoading } = useDemands(tenantId);
   const { data: team } = useTeamMembers(tenantId);
   const createMutation = useCreateDemand(tenantId);
@@ -109,6 +120,17 @@ function DemandasPage() {
   const [neighborhoodFilter, setNeighborhoodFilter] = useState("all");
   const [assigneeFilter, setAssigneeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+
+  useEffect(() => {
+    if (bairroFromUrl) {
+      setNeighborhoodFilter(bairroFromUrl);
+      setFiltersOpen(true);
+    }
+    if (semResponsavel) {
+      setAssigneeFilter("none");
+      setFiltersOpen(true);
+    }
+  }, [bairroFromUrl, semResponsavel]);
 
   const [dragOverStatus, setDragOverStatus] = useState<Enums<"demand_status"> | null>(null);
   const [draggedDemandId, setDraggedDemandId] = useState<string | null>(null);

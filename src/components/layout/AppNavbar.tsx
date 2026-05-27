@@ -1,11 +1,11 @@
 import { Bell, LogOut, Search } from "lucide-react";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useRouterState, useRouteContext } from "@tanstack/react-router";
 import { signOut } from "@/lib/supabase/session";
+import { resolveRouteMeta } from "@/lib/navigation-meta";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,24 +13,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-const labels: Record<string, string> = {
-  dashboard: "Dashboard",
-  eleitores: "Eleitores",
-  liderancas: "Lideranças",
-  demandas: "Demandas",
-  agenda: "Agenda",
-  pesquisas: "Pesquisas",
-  relatorios: "Relatórios",
-  configuracoes: "Configurações",
-  admin: "Admin",
-  tenants: "Clientes",
-  metricas: "Métricas",
-};
-
 export function AppNavbar() {
   const path = useRouterState({ select: (r) => r.location.pathname });
-  const seg = path.split("/").filter(Boolean);
   const { profile, activeTenant } = useRouteContext({ strict: false });
+  const meta = resolveRouteMeta(path);
+  const Icon = meta.icon;
 
   const initials = (profile?.full_name ?? "U")
     .split(" ")
@@ -45,55 +32,79 @@ export function AppNavbar() {
   }
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-border bg-card/80 px-4 backdrop-blur supports-[backdrop-filter]:bg-card/60 md:px-6">
-      <SidebarTrigger className="-ml-1" />
-      <nav className="hidden items-center gap-1.5 text-sm md:flex">
-        <span className="text-muted-foreground">{activeTenant?.name ?? "Strategos"}</span>
-        {seg.map((s, i) => (
-          <span key={i} className="flex items-center gap-1.5">
-            <span className="text-muted-foreground/50">/</span>
-            <span
-              className={
-                i === seg.length - 1 ? "font-medium text-foreground" : "text-muted-foreground"
-              }
-            >
-              {labels[s] ?? s}
-            </span>
-          </span>
-        ))}
-      </nav>
-      <div className="ml-auto flex items-center gap-2">
-        <div className="relative hidden md:block">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input placeholder="Buscar eleitor, liderança, demanda..." className="h-9 w-72 pl-9" />
+    <header className="strategos-topbar transition-theme sticky top-0 z-30 px-4 md:px-6">
+      <div className="flex h-[4.25rem] items-center gap-3 lg:gap-6">
+        {/* Esquerda — contexto da página */}
+        <div className="flex min-w-0 flex-1 items-center gap-3">
+          <SidebarTrigger className="-ml-1 shrink-0" />
+          <div className="topbar-section-icon hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl sm:flex">
+            <Icon className="h-[1.125rem] w-[1.125rem]" />
+          </div>
+          <div className="min-w-0">
+            <p className="topbar-title truncate">{meta.title}</p>
+            <p className="topbar-subtitle truncate">{meta.subtitle}</p>
+            {activeTenant?.name && (
+              <p className="mt-0.5 hidden truncate text-[11px] text-muted-foreground/80 xl:block">
+                {activeTenant.name}
+              </p>
+            )}
+          </div>
         </div>
-        <ThemeToggle />
-        <Button variant="ghost" size="icon" className="relative">
-          <Bell className="h-4 w-4" />
-        </Button>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              type="button"
-              className="flex items-center gap-2 rounded-full border border-border bg-background py-1 pl-1 pr-3"
-            >
-              <Avatar className="h-7 w-7">
-                <AvatarFallback className="bg-primary text-xs text-primary-foreground">
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
-              <div className="hidden text-left text-xs leading-tight sm:block">
-                <div className="font-medium">{profile?.full_name ?? "Usuário"}</div>
-                <div className="text-muted-foreground">{activeTenant?.name}</div>
-              </div>
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={handleLogout}>
-              <LogOut className="mr-2 h-4 w-4" /> Sair
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+
+        {/* Centro — busca premium */}
+        <div className="hidden flex-[1.2] justify-center px-2 lg:flex">
+          <div className="strategos-search relative w-full max-w-[32rem]">
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <input
+              type="search"
+              placeholder="Buscar eleitor, liderança, demanda..."
+              className="strategos-search-input h-10 w-full rounded-xl pl-11 pr-4 text-sm outline-none transition-theme placeholder:text-muted-foreground"
+              aria-label="Buscar na campanha"
+            />
+          </div>
+        </div>
+
+        {/* Direita — ações e usuário */}
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+          <div className="relative lg:hidden">
+            <Button variant="ghost" size="icon" aria-label="Buscar">
+              <Search className="h-4 w-4" />
+            </Button>
+          </div>
+          <ThemeToggle />
+          <Button variant="ghost" size="icon" className="relative" aria-label="Notificações">
+            <Bell className="h-4 w-4" />
+          </Button>
+          <div className="topbar-divider mx-1 hidden h-8 w-px sm:block" aria-hidden />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className="topbar-user-card flex items-center gap-2.5 rounded-xl py-1.5 pl-1.5 pr-3 transition-theme"
+              >
+                <Avatar className="h-8 w-8">
+                  <AvatarFallback className="bg-primary text-xs text-primary-foreground">
+                    {initials}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="hidden min-w-0 text-left leading-tight md:block">
+                  <div className="max-w-[8.5rem] truncate text-sm font-semibold text-foreground">
+                    {profile?.full_name ?? "Usuário"}
+                  </div>
+                  <div className="max-w-[8.5rem] truncate text-[11px] text-muted-foreground">
+                    {activeTenant?.name ?? "Campanha"}
+                  </div>
+                </div>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onClick={handleLogout}>
+                <LogOut className="mr-2 h-4 w-4" />
+                Sair
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
     </header>
   );
