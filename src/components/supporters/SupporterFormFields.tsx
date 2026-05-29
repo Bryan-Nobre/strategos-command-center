@@ -117,7 +117,7 @@ export function SupporterFormFields({
         </div>
       </div>
       <div className="grid gap-2">
-        <Label>Liderança responsável</Label>
+        <Label>Liderança primária (CRM)</Label>
         <Select
           value={leadershipId || "none"}
           onValueChange={(v) => setValue("leadership_id", v === "none" ? undefined : v)}

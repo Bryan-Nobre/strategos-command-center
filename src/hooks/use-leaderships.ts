@@ -9,6 +9,8 @@ export function useLeaderships(tenantId: string) {
     queryKey: queryKeys.leaderships(tenantId),
     queryFn: () => leadershipsService.listLeaderships(tenantId),
     enabled: !!tenantId,
+    /** Vínculos podem mudar via triggers no backend sem passar pelo client. */
+    staleTime: 60_000,
   });
 }
 
@@ -19,6 +21,8 @@ export function useCreateLeadership(tenantId: string) {
       leadershipsService.createLeadership(tenantId, payload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.leaderships(tenantId) });
+      void qc.invalidateQueries({ queryKey: queryKeys.supporterPoliticalSummaries(tenantId) });
+      void qc.invalidateQueries({ queryKey: ["leadership-operational-detail", tenantId] });
       qc.invalidateQueries({ queryKey: queryKeys.dashboard(tenantId) });
       toast.success("Liderança cadastrada");
     },
@@ -33,6 +37,7 @@ export function useUpdateLeadership(tenantId: string) {
       leadershipsService.updateLeadership(id, payload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.leaderships(tenantId) });
+      void qc.invalidateQueries({ queryKey: ["leadership-operational-detail", tenantId] });
       toast.success("Liderança atualizada");
     },
     onError: (e: Error) => toast.error(e.message),
@@ -45,7 +50,9 @@ export function useDeleteLeadership(tenantId: string) {
     mutationFn: (id: string) => leadershipsService.deleteLeadership(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.leaderships(tenantId) });
+      void qc.invalidateQueries({ queryKey: ["leadership-operational-detail", tenantId] });
       qc.invalidateQueries({ queryKey: queryKeys.supporters(tenantId) });
+      void qc.invalidateQueries({ queryKey: queryKeys.supporterPoliticalSummaries(tenantId) });
       qc.invalidateQueries({ queryKey: queryKeys.dashboard(tenantId) });
       toast.success("Liderança excluída — apoiadores desvinculados");
     },

@@ -20,6 +20,10 @@ export function useCreateLeadershipChapa(tenantId: string, leadershipId: string)
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: queryKeys.leadershipChapas(tenantId, leadershipId) });
       void qc.invalidateQueries({ queryKey: queryKeys.leaderships(tenantId) });
+      void qc.invalidateQueries({ queryKey: queryKeys.supporterPoliticalSummaries(tenantId) });
+      void qc.invalidateQueries({
+        queryKey: ["leadership-operational-detail", tenantId],
+      });
       toast.success("Chapa cadastrada");
     },
     onError: (e: Error) => toast.error(e.message),
@@ -34,6 +38,10 @@ export function useUpdateLeadershipChapa(tenantId: string, leadershipId: string)
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: queryKeys.leadershipChapas(tenantId, leadershipId) });
       void qc.invalidateQueries({ queryKey: queryKeys.leaderships(tenantId) });
+      void qc.invalidateQueries({ queryKey: queryKeys.supporterPoliticalSummaries(tenantId) });
+      void qc.invalidateQueries({
+        queryKey: ["leadership-operational-detail", tenantId],
+      });
       toast.success("Chapa atualizada");
     },
     onError: (e: Error) => toast.error(e.message),
@@ -47,6 +55,10 @@ export function useDeleteLeadershipChapa(tenantId: string, leadershipId: string)
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: queryKeys.leadershipChapas(tenantId, leadershipId) });
       void qc.invalidateQueries({ queryKey: queryKeys.leaderships(tenantId) });
+      void qc.invalidateQueries({ queryKey: queryKeys.supporterPoliticalSummaries(tenantId) });
+      void qc.invalidateQueries({
+        queryKey: ["leadership-operational-detail", tenantId],
+      });
       toast.success("Chapa removida");
     },
     onError: (e: Error) => toast.error(e.message),

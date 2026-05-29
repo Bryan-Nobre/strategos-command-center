@@ -11,7 +11,9 @@
     "preview": "vite preview",
     "start": "node .output/server/index.mjs",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "test:postal": "node --experimental-strip-types --test src/lib/postal-code.test.ts",
+    "test:normalize": "node --experimental-strip-types --test src/lib/postal-code.test.ts src/lib/normalize-phone.test.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

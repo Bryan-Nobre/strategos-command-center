@@ -15,9 +15,11 @@ import {
 } from "@/components/supporters/SupporterFormFields";
 import type { SupporterFormValues } from "@/types/domain";
 import type { SupporterListItem } from "@/lib/eleitores-filter";
+import { SupporterPoliticalLinksPanel } from "@/components/supporters/SupporterPoliticalLinksPanel";
 
 export function EleitoresEditSheet({
   supporter,
+  tenantId,
   open,
   onOpenChange,
   leaderships,
@@ -25,6 +27,7 @@ export function EleitoresEditSheet({
   onSubmit,
 }: {
   supporter: SupporterListItem | null;
+  tenantId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   leaderships: { id: string; name: string }[];
@@ -49,14 +52,21 @@ export function EleitoresEditSheet({
           </SheetDescription>
         </SheetHeader>
         {supporter && (
-          <SupporterFormFields
-            key={supporter.id}
-            defaultValues={supporterToFormValues(supporter)}
-            leaderships={leaderships}
-            loading={loading}
-            submitLabel="Salvar alterações"
-            onSubmit={onSubmit}
-          />
+          <>
+            <SupporterPoliticalLinksPanel
+              tenantId={tenantId}
+              supporterId={supporter.id}
+              className="mt-2"
+            />
+            <SupporterFormFields
+              key={supporter.id}
+              defaultValues={supporterToFormValues(supporter)}
+              leaderships={leaderships}
+              loading={loading}
+              submitLabel="Salvar alterações"
+              onSubmit={onSubmit}
+            />
+          </>
         )}
       </SheetContent>
     </Sheet>

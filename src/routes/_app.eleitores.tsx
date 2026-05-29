@@ -47,6 +47,7 @@ import {
   useImportSupporters,
 } from "@/hooks/use-supporters";
 import { useLeaderships } from "@/hooks/use-leaderships";
+import { useSupporterPoliticalSummaries } from "@/hooks/use-supporter-political";
 import { usePlanGate } from "@/hooks/use-plan-gate";
 import { useCrudPermissions } from "@/hooks/use-crud-permissions";
 import { ModuleRouteGuard } from "@/components/auth/PermissionGate";
@@ -73,6 +74,7 @@ import {
   parseSupportersCsv,
   getSupporterImportTemplateCsv,
 } from "@/lib/csv/supporters-csv";
+import { ELEITORES_ENGAGEMENT_FILTER_LABELS } from "@/lib/supporter-engagement";
 import { buildExcelFilename, downloadSupportersExcel } from "@/lib/excel/supporters-export";
 import { filterSupporters, countNewInPeriod, type SupporterListItem } from "@/lib/eleitores-filter";
 import { toast } from "sonner";
@@ -121,13 +123,15 @@ function EleitoresPage() {
       urlSearch.status ||
       urlSearch.lideranca ||
       urlSearch.apoio ||
-      urlSearch.tag
+      urlSearch.tag ||
+      urlSearch.engagement
     ) {
       setFiltersOpen(true);
     }
-  }, [urlSearch.bairro, urlSearch.status, urlSearch.lideranca, urlSearch.apoio, urlSearch.tag]);
+  }, [urlSearch.bairro, urlSearch.status, urlSearch.lideranca, urlSearch.apoio, urlSearch.tag, urlSearch.engagement]);
 
   const { data: supporters, isLoading } = useSupporters(tenantId);
+  const { data: politicalSummaries } = useSupporterPoliticalSummaries(tenantId);
   const { data: leaderships } = useLeaderships(tenantId);
   const createMutation = useCreateSupporter(tenantId);
   const updateMutation = useUpdateSupporter(tenantId);
@@ -144,7 +148,8 @@ function EleitoresPage() {
   const neighborhoods = useMemo(() => {
     const set = new Set<string>();
     for (const s of supporters ?? []) {
-      if (s.neighborhood) set.add(s.neighborhood);
+      const n = s.normalized_neighborhood ?? s.neighborhood;
+      if (n) set.add(n);
     }
     return [...set].sort();
   }, [supporters]);
@@ -157,9 +162,22 @@ function EleitoresPage() {
     return [...set].sort();
   }, [supporters]);
 
+  const supportersEnriched = useMemo(() => {
+    return (supporters ?? []).map((s) => {
+      const summary = politicalSummaries?.get(s.id);
+      return {
+        ...s,
+        political_link_count: summary?.link_count ?? 0,
+        political_leadership_ids: summary?.leadership_ids ?? [],
+        political_leadership_names: summary?.leadership_names ?? [],
+        primary_leadership_name: summary?.primary_leadership_name ?? null,
+      } satisfies SupporterRow;
+    });
+  }, [supporters, politicalSummaries]);
+
   const filtered = useMemo(
-    () => filterSupporters((supporters ?? []) as SupporterRow[], filters, query),
-    [supporters, filters, query],
+    () => filterSupporters(supportersEnriched, filters, query),
+    [supportersEnriched, filters, query],
   );
 
   const landingCount = useMemo(
@@ -195,6 +213,7 @@ function EleitoresPage() {
     !!filters.tag,
     filters.origem !== "all",
     filters.period !== "all",
+    filters.engagement !== "all",
     !!query.trim(),
   ]);
 
@@ -219,6 +238,7 @@ function EleitoresPage() {
         origem: "all",
         view: "table",
         period: "all",
+        engagement: "all",
       }),
     );
   }
@@ -268,12 +288,21 @@ function EleitoresPage() {
     }
     const slug = activeTenant?.slug ?? "campanha";
     const csv = supportersToCsv(
-      filtered.map((r) => ({
-        ...r,
-        status: SUPPORTER_STATUS_LABELS[r.status] ?? r.status,
-        support_level: SUPPORT_LEVEL_LABELS[r.support_level] ?? r.support_level,
-        source: SUPPORTER_SOURCE_LABELS[r.source] ?? r.source,
-      })),
+      filtered.map((r) => {
+        const allNames = r.political_leadership_names ?? [];
+        const primary =
+          r.primary_leadership_name ??
+          (r.leadership_id ? leadershipMap.get(r.leadership_id) : null);
+        return {
+          ...r,
+          status: SUPPORTER_STATUS_LABELS[r.status] ?? r.status,
+          support_level: SUPPORT_LEVEL_LABELS[r.support_level] ?? r.support_level,
+          source: SUPPORTER_SOURCE_LABELS[r.source] ?? r.source,
+          primary_leadership_label: primary,
+          all_leaderships_label: allNames.length ? allNames.join("; ") : primary,
+          leadership_link_count: r.political_link_count ?? (r.leadership_id ? 1 : 0),
+        };
+      }),
     );
     downloadCsv(buildCsvFilename(slug, "apoiadores"), csv);
     toast.success(`${filtered.length} apoiador(es) exportado(s) em CSV`);
@@ -529,6 +558,29 @@ function EleitoresPage() {
                     </Select>
                   </div>
                   <div className="grid gap-2">
+                    <Label>Temperatura / atividade</Label>
+                    <Select
+                      value={filters.engagement}
+                      onValueChange={(v) => patchFilter({ engagement: v as typeof filters.engagement })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(
+                          Object.entries(ELEITORES_ENGAGEMENT_FILTER_LABELS) as [
+                            keyof typeof ELEITORES_ENGAGEMENT_FILTER_LABELS,
+                            string,
+                          ][]
+                        ).map(([k, l]) => (
+                          <SelectItem key={k} value={k}>
+                            {l}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid gap-2">
                     <Label>Grau de apoio</Label>
                     <Select value={filters.apoio} onValueChange={(v) => patchFilter({ apoio: v })}>
                       <SelectTrigger>
@@ -634,6 +686,7 @@ function EleitoresPage() {
 
         <EleitoresEditSheet
           supporter={editTarget}
+          tenantId={tenantId}
           open={!!editTarget}
           onOpenChange={(o) => !o && setEditTarget(null)}
           leaderships={(leaderships ?? []).map((l) => ({ id: l.id, name: l.name }))}

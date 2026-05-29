@@ -10,6 +10,11 @@ export async function downloadLeadershipsExcel({
     pledged_votes: number;
     apoiadores: number;
     chapa_count: number;
+    political_strength_score: number;
+    primary_supporters: number;
+    secondary_supporters: number;
+    weekly_growth: number;
+    top_neighborhood: string | null;
   }[];
 }): Promise<void> {
   const ExcelJS = await import("exceljs");
@@ -19,12 +24,16 @@ export async function downloadLeadershipsExcel({
   });
 
   sheet.columns = [
+    { header: "Força (score)", key: "score", width: 12 },
     { header: "Liderança", key: "name", width: 28 },
     { header: "Região", key: "region", width: 18 },
-    { header: "Meta (associados)", key: "target", width: 16 },
+    { header: "Primários", key: "primary", width: 10 },
+    { header: "Secundários", key: "secondary", width: 12 },
+    { header: "Cresc. 7d", key: "growth", width: 10 },
+    { header: "Top bairro", key: "neighborhood", width: 18 },
+    { header: "Na rede", key: "supporters", width: 10 },
     { header: "Apoios landing", key: "pledged", width: 14 },
-    { header: "% meta", key: "pct", width: 10 },
-    { header: "Apoiadores CRM", key: "supporters", width: 14 },
+    { header: "Meta", key: "target", width: 10 },
     { header: "Chapas", key: "chapas", width: 10 },
   ];
 
@@ -35,20 +44,22 @@ export async function downloadLeadershipsExcel({
   });
 
   rows.forEach((r) => {
-    const pct =
-      r.estimated_votes > 0 ? Math.round((r.pledged_votes / r.estimated_votes) * 100) : 0;
     sheet.addRow({
+      score: r.political_strength_score,
       name: r.name,
       region: r.region ?? "",
-      target: r.estimated_votes,
-      pledged: r.pledged_votes,
-      pct: r.estimated_votes > 0 ? `${pct}%` : "—",
+      primary: r.primary_supporters,
+      secondary: r.secondary_supporters,
+      growth: r.weekly_growth,
+      neighborhood: r.top_neighborhood ?? "",
       supporters: r.apoiadores,
+      pledged: r.pledged_votes,
+      target: r.estimated_votes,
       chapas: r.chapa_count,
     });
   });
 
-  sheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: 7 } };
+  sheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: 11 } };
 
   const buffer = await workbook.xlsx.writeBuffer();
   const blob = new Blob([buffer], {

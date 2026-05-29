@@ -1,22 +1,21 @@
-import { Crown, Target, Users } from "lucide-react";
+import { Crown, TrendingUp, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function LeadershipCompactBar({
   total,
   filtered,
-  totalPledged,
-  totalTarget,
+  totalLinked,
+  totalPrimary,
+  totalWeeklyGrowth,
   className,
 }: {
   total: number;
   filtered: number;
-  totalPledged: number;
-  totalTarget: number;
+  totalLinked: number;
+  totalPrimary: number;
+  totalWeeklyGrowth: number;
   className?: string;
 }) {
-  const pct =
-    totalTarget > 0 ? Math.min(100, Math.round((totalPledged / totalTarget) * 100)) : 0;
-
   return (
     <div className={cn("eleitores-compact-bar liderancas-compact-bar", className)}>
       <div className="eleitores-compact-stat">
@@ -30,18 +29,20 @@ export function LeadershipCompactBar({
         </span>
       </div>
       <div className="eleitores-compact-stat">
-        <Target className="h-4 w-4 text-primary" aria-hidden />
+        <Users className="h-4 w-4 text-primary" aria-hidden />
         <span>
-          Apoios na landing: <strong className="tabular-nums">{totalPledged}</strong>
-          {totalTarget > 0 && (
-            <span className="text-muted-foreground"> / meta {totalTarget} ({pct}%)</span>
-          )}
+          Na rede: <strong className="tabular-nums">{totalLinked}</strong>
+          <span className="text-muted-foreground">
+            {" "}
+            · <strong className="tabular-nums text-foreground">{totalPrimary}</strong> primários
+          </span>
         </span>
       </div>
       <div className="eleitores-compact-stat">
-        <Users className="h-4 w-4 text-muted-foreground" aria-hidden />
+        <TrendingUp className="h-4 w-4 text-chart-2" aria-hidden />
         <span className="text-muted-foreground">
-          Chapas somam na barra de cada liderança conforme seleção na landing
+          <strong className="tabular-nums text-foreground">{totalWeeklyGrowth}</strong> novos vínculos
+          nos últimos 7 dias
         </span>
       </div>
     </div>

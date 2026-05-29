@@ -1,6 +1,7 @@
 import { Constants } from "@/types/supabase";
 import { omitEmpty, pickEnum, trimParam } from "@/lib/list-search/utils";
 import { parseDeepLinkSearch } from "@/lib/search-deep-link";
+import type { EleitoresEngagementFilter } from "@/lib/supporter-engagement";
 
 const STATUSES = Constants.public.Enums.supporter_status;
 const SUPPORT_LEVELS = Constants.public.Enums.support_level;
@@ -20,7 +21,17 @@ export type EleitoresListSearch = {
   origem?: string;
   view?: EleitoresViewMode;
   period?: EleitoresPeriodPreset;
+  engagement?: EleitoresEngagementFilter;
 };
+
+const ENGAGEMENT_FILTERS = [
+  "all",
+  "active_7d",
+  "hot",
+  "warm",
+  "cold",
+  "inactive",
+] as const satisfies readonly EleitoresEngagementFilter[];
 
 export function parseEleitoresSearch(raw: Record<string, unknown>): EleitoresListSearch {
   const deep = parseDeepLinkSearch(raw);
@@ -29,6 +40,7 @@ export function parseEleitoresSearch(raw: Record<string, unknown>): EleitoresLis
   const origem = pickEnum(raw.origem, SOURCES);
   const view = pickEnum(raw.view, ["table", "cards", "landing"] as const) ?? "table";
   const period = pickEnum(raw.period, ["all", "today", "7d", "30d"] as const) ?? "all";
+  const engagement = pickEnum(raw.engagement, ENGAGEMENT_FILTERS) ?? "all";
   const lideranca = trimParam(raw.lideranca);
   const validLideranca =
     lideranca === "none" || (lideranca && /^[0-9a-f-]{36}$/i.test(lideranca)) ? lideranca : undefined;
@@ -44,6 +56,7 @@ export function parseEleitoresSearch(raw: Record<string, unknown>): EleitoresLis
     origem,
     view,
     period,
+    engagement: engagement !== "all" ? engagement : undefined,
   }) as EleitoresListSearch;
 }
 
@@ -64,6 +77,10 @@ export function serializeEleitoresSearch(filters: EleitoresListSearch): Eleitore
     origem: pickEnum(filters.origem, SOURCES),
     view: pickEnum(filters.view, ["table", "cards", "landing"] as const) ?? "table",
     period: pickEnum(filters.period, ["all", "today", "7d", "30d"] as const) ?? "all",
+    engagement:
+      pickEnum(filters.engagement, ENGAGEMENT_FILTERS) !== "all"
+        ? pickEnum(filters.engagement, ENGAGEMENT_FILTERS)
+        : undefined,
   }) as EleitoresListSearch;
 }
 
@@ -77,6 +94,7 @@ export type EleitoresFilterState = {
   origem: string;
   view: EleitoresViewMode;
   period: EleitoresPeriodPreset;
+  engagement: EleitoresEngagementFilter;
 };
 
 export function eleitoresSearchToFilterState(search: EleitoresListSearch): EleitoresFilterState {
@@ -90,6 +108,7 @@ export function eleitoresSearchToFilterState(search: EleitoresListSearch): Eleit
     origem: search.origem ?? "all",
     view: search.view ?? "table",
     period: search.period ?? "all",
+    engagement: search.engagement ?? "all",
   };
 }
 
@@ -108,5 +127,6 @@ export function filterStateToEleitoresSearch(
     origem: state.origem !== "all" ? state.origem : undefined,
     view: state.view,
     period: state.period !== "all" ? state.period : undefined,
+    engagement: state.engagement !== "all" ? state.engagement : undefined,
   });
 }

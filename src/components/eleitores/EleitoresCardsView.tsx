@@ -4,12 +4,15 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { SupporterSourceBadge } from "@/components/supporters/SupporterSourceBadge";
+import { SupporterPossibleDuplicateBadge } from "@/components/supporters/SupporterPossibleDuplicateBadge";
+import { SupporterEngagementBadge } from "@/components/supporters/SupporterEngagementBadge";
 import {
   SUPPORT_LEVEL_LABELS,
   SUPPORTER_STATUS_LABELS,
   SUPPORTER_SOURCE_LABELS,
 } from "@/types/domain";
 import type { SupporterListItem } from "@/lib/eleitores-filter";
+import { formatLeadershipSummaryLabel } from "@/components/supporters/SupporterPoliticalLinksPanel";
 import { DEEP_LINK_HIGHLIGHT_CLASS } from "@/lib/search-deep-link";
 import { cn } from "@/lib/utils";
 
@@ -61,7 +64,10 @@ export function EleitoresCardsView({
         >
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0 flex-1">
-              <h3 className="truncate font-semibold text-foreground">{e.name}</h3>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <h3 className="truncate font-semibold text-foreground">{e.name}</h3>
+                {e.is_possible_duplicate && <SupporterPossibleDuplicateBadge />}
+              </div>
               <p className="mt-0.5 text-xs text-muted-foreground">
                 {format(new Date(e.created_at), "dd/MM/yyyy HH:mm")}
               </p>
@@ -77,6 +83,7 @@ export function EleitoresCardsView({
           </div>
 
           <div className="mt-2 flex flex-wrap gap-1.5">
+            <SupporterEngagementBadge status={e.engagement_status} />
             <SupporterSourceBadge source={e.source} />
             <Badge variant="outline" className="text-[10px]">
               {SUPPORTER_STATUS_LABELS[e.status]}
@@ -91,6 +98,22 @@ export function EleitoresCardsView({
               {[e.neighborhood, e.city].filter(Boolean).join(" · ")}
             </p>
           )}
+
+          {e.last_activity_at && (
+            <p className="mt-1 text-xs text-muted-foreground">
+              Última atividade: {format(new Date(e.last_activity_at), "dd/MM/yyyy HH:mm")}
+            </p>
+          )}
+
+          {(e.political_link_count ?? 0) > 0 || e.leadership_id ? (
+            <p className="mt-1 text-xs text-muted-foreground">
+              {formatLeadershipSummaryLabel(
+                e.primary_leadership_name,
+                e.political_link_count ?? (e.leadership_id ? 1 : 0),
+                e.political_leadership_names ?? [],
+              )}
+            </p>
+          ) : null}
 
           {landingMode && e.interest && (
             <p className="mt-2 rounded-md bg-violet-500/8 px-2 py-1.5 text-xs text-violet-900 dark:text-violet-200">

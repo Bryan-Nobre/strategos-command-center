@@ -17,13 +17,17 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { SupporterSourceBadge } from "@/components/supporters/SupporterSourceBadge";
+import { SupporterPossibleDuplicateBadge } from "@/components/supporters/SupporterPossibleDuplicateBadge";
+import { SupporterEngagementBadge } from "@/components/supporters/SupporterEngagementBadge";
 import {
   SUPPORT_LEVEL_LABELS,
   SUPPORTER_STATUS_LABELS,
 } from "@/types/domain";
 import { DEEP_LINK_HIGHLIGHT_CLASS } from "@/lib/search-deep-link";
 import type { SupporterListItem } from "@/lib/eleitores-filter";
+import { formatLeadershipSummaryLabel } from "@/components/supporters/SupporterPoliticalLinksPanel";
 import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 
 const apoioVariant: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
@@ -86,9 +90,12 @@ export function EleitoresTableView({
             <TableHead>Origem</TableHead>
             <TableHead>Telefone</TableHead>
             <TableHead>Bairro</TableHead>
+            <TableHead className="hidden md:table-cell">Liderança</TableHead>
             <TableHead>Apoio</TableHead>
+            <TableHead className="hidden md:table-cell">Temp.</TableHead>
+            <TableHead className="hidden lg:table-cell">Última ativ.</TableHead>
             <TableHead>Status</TableHead>
-            <TableHead className="hidden lg:table-cell">Cadastro</TableHead>
+            <TableHead className="hidden xl:table-cell">Cadastro</TableHead>
             <TableHead className="w-28" />
           </TableRow>
         </TableHeader>
@@ -114,7 +121,10 @@ export function EleitoresTableView({
                 </TableCell>
               )}
               <TableCell className="font-medium">
-                <div>{e.name}</div>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span>{e.name}</span>
+                  {e.is_possible_duplicate && <SupporterPossibleDuplicateBadge />}
+                </div>
                 {e.interest && (
                   <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">{e.interest}</p>
                 )}
@@ -140,15 +150,35 @@ export function EleitoresTableView({
                 {e.neighborhood ?? "—"}
                 {e.city && <div className="text-xs text-muted-foreground">{e.city}</div>}
               </TableCell>
+              <TableCell className="hidden max-w-[140px] truncate text-sm md:table-cell" title={
+                (e.political_leadership_names ?? []).join(", ") ||
+                (e.leadership_id ? leadershipMap.get(e.leadership_id) : "") ||
+                ""
+              }>
+                {formatLeadershipSummaryLabel(
+                  e.primary_leadership_name ??
+                    (e.leadership_id ? leadershipMap.get(e.leadership_id) : null),
+                  e.political_link_count ?? (e.leadership_id ? 1 : 0),
+                  e.political_leadership_names ?? [],
+                )}
+              </TableCell>
               <TableCell>
                 <Badge variant={apoioVariant[e.support_level]}>
                   {SUPPORT_LEVEL_LABELS[e.support_level]}
                 </Badge>
               </TableCell>
+              <TableCell className="hidden md:table-cell">
+                <SupporterEngagementBadge status={e.engagement_status} />
+              </TableCell>
+              <TableCell className="hidden whitespace-nowrap text-xs text-muted-foreground lg:table-cell">
+                {e.last_activity_at
+                  ? format(new Date(e.last_activity_at), "dd/MM/yy", { locale: ptBR })
+                  : "—"}
+              </TableCell>
               <TableCell>
                 <Badge variant="outline">{SUPPORTER_STATUS_LABELS[e.status] ?? e.status}</Badge>
               </TableCell>
-              <TableCell className="hidden text-xs text-muted-foreground lg:table-cell">
+              <TableCell className="hidden text-xs text-muted-foreground xl:table-cell">
                 {format(new Date(e.created_at), "dd/MM/yy")}
               </TableCell>
               <TableCell onClick={(ev) => ev.stopPropagation()}>

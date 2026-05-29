@@ -29,5 +29,8 @@ verify_jwt = false
 [functions.provision-team-member]
 verify_jwt = true
 
+[functions.resolve-postal-code]
+verify_jwt = false
+
 [functions.team-member-actions]
 verify_jwt = true

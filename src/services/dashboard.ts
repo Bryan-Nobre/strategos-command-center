@@ -16,6 +16,8 @@ export type DashboardMetrics = {
 
 export type TerritoryInsight = {
   neighborhood: string;
+  territoryKey?: string;
+  territoryLabel?: string;
   supporters: number;
   strongSupportPct: number;
   undecidedPct: number;

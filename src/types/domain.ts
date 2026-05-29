@@ -108,6 +108,7 @@ export const AGENDA_ATTENDEE_ROLE_LABELS: Record<string, string> = {
 export const landingCaptureSchema = z.object({
   name: z.string().min(2),
   phone: z.string().optional(),
+  cep: z.string().optional(),
   neighborhood: z.string().optional(),
   city: z.string().optional(),
   interest: z.string().optional(),
@@ -155,6 +156,21 @@ export const SUPPORTER_SOURCE_LABELS: Record<string, string> = {
   landing: "Landing",
   manual: "Manual",
   import: "Importação",
+};
+
+export const SUPPORTER_LEADERSHIP_RELATIONSHIP_LABELS: Record<string, string> = {
+  pledge: "Apoio a chapa",
+  assigned: "Atribuição CRM",
+  imported: "Importação",
+  legacy: "Legado",
+};
+
+export const SUPPORTER_LEADERSHIP_LINK_SOURCE_LABELS: Record<string, string> = {
+  landing: "Landing",
+  manual: "Manual",
+  import: "Importação",
+  migration: "Migração",
+  system: "Sistema",
 };
 
 export const DEMAND_CATEGORY_LABELS: Record<string, string> = {

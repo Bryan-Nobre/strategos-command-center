@@ -24,6 +24,17 @@ export const queryKeys = {
   team: (tenantId: string) => ["team", tenantId] as const,
   invitations: (tenantId: string) => ["invitations", tenantId] as const,
   landing: (tenantId: string) => ["landing", tenantId] as const,
+  supporterLeadershipLinks: (tenantId: string, supporterId?: string) =>
+    ["supporter-leadership-links", tenantId, supporterId ?? "all"] as const,
+  supporterPoliticalSummaries: (tenantId: string) =>
+    ["supporter-political-summaries", tenantId] as const,
+  supporterPoliticalDetail: (tenantId: string, supporterId: string) =>
+    ["supporter-political-detail", tenantId, supporterId] as const,
+  leadershipOperationalDetail: (
+    tenantId: string,
+    leadershipId: string,
+    params: Record<string, string | number>,
+  ) => ["leadership-operational-detail", tenantId, leadershipId, params] as const,
   prefs: (tenantId: string) => ["prefs", tenantId] as const,
   planUsage: (tenantId: string) => ["plan-usage", tenantId] as const,
   tenantPermissions: (tenantId: string) => ["tenant-permissions", tenantId] as const,
@@ -65,6 +76,9 @@ export function isTenantScopedQueryKey(key: readonly unknown[]): boolean {
     "global-search",
     "notifications",
     "notification-count",
+    "supporter-political-summaries",
+    "supporter-political-detail",
+    "leadership-operational-detail",
   ]);
   return tenantRoots.has(root);
 }

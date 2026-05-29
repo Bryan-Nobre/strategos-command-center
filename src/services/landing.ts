@@ -37,6 +37,7 @@ export async function registerFromLanding(
   payload: {
     name: string;
     phone?: string;
+    cep?: string;
     neighborhood?: string;
     city?: string;
     interest?: string;
@@ -49,6 +50,7 @@ export async function registerFromLanding(
     p_slug: slug,
     p_name: payload.name,
     p_phone: payload.phone ?? undefined,
+    p_cep: payload.cep ?? undefined,
     p_neighborhood: payload.neighborhood ?? undefined,
     p_city: payload.city ?? undefined,
     p_interest: payload.interest ?? undefined,

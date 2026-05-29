@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
+import { normalizeSupporterPhone } from "@/lib/normalize-phone";
 import type { TablesInsert, TablesUpdate } from "@/types/supabase";
 
 export async function listSupporters(tenantId: string) {
@@ -6,7 +7,7 @@ export async function listSupporters(tenantId: string) {
   const { data, error } = await supabase
     .from("supporters")
     .select(
-      "id, name, phone, neighborhood, city, electoral_zone, electoral_section, status, support_level, notes, tags, leadership_id, source, interest, created_at",
+      "id, name, phone, email, neighborhood, normalized_neighborhood, normalized_city, city, electoral_zone, electoral_section, status, support_level, notes, tags, leadership_id, source, interest, is_possible_duplicate, last_activity_at, activity_score, engagement_status, created_at",
     )
     .eq("tenant_id", tenantId)
     .order("created_at", { ascending: false });
@@ -48,13 +49,24 @@ export async function deleteSupporter(id: string) {
   if (error) throw error;
 }
 
+/** Apoiadores com vínculo à liderança (supporter_leadership_links). Segurança real: RLS. */
 export async function listSupportersByLeadership(tenantId: string, leadershipId: string) {
   const supabase = createClient();
+  const { data: links, error: linksError } = await supabase
+    .from("supporter_leadership_links")
+    .select("supporter_id")
+    .eq("tenant_id", tenantId)
+    .eq("leadership_id", leadershipId);
+  if (linksError) throw linksError;
+
+  const ids = [...new Set((links ?? []).map((l) => l.supporter_id))];
+  if (!ids.length) return [];
+
   const { data, error } = await supabase
     .from("supporters")
-    .select("id, name, phone, neighborhood, city, status, support_level, created_at")
+    .select("id, name, phone, neighborhood, city, status, support_level, created_at, leadership_id")
     .eq("tenant_id", tenantId)
-    .eq("leadership_id", leadershipId)
+    .in("id", ids)
     .order("name");
   if (error) throw error;
   return data;
@@ -89,7 +101,7 @@ export async function importSupporters(
   const payload = rows.map((r) => ({
     tenant_id: tenantId,
     name: r.name,
-    phone: r.phone ?? null,
+    phone: normalizeSupporterPhone(r.phone),
     neighborhood: r.neighborhood ?? null,
     city: r.city ?? null,
     support_level: r.support_level ?? "indeciso",

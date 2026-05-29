@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -19,6 +19,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { LoadingState } from "@/components/common/LoadingState";
+import {
+  getGeoForEnrichment,
+  LandingCepLookup,
+  type LandingCepLookupState,
+} from "@/components/landing/LandingCepLookup";
+import { normalizeCep } from "@/lib/postal-code";
+import { applySupporterGeoFromCep } from "@/services/postal-code";
 import { toast } from "sonner";
 
 type CaptureForm = z.infer<typeof landingCaptureSchema>;
@@ -31,6 +38,9 @@ export const Route = createFileRoute("/p/$slug")({
 function PublicLandingPage() {
   const { slug } = Route.useParams();
   const [selectedChapas, setSelectedChapas] = useState<string[]>([]);
+  const [cepInput, setCepInput] = useState("");
+  const [stateUf, setStateUf] = useState("");
+  const [cepLookup, setCepLookup] = useState<LandingCepLookupState>({ status: "idle" });
 
   const { data: landing, isLoading, error } = useQuery({
     queryKey: ["public-landing", slug],
@@ -54,9 +64,23 @@ function PublicLandingPage() {
     return [...map.values()];
   }, [chapas]);
 
-  const { register, handleSubmit, reset, formState: { isSubmitting } } = useForm<CaptureForm>({
+  const {
+    register,
+    handleSubmit,
+    reset,
+    setValue,
+    watch,
+    formState: { isSubmitting },
+  } = useForm<CaptureForm>({
     resolver: zodResolver(landingCaptureSchema),
   });
+
+  const neighborhood = watch("neighborhood") ?? "";
+  const city = watch("city") ?? "";
+
+  const handleCepLookupChange = useCallback((state: LandingCepLookupState) => {
+    setCepLookup(state);
+  }, []);
 
   const {
     register: registerDemand,
@@ -70,10 +94,23 @@ function PublicLandingPage() {
 
   const mutation = useMutation({
     mutationFn: (values: CaptureForm) =>
-      registerFromLanding(slug, { ...values, chapaIds: selectedChapas }),
-    onSuccess: () => {
+      registerFromLanding(slug, {
+        ...values,
+        cep: normalizeCep(cepInput) ?? undefined,
+        chapaIds: selectedChapas,
+      }),
+    onSuccess: (supporterId) => {
       toast.success("Obrigado pelo apoio! Entraremos em contato.");
+      const geo = getGeoForEnrichment(cepLookup);
+      if (geo && supporterId) {
+        void applySupporterGeoFromCep(supporterId, geo).catch(() => {
+          /* Enrichment assíncrono: falha não afeta conversão. */
+        });
+      }
       reset();
+      setCepInput("");
+      setStateUf("");
+      setCepLookup({ status: "idle" });
       setSelectedChapas([]);
     },
     onError: (e: Error) => toast.error(e.message),
@@ -301,6 +338,17 @@ function PublicLandingPage() {
                 <Label>Telefone</Label>
                 <Input {...register("phone")} />
               </div>
+              <LandingCepLookup
+                cepValue={cepInput}
+                onCepChange={setCepInput}
+                onLookupStateChange={handleCepLookupChange}
+                neighborhood={neighborhood}
+                city={city}
+                onNeighborhoodChange={(v) => setValue("neighborhood", v)}
+                onCityChange={(v) => setValue("city", v)}
+                stateUf={stateUf}
+                onStateUfChange={setStateUf}
+              />
               <div className="space-y-2">
                 <Label>Cidade</Label>
                 <Input {...register("city")} />

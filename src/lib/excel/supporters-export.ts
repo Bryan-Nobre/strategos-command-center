@@ -43,7 +43,9 @@ export async function downloadSupportersExcel({
     { header: "Origem", key: "source", width: 12 },
     { header: "Interesse (landing)", key: "interest", width: 24 },
     { header: "Tags", key: "tags", width: 20 },
-    { header: "Liderança", key: "leadership", width: 22 },
+    { header: "Liderança primária", key: "leadership_primary", width: 22 },
+    { header: "Todas as lideranças", key: "leadership_all", width: 28 },
+    { header: "Qtd. vínculos", key: "leadership_link_count", width: 12 },
     { header: "Cadastro", key: "created_at", width: 18 },
     { header: "Observações", key: "notes", width: 32 },
   ];
@@ -72,7 +74,15 @@ export async function downloadSupportersExcel({
       source: SUPPORTER_SOURCE_LABELS[r.source] ?? r.source,
       interest: r.interest ?? "",
       tags: (r.tags ?? []).join("; "),
-      leadership: r.leadership_id ? leadershipNames.get(r.leadership_id) ?? "" : "",
+      leadership_primary:
+        r.primary_leadership_name ??
+        (r.leadership_id ? leadershipNames.get(r.leadership_id) ?? "" : ""),
+      leadership_all: (r.political_leadership_names ?? []).length
+        ? (r.political_leadership_names ?? []).join("; ")
+        : r.leadership_id
+          ? (leadershipNames.get(r.leadership_id) ?? "")
+          : "",
+      leadership_link_count: r.political_link_count ?? (r.leadership_id ? 1 : 0),
       created_at: new Date(r.created_at),
       notes: r.notes ?? "",
     });

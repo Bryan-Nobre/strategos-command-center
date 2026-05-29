@@ -30,10 +30,8 @@ import { LoadingState } from "@/components/common/LoadingState";
 import { LeadershipCompactBar } from "@/components/liderancas/LeadershipCompactBar";
 import { LeadershipCardsView } from "@/components/liderancas/LeadershipCardsView";
 import { LeadershipTableView } from "@/components/liderancas/LeadershipTableView";
-import {
-  LeadershipDetailSheet,
-  type LeadershipListItem,
-} from "@/components/liderancas/LeadershipDetailSheet";
+import { LeadershipDetailSheet } from "@/components/liderancas/LeadershipDetailSheet";
+import type { LeadershipListItem } from "@/components/liderancas/leadership-list-types";
 import {
   parseLiderancasSearch,
   serializeLiderancasSearch,
@@ -85,7 +83,7 @@ function LiderancasPage() {
   const regions = useMemo(() => {
     const set = new Set<string>();
     for (const l of list ?? []) {
-      if (l.region?.trim()) set.add(l.region.trim());
+      if (l.leadership_region?.trim()) set.add(l.leadership_region.trim());
     }
     return [...set].sort();
   }, [list]);
@@ -94,8 +92,8 @@ function LiderancasPage() {
     const q = query.toLowerCase();
     return (list ?? []).filter((l) => {
       const matchesQuery =
-        !q || [l.name, l.region].some((f) => f?.toLowerCase().includes(q));
-      const matchesRegion = filters.regiao === "all" || l.region === filters.regiao;
+        !q || [l.name, l.leadership_region].some((f) => f?.toLowerCase().includes(q));
+      const matchesRegion = filters.regiao === "all" || l.leadership_region === filters.regiao;
       return matchesQuery && matchesRegion;
     }) as LeadershipListItem[];
   }, [list, query, filters.regiao]);
@@ -103,8 +101,9 @@ function LiderancasPage() {
   const totals = useMemo(() => {
     const items = filteredList;
     return {
-      pledged: items.reduce((s, l) => s + (l.pledged_votes ?? 0), 0),
-      target: items.reduce((s, l) => s + (l.estimated_votes ?? 0), 0),
+      linked: items.reduce((s, l) => s + l.linked_supporters, 0),
+      primary: items.reduce((s, l) => s + l.primary_supporters, 0),
+      weeklyGrowth: items.reduce((s, l) => s + l.weekly_growth, 0),
     };
   }, [filteredList]);
 
@@ -132,11 +131,16 @@ function LiderancasPage() {
         filename: buildLeadershipExcelFilename(slug),
         rows: filteredList.map((l) => ({
           name: l.name,
-          region: l.region,
+          region: l.leadership_region,
           estimated_votes: l.estimated_votes ?? 0,
           pledged_votes: l.pledged_votes ?? 0,
-          apoiadores: l.apoiadores,
+          apoiadores: l.linked_supporters,
           chapa_count: l.chapa_count ?? 0,
+          political_strength_score: l.political_strength_score,
+          primary_supporters: l.primary_supporters,
+          secondary_supporters: l.secondary_supporters,
+          weekly_growth: l.weekly_growth,
+          top_neighborhood: l.top_neighborhood,
         })),
       });
       toast.success("Planilha de lideranças exportada");
@@ -154,7 +158,7 @@ function LiderancasPage() {
       <div className="liderancas-page space-y-6">
         <PageHeader
           title="Lideranças"
-          description="Rede política, chapas na landing e meta de associados ao partido — apoios somam na barra de cada liderança."
+          description="Centro operacional da rede política: força, vínculos primários/secundários, crescimento e território básico. O score é heurística interna, não projeção eleitoral."
           actions={
             <>
               <Button
@@ -214,10 +218,36 @@ function LiderancasPage() {
                                 setRegion("");
                                 setEstimatedVotes("0");
                                 setDetailTarget({
-                                  ...row,
-                                  apoiadores: 0,
+                                  tenant_id: tenantId,
+                                  id: row.id,
+                                  leadership_id: row.id,
+                                  name: row.name,
+                                  leadership_region: row.region,
+                                  region: row.region,
+                                  estimated_votes: row.estimated_votes ?? 0,
+                                  actor_type: row.actor_type ?? "regional_leader",
+                                  supporter_id: row.supporter_id,
+                                  created_at: row.created_at,
+                                  linked_supporters: 0,
+                                  primary_supporters: 0,
+                                  secondary_supporters: 0,
                                   pledged_votes: 0,
+                                  pledged_supporters_count: 0,
                                   chapa_count: 0,
+                                  pledge_links_count: 0,
+                                  manual_links_count: 0,
+                                  weekly_growth: 0,
+                                  top_neighborhood: null,
+                                  top_neighborhood_count: null,
+                                  top_neighborhood_concentration_pct: null,
+                                  landing_only_network: false,
+                                  political_strength_score: 0,
+                                  active_supporters_30d: 0,
+                                  hot_supporters: 0,
+                                  inactive_supporters: 0,
+                                  avg_activity_score: 0,
+                                  cold_network_pct: null,
+                                  apoiadores: 0,
                                 });
                               },
                             },
@@ -237,8 +267,9 @@ function LiderancasPage() {
         <LeadershipCompactBar
           total={list?.length ?? 0}
           filtered={filteredList.length}
-          totalPledged={totals.pledged}
-          totalTarget={totals.target}
+          totalLinked={totals.linked}
+          totalPrimary={totals.primary}
+          totalWeeklyGrowth={totals.weeklyGrowth}
         />
 
         <Card className="shadow-elegant overflow-hidden">
@@ -347,7 +378,7 @@ function LiderancasPage() {
           onSaveLeadership={(payload) => {
             if (!detailTarget) return;
             updateMutation.mutate(
-              { id: detailTarget.id, ...payload },
+              { id: detailTarget.leadership_id, ...payload },
               {
                 onSuccess: () => {
                   setDetailTarget((prev) => (prev ? { ...prev, ...payload } : null));
@@ -363,16 +394,18 @@ function LiderancasPage() {
           title="Excluir liderança"
           description={
             deleteTarget
-              ? `"${deleteTarget.name}" possui ${deleteTarget.apoiadores} apoiador(es) e ${deleteTarget.chapa_count} chapa(s). Apoiadores serão desvinculados; chapas e apoios na landing serão removidos.`
+              ? `"${deleteTarget.name}" possui ${deleteTarget.linked_supporters} vínculo(s) na rede (${deleteTarget.primary_supporters} primários) e ${deleteTarget.chapa_count} chapa(s). Vínculos e chapas serão removidos em cascata.`
               : ""
           }
           loading={deleteMutation.isPending}
           onConfirm={() => {
             if (deleteTarget) {
-              deleteMutation.mutate(deleteTarget.id, {
+              deleteMutation.mutate(deleteTarget.leadership_id, {
                 onSuccess: () => {
                   setDeleteTarget(null);
-                  if (detailTarget?.id === deleteTarget.id) setDetailTarget(null);
+                  if (detailTarget?.leadership_id === deleteTarget.leadership_id) {
+                    setDetailTarget(null);
+                  }
                 },
               });
             }

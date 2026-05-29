@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/client";
 import type { TablesInsert, TablesUpdate } from "@/types/supabase";
+import { listChapaMetricsByLeadership } from "@/services/leadership-metrics";
 
 export type LeadershipChapaRow = {
   id: string;
@@ -17,34 +18,26 @@ export type LeadershipChapaRow = {
 
 export async function listChapasByLeadership(tenantId: string, leadershipId: string) {
   const supabase = createClient();
-  const { data, error } = await supabase
-    .from("leadership_chapas")
-    .select("id, tenant_id, leadership_id, name, subtitle, vote_weight, display_order, is_published, created_at")
-    .eq("tenant_id", tenantId)
-    .eq("leadership_id", leadershipId)
-    .order("display_order")
-    .order("name");
+  const [{ data, error }, metricsMap] = await Promise.all([
+    supabase
+      .from("leadership_chapas")
+      .select("id, tenant_id, leadership_id, name, subtitle, vote_weight, display_order, is_published, created_at")
+      .eq("tenant_id", tenantId)
+      .eq("leadership_id", leadershipId)
+      .order("display_order")
+      .order("name"),
+    listChapaMetricsByLeadership(tenantId, leadershipId),
+  ]);
   if (error) throw error;
 
-  const chapaIds = (data ?? []).map((c) => c.id);
-  if (!chapaIds.length) return [] as LeadershipChapaRow[];
-
-  const { data: pledges, error: pledgeError } = await supabase
-    .from("supporter_chapa_pledges")
-    .select("chapa_id")
-    .in("chapa_id", chapaIds);
-  if (pledgeError) throw pledgeError;
-
-  const countMap = new Map<string, number>();
-  for (const p of pledges ?? []) {
-    countMap.set(p.chapa_id, (countMap.get(p.chapa_id) ?? 0) + 1);
-  }
-
-  return (data ?? []).map((c) => ({
-    ...c,
-    pledge_count: countMap.get(c.id) ?? 0,
-    pledged_votes: (countMap.get(c.id) ?? 0) * c.vote_weight,
-  }));
+  return (data ?? []).map((c) => {
+    const m = metricsMap.get(c.id);
+    return {
+      ...c,
+      pledge_count: m?.pledge_count ?? 0,
+      pledged_votes: m?.pledged_votes ?? 0,
+    } satisfies LeadershipChapaRow;
+  });
 }
 
 export async function createChapa(

@@ -4,6 +4,8 @@ import { greetingForHour } from "@/lib/dashboard-dates";
 export type TerritoryRiskLevel = "critico" | "atencao" | "promissor";
 
 export type EnrichedTerritory = TerritoryInsight & {
+  territoryKey: string;
+  territoryLabel: string;
   displayScore: number;
   riskLevel: TerritoryRiskLevel;
 };

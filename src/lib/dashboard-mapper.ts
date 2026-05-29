@@ -52,8 +52,14 @@ function mapSearch(value: unknown): Record<string, string | boolean> | undefined
 
 function mapTerritory(row: RpcRecord): EnrichedTerritory {
   const risk = asString(row.risk_level, "atencao");
+  const territoryLabel = asString(
+    row.territory_label,
+    asString(row.neighborhood, "Sem bairro"),
+  );
   return {
-    neighborhood: asString(row.neighborhood, "Sem bairro"),
+    neighborhood: territoryLabel,
+    territoryKey: asString(row.territory_key, territoryLabel),
+    territoryLabel,
     supporters: asNumber(row.supporters),
     strongSupportPct: asNumber(row.strong_support_pct),
     undecidedPct: asNumber(row.undecided_pct),

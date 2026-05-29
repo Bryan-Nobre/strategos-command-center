@@ -188,6 +188,8 @@ export type Database = {
           description: string | null
           id: string
           neighborhood: string | null
+          normalized_city: string | null
+          normalized_neighborhood: string | null
           priority: Database["public"]["Enums"]["demand_priority"]
           requester_city: string | null
           requester_name: string | null
@@ -207,6 +209,8 @@ export type Database = {
           description?: string | null
           id?: string
           neighborhood?: string | null
+          normalized_city?: string | null
+          normalized_neighborhood?: string | null
           priority?: Database["public"]["Enums"]["demand_priority"]
           requester_city?: string | null
           requester_name?: string | null
@@ -226,6 +230,8 @@ export type Database = {
           description?: string | null
           id?: string
           neighborhood?: string | null
+          normalized_city?: string | null
+          normalized_neighborhood?: string | null
           priority?: Database["public"]["Enums"]["demand_priority"]
           requester_city?: string | null
           requester_name?: string | null
@@ -305,6 +311,7 @@ export type Database = {
       }
       leaderships: {
         Row: {
+          actor_type: Database["public"]["Enums"]["leadership_actor_type"]
           created_at: string
           estimated_votes: number
           id: string
@@ -315,6 +322,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          actor_type?: Database["public"]["Enums"]["leadership_actor_type"]
           created_at?: string
           estimated_votes?: number
           id?: string
@@ -325,6 +333,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          actor_type?: Database["public"]["Enums"]["leadership_actor_type"]
           created_at?: string
           estimated_votes?: number
           id?: string
@@ -451,6 +460,67 @@ export type Database = {
           },
         ]
       }
+      supporter_leadership_links: {
+        Row: {
+          created_at: string
+          id: string
+          is_primary: boolean
+          leadership_id: string
+          relationship_type: Database["public"]["Enums"]["supporter_leadership_relationship"]
+          source: Database["public"]["Enums"]["supporter_leadership_link_source"]
+          supporter_id: string
+          tenant_id: string
+          updated_at: string
+          weight: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_primary?: boolean
+          leadership_id: string
+          relationship_type?: Database["public"]["Enums"]["supporter_leadership_relationship"]
+          source?: Database["public"]["Enums"]["supporter_leadership_link_source"]
+          supporter_id: string
+          tenant_id: string
+          updated_at?: string
+          weight?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_primary?: boolean
+          leadership_id?: string
+          relationship_type?: Database["public"]["Enums"]["supporter_leadership_relationship"]
+          source?: Database["public"]["Enums"]["supporter_leadership_link_source"]
+          supporter_id?: string
+          tenant_id?: string
+          updated_at?: string
+          weight?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supporter_leadership_links_leadership_id_fkey"
+            columns: ["leadership_id"]
+            isOneToOne: false
+            referencedRelation: "leaderships"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supporter_leadership_links_supporter_id_fkey"
+            columns: ["supporter_id"]
+            isOneToOne: false
+            referencedRelation: "supporters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supporter_leadership_links_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       poll_snapshots: {
         Row: {
           created_at: string
@@ -525,21 +595,90 @@ export type Database = {
         }
         Relationships: []
       }
+      postal_code_cache: {
+        Row: {
+          cep: string
+          city_name: string | null
+          expires_at: string
+          fetched_at: string
+          geo_confidence: string | null
+          geo_precision: string | null
+          ibge_city_code: string | null
+          latitude: number | null
+          longitude: number | null
+          neighborhood: string | null
+          provider: string
+          raw_response: Json
+          state_uf: string | null
+          street: string | null
+        }
+        Insert: {
+          cep: string
+          city_name?: string | null
+          expires_at: string
+          fetched_at?: string
+          geo_confidence?: string | null
+          geo_precision?: string | null
+          ibge_city_code?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          neighborhood?: string | null
+          provider: string
+          raw_response?: Json
+          state_uf?: string | null
+          street?: string | null
+        }
+        Update: {
+          cep?: string
+          city_name?: string | null
+          expires_at?: string
+          fetched_at?: string
+          geo_confidence?: string | null
+          geo_precision?: string | null
+          ibge_city_code?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          neighborhood?: string | null
+          provider?: string
+          raw_response?: Json
+          state_uf?: string | null
+          street?: string | null
+        }
+        Relationships: []
+      }
       supporters: {
         Row: {
+          cep: string | null
           city: string | null
           created_at: string
           created_by: string | null
+          duplicate_group_key: string | null
           electoral_section: string | null
           electoral_zone: string | null
+          email: string | null
           id: string
           interest: string | null
+          is_possible_duplicate: boolean
+          last_activity_at: string | null
+          activity_score: number
+          engagement_status: Database["public"]["Enums"]["supporter_engagement_status"]
+          geo_confidence: string | null
+          geo_enriched_at: string | null
+          geo_pending: boolean
+          geo_precision: string | null
+          geo_source: string | null
+          ibge_city_code: string | null
+          latitude: number | null
           leadership_id: string | null
+          longitude: number | null
           name: string
           neighborhood: string | null
+          normalized_city: string | null
+          normalized_neighborhood: string | null
           notes: string | null
           phone: string | null
           source: Database["public"]["Enums"]["supporter_source"]
+          state_uf: string | null
           status: Database["public"]["Enums"]["supporter_status"]
           support_level: Database["public"]["Enums"]["support_level"]
           tags: string[]
@@ -547,19 +686,37 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          cep?: string | null
           city?: string | null
           created_at?: string
           created_by?: string | null
+          duplicate_group_key?: string | null
           electoral_section?: string | null
           electoral_zone?: string | null
+          email?: string | null
           id?: string
           interest?: string | null
+          is_possible_duplicate?: boolean
+          last_activity_at?: string | null
+          activity_score?: number
+          engagement_status?: Database["public"]["Enums"]["supporter_engagement_status"]
+          geo_confidence?: string | null
+          geo_enriched_at?: string | null
+          geo_pending?: boolean
+          geo_precision?: string | null
+          geo_source?: string | null
+          ibge_city_code?: string | null
+          latitude?: number | null
           leadership_id?: string | null
+          longitude?: number | null
           name: string
           neighborhood?: string | null
+          normalized_city?: string | null
+          normalized_neighborhood?: string | null
           notes?: string | null
           phone?: string | null
           source?: Database["public"]["Enums"]["supporter_source"]
+          state_uf?: string | null
           status?: Database["public"]["Enums"]["supporter_status"]
           support_level?: Database["public"]["Enums"]["support_level"]
           tags?: string[]
@@ -567,19 +724,37 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          cep?: string | null
           city?: string | null
           created_at?: string
           created_by?: string | null
+          duplicate_group_key?: string | null
           electoral_section?: string | null
           electoral_zone?: string | null
+          email?: string | null
           id?: string
           interest?: string | null
+          is_possible_duplicate?: boolean
+          last_activity_at?: string | null
+          activity_score?: number
+          engagement_status?: Database["public"]["Enums"]["supporter_engagement_status"]
+          geo_confidence?: string | null
+          geo_enriched_at?: string | null
+          geo_pending?: boolean
+          geo_precision?: string | null
+          geo_source?: string | null
+          ibge_city_code?: string | null
+          latitude?: number | null
           leadership_id?: string | null
+          longitude?: number | null
           name?: string
           neighborhood?: string | null
+          normalized_city?: string | null
+          normalized_neighborhood?: string | null
           notes?: string | null
           phone?: string | null
           source?: Database["public"]["Enums"]["supporter_source"]
+          state_uf?: string | null
           status?: Database["public"]["Enums"]["supporter_status"]
           support_level?: Database["public"]["Enums"]["support_level"]
           tags?: string[]
@@ -884,7 +1059,72 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      leadership_chapa_metrics_v: {
+        Row: {
+          chapa_id: string
+          leadership_id: string
+          pledge_count: number
+          pledged_votes: number
+          tenant_id: string
+        }
+        Relationships: []
+      }
+      leadership_political_metrics_v: {
+        Row: {
+          chapa_count: number
+          leadership_id: string
+          linked_supporters_count: number
+          manual_links_count: number
+          pledge_links_count: number
+          pledged_supporters_count: number
+          pledged_votes: number
+          primary_supporters_count: number
+          tenant_id: string
+          total_relationships: number
+          unique_supporters: number
+        }
+        Relationships: []
+      }
+      supporter_political_summary_v: {
+        Row: {
+          has_primary_link: boolean
+          leadership_ids: string[]
+          leadership_names: string[]
+          link_count: number
+          primary_leadership_id: string | null
+          primary_leadership_name: string | null
+          supporter_id: string
+          tenant_id: string
+        }
+        Relationships: []
+      }
+      leadership_operational_summary_v: {
+        Row: {
+          actor_type: Database["public"]["Enums"]["leadership_actor_type"]
+          chapa_count: number
+          created_at: string
+          estimated_votes: number
+          landing_only_network: boolean
+          leadership_id: string
+          leadership_region: string | null
+          linked_supporters: number
+          manual_links_count: number
+          name: string
+          pledge_links_count: number
+          pledged_supporters_count: number
+          pledged_votes: number
+          political_strength_score: number
+          primary_supporters: number
+          secondary_supporters: number
+          supporter_id: string | null
+          tenant_id: string
+          top_neighborhood: string | null
+          top_neighborhood_concentration_pct: number | null
+          top_neighborhood_count: number | null
+          weekly_growth: number
+        }
+        Relationships: []
+      }
     }
     Functions: {
       accept_team_invitation: { Args: { p_token: string }; Returns: string }
@@ -995,10 +1235,24 @@ export type Database = {
         }
         Returns: undefined
       }
+      apply_supporter_geo_from_cep: {
+        Args: { p_geo_payload: Json; p_supporter_id: string }
+        Returns: undefined
+      }
+      get_postal_code_cache: {
+        Args: { p_cep: string }
+        Returns: Json
+      }
+      normalize_cep: {
+        Args: { p_input?: string }
+        Returns: string
+      }
       register_supporter_from_landing: {
         Args: {
+          p_cep?: string
           p_chapa_ids?: string[]
           p_city?: string
+          p_email?: string
           p_interest?: string
           p_name: string
           p_neighborhood?: string
@@ -1007,6 +1261,53 @@ export type Database = {
           p_slug: string
         }
         Returns: string
+      }
+      upsert_postal_code_cache: {
+        Args: { p_payload: Json }
+        Returns: undefined
+      }
+      find_possible_duplicate_supporter: {
+        Args: {
+          p_tenant_id: string
+          p_phone?: string
+          p_email?: string
+          p_exclude_id?: string
+        }
+        Returns: string
+      }
+      normalize_neighborhood: {
+        Args: { p_text?: string }
+        Returns: string
+      }
+      normalize_city: {
+        Args: { p_text?: string }
+        Returns: string
+      }
+      recompute_supporter_leadership_primary: {
+        Args: { p_supporter_id: string }
+        Returns: string
+      }
+      recompute_supporter_activity_state: {
+        Args: { p_supporter_id: string }
+        Returns: undefined
+      }
+      sync_supporter_links_from_pledges: {
+        Args: { p_supporter_id: string }
+        Returns: undefined
+      }
+      supporter_matches_leadership_filter: {
+        Args: { p_leadership_id: string | null; p_supporter_id: string }
+        Returns: boolean
+      }
+      get_leadership_operational_detail: {
+        Args: {
+          p_leadership_id: string
+          p_segment?: string
+          p_search?: string | null
+          p_limit?: number
+          p_offset?: number
+        }
+        Returns: Json
       }
       upsert_manual_goals_config: {
         Args: { p_goals?: Json; p_tenant_id: string }
@@ -1069,6 +1370,36 @@ export type Database = {
         | "crescimento_apoiadores"
         | "custom"
       support_level: "forte" | "medio" | "fraco" | "indeciso"
+      supporter_leadership_link_source:
+        | "landing"
+        | "manual"
+        | "import"
+        | "migration"
+        | "system"
+      leadership_actor_type:
+        | "coordinator"
+        | "candidate"
+        | "regional_leader"
+        | "grassroots"
+        | "influencer"
+        | "volunteer_hub"
+      supporter_leadership_relationship: "pledge" | "assigned" | "imported" | "legacy"
+      supporter_activity_event_type:
+        | "landing_signup"
+        | "pledge_added"
+        | "leadership_linked"
+        | "demand_created"
+        | "supporter_updated"
+        | "imported"
+        | "manual_created"
+      supporter_activity_event_source:
+        | "landing"
+        | "manual"
+        | "import"
+        | "system"
+        | "migration"
+        | "crm"
+      supporter_engagement_status: "hot" | "warm" | "cold" | "inactive"
       supporter_source: "manual" | "landing" | "import"
       supporter_status:
         | "interessado"
@@ -1238,6 +1569,16 @@ export const Constants = {
         "custom",
       ],
       support_level: ["forte", "medio", "fraco", "indeciso"],
+      supporter_leadership_link_source: ["landing", "manual", "import", "migration", "system"],
+      leadership_actor_type: [
+        "coordinator",
+        "candidate",
+        "regional_leader",
+        "grassroots",
+        "influencer",
+        "volunteer_hub",
+      ],
+      supporter_leadership_relationship: ["pledge", "assigned", "imported", "legacy"],
       supporter_source: ["manual", "landing", "import"],
       supporter_status: [
         "interessado",

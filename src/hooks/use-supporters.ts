@@ -29,6 +29,7 @@ export function useCreateSupporter(tenantId: string) {
       supportersService.createSupporter(tenantId, payload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.supporters(tenantId) });
+      qc.invalidateQueries({ queryKey: queryKeys.supporterPoliticalSummaries(tenantId) });
       qc.invalidateQueries({ queryKey: queryKeys.operationalDashboard(tenantId) });
       qc.invalidateQueries({ queryKey: queryKeys.planUsage(tenantId) });
       qc.invalidateQueries({ queryKey: queryKeys.leaderships(tenantId) });
@@ -43,8 +44,12 @@ export function useUpdateSupporter(tenantId: string) {
   return useMutation({
     mutationFn: ({ id, ...payload }: TablesUpdate<"supporters"> & { id: string }) =>
       supportersService.updateSupporter(id, payload),
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       qc.invalidateQueries({ queryKey: queryKeys.supporters(tenantId) });
+      qc.invalidateQueries({ queryKey: queryKeys.supporterPoliticalSummaries(tenantId) });
+      qc.invalidateQueries({
+        queryKey: queryKeys.supporterPoliticalDetail(tenantId, variables.id),
+      });
       qc.invalidateQueries({ queryKey: queryKeys.dashboard(tenantId) });
       qc.invalidateQueries({ queryKey: queryKeys.leaderships(tenantId) });
       toast.success("Apoiador atualizado");
@@ -59,7 +64,9 @@ export function useDeleteSupporter(tenantId: string) {
     mutationFn: (id: string) => supportersService.deleteSupporter(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.supporters(tenantId) });
+      qc.invalidateQueries({ queryKey: queryKeys.supporterPoliticalSummaries(tenantId) });
       qc.invalidateQueries({ queryKey: queryKeys.dashboard(tenantId) });
+      qc.invalidateQueries({ queryKey: queryKeys.leaderships(tenantId) });
       toast.success("Apoiador removido");
     },
     onError: (e: Error) => toast.error(e.message),
