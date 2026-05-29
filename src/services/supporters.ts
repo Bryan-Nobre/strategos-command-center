@@ -5,7 +5,9 @@ export async function listSupporters(tenantId: string) {
   const supabase = createClient();
   const { data, error } = await supabase
     .from("supporters")
-    .select("id, name, phone, neighborhood, city, electoral_zone, electoral_section, status, support_level, notes, tags, leadership_id, source, created_at")
+    .select(
+      "id, name, phone, neighborhood, city, electoral_zone, electoral_section, status, support_level, notes, tags, leadership_id, source, interest, created_at",
+    )
     .eq("tenant_id", tenantId)
     .order("created_at", { ascending: false });
   if (error) throw error;

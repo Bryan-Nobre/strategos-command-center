@@ -196,36 +196,13 @@ export async function saveManualGoalsConfig(
   goals: ManualGoalConfig[],
 ): Promise<void> {
   const supabase = createClient();
-  const { data: existing, error: findError } = await supabase
-    .from("poll_snapshots")
-    .select("id")
-    .eq("tenant_id", tenantId)
-    .eq("snapshot_type", "custom")
-    .eq("title", "manual_goals")
-    .limit(1)
-    .maybeSingle();
-  if (findError) throw findError;
-
   const sanitizedGoals = goals
     .map((g) => parseManualGoal(g))
     .filter((g): g is ManualGoalConfig => g !== null);
 
-  const payload: Json = { goals: sanitizedGoals as unknown as Json };
-
-  if (existing?.id) {
-    await updatePollSnapshot(existing.id, payload);
-    return;
-  }
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const { error } = await supabase.from("poll_snapshots").insert({
-    tenant_id: tenantId,
-    snapshot_type: "custom",
-    title: "manual_goals",
-    data: payload,
-    created_by: user?.id ?? null,
+  const { error } = await supabase.rpc("upsert_manual_goals_config", {
+    p_tenant_id: tenantId,
+    p_goals: sanitizedGoals as unknown as Json,
   });
   if (error) throw error;
 }

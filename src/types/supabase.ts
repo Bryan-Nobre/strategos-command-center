@@ -49,47 +49,127 @@ export type Database = {
           },
         ]
       }
+      agenda_event_attendees: {
+        Row: {
+          created_at: string
+          event_id: string
+          id: string
+          notes: string | null
+          role: Database["public"]["Enums"]["agenda_attendee_role"]
+          status: Database["public"]["Enums"]["agenda_attendee_status"]
+          supporter_id: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          id?: string
+          notes?: string | null
+          role?: Database["public"]["Enums"]["agenda_attendee_role"]
+          status?: Database["public"]["Enums"]["agenda_attendee_status"]
+          supporter_id: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          id?: string
+          notes?: string | null
+          role?: Database["public"]["Enums"]["agenda_attendee_role"]
+          status?: Database["public"]["Enums"]["agenda_attendee_status"]
+          supporter_id?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agenda_event_attendees_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "agenda_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agenda_event_attendees_supporter_id_fkey"
+            columns: ["supporter_id"]
+            isOneToOne: false
+            referencedRelation: "supporters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agenda_event_attendees_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agenda_events: {
         Row: {
+          city: string | null
           created_at: string
           created_by: string | null
           description: string | null
           event_date: string
           event_time: string | null
           event_type: Database["public"]["Enums"]["agenda_event_type"]
+          expected_attendance: number | null
           id: string
+          leadership_id: string | null
           location: string | null
+          neighborhood: string | null
+          status: Database["public"]["Enums"]["agenda_event_status"]
           tenant_id: string
           title: string
           updated_at: string
         }
         Insert: {
+          city?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
           event_date: string
           event_time?: string | null
           event_type?: Database["public"]["Enums"]["agenda_event_type"]
+          expected_attendance?: number | null
           id?: string
+          leadership_id?: string | null
           location?: string | null
+          neighborhood?: string | null
+          status?: Database["public"]["Enums"]["agenda_event_status"]
           tenant_id: string
           title: string
           updated_at?: string
         }
         Update: {
+          city?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
           event_date?: string
           event_time?: string | null
           event_type?: Database["public"]["Enums"]["agenda_event_type"]
+          expected_attendance?: number | null
           id?: string
+          leadership_id?: string | null
           location?: string | null
+          neighborhood?: string | null
+          status?: Database["public"]["Enums"]["agenda_event_status"]
           tenant_id?: string
           title?: string
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "agenda_events_leadership_id_fkey"
+            columns: ["leadership_id"]
+            isOneToOne: false
+            referencedRelation: "leaderships"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "agenda_events_tenant_id_fkey"
             columns: ["tenant_id"]
@@ -109,7 +189,12 @@ export type Database = {
           id: string
           neighborhood: string | null
           priority: Database["public"]["Enums"]["demand_priority"]
+          requester_city: string | null
+          requester_name: string | null
+          requester_phone: string | null
+          source: Database["public"]["Enums"]["demand_source"]
           status: Database["public"]["Enums"]["demand_status"]
+          supporter_id: string | null
           tenant_id: string
           title: string
           updated_at: string
@@ -123,7 +208,12 @@ export type Database = {
           id?: string
           neighborhood?: string | null
           priority?: Database["public"]["Enums"]["demand_priority"]
+          requester_city?: string | null
+          requester_name?: string | null
+          requester_phone?: string | null
+          source?: Database["public"]["Enums"]["demand_source"]
           status?: Database["public"]["Enums"]["demand_status"]
+          supporter_id?: string | null
           tenant_id: string
           title: string
           updated_at?: string
@@ -137,7 +227,12 @@ export type Database = {
           id?: string
           neighborhood?: string | null
           priority?: Database["public"]["Enums"]["demand_priority"]
+          requester_city?: string | null
+          requester_name?: string | null
+          requester_phone?: string | null
+          source?: Database["public"]["Enums"]["demand_source"]
           status?: Database["public"]["Enums"]["demand_status"]
+          supporter_id?: string | null
           tenant_id?: string
           title?: string
           updated_at?: string
@@ -249,6 +344,106 @@ export type Database = {
           },
           {
             foreignKeyName: "leaderships_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leadership_chapas: {
+        Row: {
+          created_at: string
+          display_order: number
+          id: string
+          is_published: boolean
+          leadership_id: string
+          name: string
+          subtitle: string | null
+          tenant_id: string
+          updated_at: string
+          vote_weight: number
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_published?: boolean
+          leadership_id: string
+          name: string
+          subtitle?: string | null
+          tenant_id: string
+          updated_at?: string
+          vote_weight?: number
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_published?: boolean
+          leadership_id?: string
+          name?: string
+          subtitle?: string | null
+          tenant_id?: string
+          updated_at?: string
+          vote_weight?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leadership_chapas_leadership_id_fkey"
+            columns: ["leadership_id"]
+            isOneToOne: false
+            referencedRelation: "leaderships"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leadership_chapas_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supporter_chapa_pledges: {
+        Row: {
+          chapa_id: string
+          created_at: string
+          id: string
+          supporter_id: string
+          tenant_id: string
+        }
+        Insert: {
+          chapa_id: string
+          created_at?: string
+          id?: string
+          supporter_id: string
+          tenant_id: string
+        }
+        Update: {
+          chapa_id?: string
+          created_at?: string
+          id?: string
+          supporter_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supporter_chapa_pledges_chapa_id_fkey"
+            columns: ["chapa_id"]
+            isOneToOne: false
+            referencedRelation: "leadership_chapas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supporter_chapa_pledges_supporter_id_fkey"
+            columns: ["supporter_id"]
+            isOneToOne: false
+            referencedRelation: "supporters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supporter_chapa_pledges_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -468,6 +663,7 @@ export type Database = {
           custom_role_id: string | null
           id: string
           role: Database["public"]["Enums"]["tenant_role"]
+          status: Database["public"]["Enums"]["tenant_member_status"]
           tenant_id: string
           user_id: string
         }
@@ -476,6 +672,7 @@ export type Database = {
           custom_role_id?: string | null
           id?: string
           role?: Database["public"]["Enums"]["tenant_role"]
+          status?: Database["public"]["Enums"]["tenant_member_status"]
           tenant_id: string
           user_id: string
         }
@@ -484,6 +681,7 @@ export type Database = {
           custom_role_id?: string | null
           id?: string
           role?: Database["public"]["Enums"]["tenant_role"]
+          status?: Database["public"]["Enums"]["tenant_member_status"]
           tenant_id?: string
           user_id?: string
         }
@@ -764,6 +962,29 @@ export type Database = {
         Args: { p_custom_role_id: string; p_member_id: string }
         Returns: undefined
       }
+      list_team_members_enriched: { Args: { p_tenant_id: string }; Returns: Json }
+      validate_team_provision_request: {
+        Args: { p_email: string; p_tenant_id: string }
+        Returns: undefined
+      }
+      update_team_member_details: {
+        Args: {
+          p_custom_role_id?: string | null
+          p_full_name?: string | null
+          p_member_id: string
+          p_phone?: string | null
+        }
+        Returns: undefined
+      }
+      set_team_member_status: {
+        Args: {
+          p_member_id: string
+          p_status: Database["public"]["Enums"]["tenant_member_status"]
+        }
+        Returns: undefined
+      }
+      remove_team_member: { Args: { p_member_id: string }; Returns: undefined }
+      assert_can_manage_team_member: { Args: { p_member_id: string }; Returns: Json }
       is_super_admin: { Args: never; Returns: boolean }
       log_activity: {
         Args: {
@@ -776,6 +997,7 @@ export type Database = {
       }
       register_supporter_from_landing: {
         Args: {
+          p_chapa_ids?: string[]
           p_city?: string
           p_interest?: string
           p_name: string
@@ -783,6 +1005,25 @@ export type Database = {
           p_notes?: string
           p_phone?: string
           p_slug: string
+        }
+        Returns: string
+      }
+      upsert_manual_goals_config: {
+        Args: { p_goals?: Json; p_tenant_id: string }
+        Returns: undefined
+      }
+      notify_agenda_daily_reminders: { Args: never; Returns: number }
+      register_demand_from_landing: {
+        Args: {
+          p_category?: Database["public"]["Enums"]["demand_category"]
+          p_city?: string
+          p_description?: string
+          p_neighborhood?: string
+          p_priority?: Database["public"]["Enums"]["demand_priority"]
+          p_requester_name?: string
+          p_requester_phone?: string
+          p_slug: string
+          p_title: string
         }
         Returns: string
       }
@@ -805,6 +1046,9 @@ export type Database = {
       user_tenant_ids: { Args: never; Returns: string[] }
     }
     Enums: {
+      agenda_attendee_role: "acompanhante" | "convidado" | "lideranca"
+      agenda_attendee_status: "convidado" | "confirmado" | "compareceu" | "nao_compareceu"
+      agenda_event_status: "agendado" | "confirmado" | "realizado" | "cancelado"
       agenda_event_type: "reuniao" | "evento" | "caminhada" | "visita"
       demand_category:
         | "saude"
@@ -812,7 +1056,10 @@ export type Database = {
         | "infraestrutura"
         | "seguranca"
         | "iluminacao"
+        | "melhorias"
+        | "outros"
       demand_priority: "baixa" | "media" | "alta"
+      demand_source: "manual" | "landing"
       demand_status: "aberto" | "em_andamento" | "resolvido"
       invitation_status: "pending" | "accepted" | "expired" | "revoked"
       platform_role: "user" | "super_admin"
@@ -829,6 +1076,7 @@ export type Database = {
         | "lideranca"
         | "oposicao"
         | "indeciso"
+      tenant_member_status: "active" | "suspended"
       tenant_plan: "trial" | "basic" | "pro" | "enterprise"
       tenant_role:
         | "owner"
@@ -965,6 +1213,9 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      agenda_attendee_role: ["acompanhante", "convidado", "lideranca"],
+      agenda_attendee_status: ["convidado", "confirmado", "compareceu", "nao_compareceu"],
+      agenda_event_status: ["agendado", "confirmado", "realizado", "cancelado"],
       agenda_event_type: ["reuniao", "evento", "caminhada", "visita"],
       demand_category: [
         "saude",
@@ -972,8 +1223,11 @@ export const Constants = {
         "infraestrutura",
         "seguranca",
         "iluminacao",
+        "melhorias",
+        "outros",
       ],
       demand_priority: ["baixa", "media", "alta"],
+      demand_source: ["manual", "landing"],
       demand_status: ["aberto", "em_andamento", "resolvido"],
       invitation_status: ["pending", "accepted", "expired", "revoked"],
       platform_role: ["user", "super_admin"],
@@ -992,6 +1246,7 @@ export const Constants = {
         "oposicao",
         "indeciso",
       ],
+      tenant_member_status: ["active", "suspended"],
       tenant_plan: ["trial", "basic", "pro", "enterprise"],
       tenant_role: [
         "owner",

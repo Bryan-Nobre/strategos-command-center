@@ -1,358 +1,145 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { Plus, Trash2, Save } from "lucide-react";
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-  Pie,
-  PieChart,
-  Cell,
-  Legend,
-  Area,
-  AreaChart,
-} from "recharts";
-import { PageHeader } from "@/components/layout/PageHeader";
-import { ChartCard } from "@/components/common/ChartCard";
-import { EmptyState } from "@/components/common/EmptyState";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useMemo, useCallback } from "react";
+import { ModuleRouteGuard } from "@/components/auth/PermissionGate";
+import { PlanLimitNotice } from "@/components/common/PlanLimitNotice";
+import { PesquisasHero } from "@/components/pesquisas/PesquisasHero";
+import { PesquisasFiltersBar } from "@/components/pesquisas/PesquisasFiltersBar";
+import { PesquisasGrowthSection } from "@/components/pesquisas/PesquisasGrowthSection";
+import { PesquisasSurveysSection } from "@/components/pesquisas/PesquisasSurveysSection";
+import { PesquisasPageSkeleton } from "@/components/pesquisas/PesquisasPageSkeleton";
+import { ReportsKpiStrip } from "@/components/reports/ReportsKpiStrip";
+import { ReportsTerritorySection } from "@/components/reports/ReportsTerritorySection";
 import { useTenant } from "@/hooks/use-tenant";
 import { usePlanGate } from "@/hooks/use-plan-gate";
 import { useCrudPermissions } from "@/hooks/use-crud-permissions";
-import { ModuleRouteGuard } from "@/components/auth/PermissionGate";
-import { PlanLimitNotice } from "@/components/common/PlanLimitNotice";
 import { usePollSnapshots, useUpsertPollSnapshot } from "@/hooks/use-dashboard";
-import type { Json } from "@/types/supabase";
-import { LoadingState } from "@/components/common/LoadingState";
+import { useReportsSummary } from "@/hooks/use-reports";
+import { useSyncedListSearch } from "@/hooks/use-synced-list-search";
+import { resolveAnalyticsDateRange } from "@/lib/analytics-period";
+import {
+  parsePesquisasSearch,
+  serializePesquisasSearch,
+  pesquisasFiltersToRpcParams,
+  type PesquisasListSearch,
+} from "@/lib/list-search/pesquisas";
 
 export const Route = createFileRoute("/_app/pesquisas")({
+  validateSearch: (search: Record<string, unknown>): PesquisasListSearch =>
+    parsePesquisasSearch(search),
   component: PesquisasPage,
 });
 
-const PALETTE = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)"];
-
-type IntencaoRow = { candidato: string; valor: number };
-type AprovacaoRow = { bairro: string; aprovacao: number };
-type CrescimentoRow = { mes: string; apoiadores: number };
+const DEFAULT_SEARCH: PesquisasListSearch = { period: "30d" };
 
 function PesquisasPage() {
   const { tenantId } = useTenant();
   const planGate = usePlanGate(tenantId);
   const perms = useCrudPermissions("polls");
-  const { data: polls, isLoading } = usePollSnapshots(tenantId);
+  const search = Route.useSearch();
+  const { setSearch } = useSyncedListSearch({
+    search,
+    serialize: serializePesquisasSearch,
+  });
+
+  const range = useMemo(() => resolveAnalyticsDateRange(search), [search]);
+  const rpcFilters = useMemo(() => pesquisasFiltersToRpcParams(search), [search]);
+
+  const queryParams = useMemo(
+    () =>
+      tenantId
+        ? {
+            tenantId,
+            from: range.from,
+            to: range.to,
+            ...rpcFilters,
+          }
+        : null,
+    [tenantId, range.from, range.to, rpcFilters],
+  );
+
+  const { data: summary, isLoading: summaryLoading, isError, refetch } = useReportsSummary(queryParams);
+  const { data: polls, isLoading: pollsLoading } = usePollSnapshots(tenantId);
   const upsertMutation = useUpsertPollSnapshot(tenantId);
+
   const pollsLocked = !planGate.canEditPolls || !perms.canUpdate;
 
-  const intencaoSaved = (polls?.find((p) => p.snapshot_type === "intencao_voto")?.data ?? []) as IntencaoRow[];
-  const aprovacaoSaved = (polls?.find((p) => p.snapshot_type === "aprovacao_bairro")?.data ?? []) as AprovacaoRow[];
-  const crescimentoSaved = (polls?.find((p) => p.snapshot_type === "crescimento_apoiadores")?.data ?? []) as CrescimentoRow[];
+  const intencaoPoll = polls?.find((p) => p.snapshot_type === "intencao_voto");
+  const aprovacaoPoll = polls?.find((p) => p.snapshot_type === "aprovacao_bairro");
 
-  const [intencao, setIntencao] = useState<IntencaoRow[]>([{ candidato: "Candidato", valor: 0 }]);
-  const [aprovacao, setAprovacao] = useState<AprovacaoRow[]>([{ bairro: "Centro", aprovacao: 0 }]);
-  const [crescimento, setCrescimento] = useState<CrescimentoRow[]>([{ mes: "Jan", apoiadores: 0 }]);
+  const intencaoSaved = (intencaoPoll?.data ?? []) as { candidato: string; valor: number }[];
+  const aprovacaoSaved = (aprovacaoPoll?.data ?? []) as { bairro: string; aprovacao: number }[];
 
-  useEffect(() => {
-    if (isLoading) return;
-    setIntencao(intencaoSaved.length ? intencaoSaved : [{ candidato: "Candidato", valor: 0 }]);
-    setAprovacao(aprovacaoSaved.length ? aprovacaoSaved : [{ bairro: "Centro", aprovacao: 0 }]);
-    setCrescimento(crescimentoSaved.length ? crescimentoSaved : [{ mes: "Jan", apoiadores: 0 }]);
-  }, [isLoading, polls]);
+  const resetFilters = useCallback(() => {
+    setSearch(DEFAULT_SEARCH);
+  }, [setSearch]);
 
-  if (isLoading) return <LoadingState />;
-
-  const hasAnyData = intencaoSaved.length || aprovacaoSaved.length || crescimentoSaved.length;
+  const showSkeleton = summaryLoading && !summary;
 
   return (
     <ModuleRouteGuard module="polls">
-    <div className="space-y-8">
-      <PageHeader
-        title="Pesquisas"
-        description="Atualize intenção de voto, aprovação por bairro e crescimento mensal."
-      />
+      <div className="reports-analytics pesquisas-page mx-auto w-full max-w-7xl">
+        {showSkeleton ? (
+          <PesquisasPageSkeleton />
+        ) : (
+          <>
+            <PesquisasHero range={range} pulse={summary?.pulse} />
 
-      {pollsLocked && (
-        <PlanLimitNotice message="Edição de pesquisas não está disponível no seu plano atual. Os dados existentes permanecem visíveis." />
-      )}
+            <div className="mt-4">
+              <PesquisasFiltersBar
+                search={search}
+                neighborhoods={summary?.filterOptions.neighborhoods}
+                onChange={setSearch}
+                onReset={resetFilters}
+              />
+            </div>
 
-      {!hasAnyData && (
-        <EmptyState
-          title="Nenhuma pesquisa salva ainda"
-          description="Preencha os formulários abaixo e clique em Salvar para persistir os dados."
-        />
-      )}
-
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <ChartCard title="Intenção de voto" description="Estimulada">
-          <div className="h-56 mb-4">
-            {intencao.some((r) => r.valor > 0) ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={intencao} dataKey="valor" nameKey="candidato" innerRadius={45} outerRadius={75}>
-                    {intencao.map((_, i) => (
-                      <Cell key={i} fill={PALETTE[i % PALETTE.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                Adicione valores para visualizar o gráfico
+            {pollsLocked && (
+              <div className="mt-4">
+                <PlanLimitNotice message="Edição de pesquisas eleitorais não está disponível no seu plano ou cargo. Dados do CRM e leituras permanecem visíveis." />
               </div>
             )}
-          </div>
-          <EditableIntencaoTable rows={intencao} onChange={setIntencao} />
-          <Button
-            className="mt-3"
-            size="sm"
-            disabled={upsertMutation.isPending || pollsLocked}
-            onClick={() =>
-              upsertMutation.mutate({
-                snapshotType: "intencao_voto",
-                data: intencao as Json,
-                title: "Intenção de voto",
-              })
-            }
-          >
-            <Save className="mr-2 h-4 w-4" />
-            {upsertMutation.isPending ? "Salvando..." : "Salvar intenção"}
-          </Button>
-        </ChartCard>
 
-        <ChartCard title="Aprovação por bairro" description="Índice regional">
-          <div className="h-56 mb-4">
-            {aprovacao.some((r) => r.aprovacao > 0) ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={aprovacao}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="bairro" fontSize={11} />
-                  <YAxis fontSize={11} />
-                  <Tooltip />
-                  <Bar dataKey="aprovacao" fill="var(--chart-1)" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                Adicione valores para visualizar o gráfico
+            {isError && (
+              <div className="mt-4 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+                Não foi possível carregar os indicadores do período.{" "}
+                <button type="button" className="underline" onClick={() => void refetch()}>
+                  Tentar novamente
+                </button>
               </div>
             )}
-          </div>
-          <EditableAprovacaoTable rows={aprovacao} onChange={setAprovacao} />
-          <Button
-            className="mt-3"
-            size="sm"
-            disabled={upsertMutation.isPending || pollsLocked}
-            onClick={() =>
-              upsertMutation.mutate({
-                snapshotType: "aprovacao_bairro",
-                data: aprovacao as Json,
-                title: "Aprovação por bairro",
-              })
-            }
-          >
-            <Save className="mr-2 h-4 w-4" />
-            Salvar aprovação
-          </Button>
-        </ChartCard>
+
+            <div className="reports-stack">
+              <ReportsKpiStrip
+                summary={summary?.summary}
+                funnel={summary?.funnel}
+                isLoading={summaryLoading}
+              />
+
+              <PesquisasGrowthSection
+                growthSeries={summary?.growthSeries ?? []}
+                newInPeriod={summary?.summary.newSupportersInPeriod}
+                isLoading={summaryLoading}
+                index={2}
+              />
+
+              <ReportsTerritorySection
+                territories={summary?.territories ?? { critical: [], promising: [] }}
+              />
+
+              <PesquisasSurveysSection
+                intencaoSaved={intencaoSaved}
+                aprovacaoSaved={aprovacaoSaved}
+                intencaoUpdatedAt={intencaoPoll?.recorded_at}
+                aprovacaoUpdatedAt={aprovacaoPoll?.recorded_at}
+                upsertMutation={upsertMutation}
+                pollsLocked={pollsLocked}
+                isLoading={pollsLoading}
+                index={4}
+              />
+            </div>
+          </>
+        )}
       </div>
-
-      <Card className="shadow-elegant">
-        <CardHeader>
-          <CardTitle>Crescimento mensal de apoiadores</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-56 mb-4">
-            {crescimento.some((r) => r.apoiadores > 0) ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={crescimento}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="mes" />
-                  <YAxis />
-                  <Tooltip />
-                  <Area type="monotone" dataKey="apoiadores" stroke="var(--chart-2)" fill="var(--chart-2)" fillOpacity={0.15} />
-                </AreaChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                Adicione valores para visualizar o gráfico
-              </div>
-            )}
-          </div>
-          <EditableCrescimentoTable rows={crescimento} onChange={setCrescimento} />
-          <Button
-            className="mt-3"
-            size="sm"
-            disabled={upsertMutation.isPending || pollsLocked}
-            onClick={() =>
-              upsertMutation.mutate({
-                snapshotType: "crescimento_apoiadores",
-                data: crescimento as Json,
-                title: "Crescimento mensal",
-              })
-            }
-          >
-            <Save className="mr-2 h-4 w-4" />
-            Salvar crescimento
-          </Button>
-        </CardContent>
-      </Card>
-    </div>
     </ModuleRouteGuard>
-  );
-}
-
-function EditableIntencaoTable({
-  rows,
-  onChange,
-}: {
-  rows: IntencaoRow[];
-  onChange: (rows: IntencaoRow[]) => void;
-}) {
-  return (
-    <div className="space-y-2">
-      {rows.map((row, i) => (
-        <div key={i} className="flex gap-2">
-          <Input
-            placeholder="Candidato"
-            value={row.candidato}
-            onChange={(e) => {
-              const next = [...rows];
-              next[i] = { ...row, candidato: e.target.value };
-              onChange(next);
-            }}
-          />
-          <Input
-            type="number"
-            min={0}
-            max={100}
-            className="w-24"
-            value={row.valor}
-            onChange={(e) => {
-              const next = [...rows];
-              next[i] = { ...row, valor: Number(e.target.value) || 0 };
-              onChange(next);
-            }}
-          />
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onChange(rows.filter((_, j) => j !== i))}
-            disabled={rows.length <= 1}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
-      ))}
-      <Button variant="outline" size="sm" onClick={() => onChange([...rows, { candidato: "", valor: 0 }])}>
-        <Plus className="mr-2 h-4 w-4" />
-        Linha
-      </Button>
-    </div>
-  );
-}
-
-function EditableAprovacaoTable({
-  rows,
-  onChange,
-}: {
-  rows: AprovacaoRow[];
-  onChange: (rows: AprovacaoRow[]) => void;
-}) {
-  return (
-    <div className="space-y-2">
-      {rows.map((row, i) => (
-        <div key={i} className="flex gap-2">
-          <Input
-            placeholder="Bairro"
-            value={row.bairro}
-            onChange={(e) => {
-              const next = [...rows];
-              next[i] = { ...row, bairro: e.target.value };
-              onChange(next);
-            }}
-          />
-          <Input
-            type="number"
-            min={0}
-            max={100}
-            className="w-24"
-            value={row.aprovacao}
-            onChange={(e) => {
-              const next = [...rows];
-              next[i] = { ...row, aprovacao: Number(e.target.value) || 0 };
-              onChange(next);
-            }}
-          />
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onChange(rows.filter((_, j) => j !== i))}
-            disabled={rows.length <= 1}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
-      ))}
-      <Button variant="outline" size="sm" onClick={() => onChange([...rows, { bairro: "", aprovacao: 0 }])}>
-        <Plus className="mr-2 h-4 w-4" />
-        Linha
-      </Button>
-    </div>
-  );
-}
-
-function EditableCrescimentoTable({
-  rows,
-  onChange,
-}: {
-  rows: CrescimentoRow[];
-  onChange: (rows: CrescimentoRow[]) => void;
-}) {
-  return (
-    <div className="space-y-2">
-      {rows.map((row, i) => (
-        <div key={i} className="flex gap-2">
-          <Input
-            placeholder="Mês"
-            value={row.mes}
-            onChange={(e) => {
-              const next = [...rows];
-              next[i] = { ...row, mes: e.target.value };
-              onChange(next);
-            }}
-          />
-          <Input
-            type="number"
-            min={0}
-            className="w-28"
-            value={row.apoiadores}
-            onChange={(e) => {
-              const next = [...rows];
-              next[i] = { ...row, apoiadores: Number(e.target.value) || 0 };
-              onChange(next);
-            }}
-          />
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onChange(rows.filter((_, j) => j !== i))}
-            disabled={rows.length <= 1}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
-      ))}
-      <Button variant="outline" size="sm" onClick={() => onChange([...rows, { mes: "", apoiadores: 0 }])}>
-        <Plus className="mr-2 h-4 w-4" />
-        Linha
-      </Button>
-    </div>
   );
 }

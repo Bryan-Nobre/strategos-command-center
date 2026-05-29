@@ -17,6 +17,8 @@ export const queryKeys = {
   ) => ["reports-summary", tenantId, filters] as const,
   supporters: (tenantId: string) => ["supporters", tenantId] as const,
   leaderships: (tenantId: string) => ["leaderships", tenantId] as const,
+  leadershipChapas: (tenantId: string, leadershipId: string) =>
+    ["leadership-chapas", tenantId, leadershipId] as const,
   demands: (tenantId: string) => ["demands", tenantId] as const,
   agenda: (tenantId: string) => ["agenda", tenantId] as const,
   team: (tenantId: string) => ["team", tenantId] as const,

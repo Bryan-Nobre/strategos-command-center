@@ -35,7 +35,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { signOut } from "@/lib/supabase/session";
 import { useTenantPermissions } from "@/hooks/use-tenant-permissions";
 import { useAuth } from "@/contexts/auth-provider";
@@ -229,6 +229,9 @@ export function AppSidebar({ isSuperAdmin = false }: { isSuperAdmin?: boolean })
               )}
             >
               <Avatar className="h-9 w-9 shrink-0">
+                {profile?.avatar_url ? (
+                  <AvatarImage src={profile.avatar_url} alt={profile.full_name ?? ""} />
+                ) : null}
                 <AvatarFallback className="sidebar-profile-avatar text-xs">
                   {initials}
                 </AvatarFallback>

@@ -16,15 +16,17 @@ type SupporterExportRow = {
   city: string | null;
   status: string;
   support_level: string;
+  source?: string;
+  interest?: string | null;
   tags: string[] | null;
   leadership_id: string | null;
+  created_at?: string;
 };
 
 const IMPORT_HEADERS = ["nome", "telefone", "bairro", "cidade", "apoio"] as const;
 
 export function supportersToCsv(rows: SupporterExportRow[]): string {
-  const header =
-    "nome,telefone,bairro,cidade,status,apoio,tags\n";
+  const header = "nome,telefone,bairro,cidade,status,apoio,origem,interesse,tags,cadastro\n";
   const body = rows
     .map((r) =>
       [
@@ -34,7 +36,10 @@ export function supportersToCsv(rows: SupporterExportRow[]): string {
         csvEscape(r.city),
         csvEscape(r.status),
         csvEscape(r.support_level),
+        csvEscape(r.source),
+        csvEscape(r.interest),
         csvEscape((r.tags ?? []).join("; ")),
+        csvEscape(r.created_at ? new Date(r.created_at).toLocaleString("pt-BR") : ""),
       ].join(","),
     )
     .join("\n");

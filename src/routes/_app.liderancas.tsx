@@ -1,31 +1,22 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Plus, Crown, Users, Pencil, Trash2, Eye, Search } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Plus, Search, FileSpreadsheet, LayoutGrid, LayoutList, Crown } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { EmptyState } from "@/components/common/EmptyState";
 import { ConfirmDeleteDialog } from "@/components/common/ConfirmDeleteDialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useTenant } from "@/hooks/use-tenant";
 import { useCrudPermissions } from "@/hooks/use-crud-permissions";
 import { ModuleRouteGuard } from "@/components/auth/PermissionGate";
@@ -35,34 +26,46 @@ import {
   useUpdateLeadership,
   useDeleteLeadership,
 } from "@/hooks/use-leaderships";
-import { useSupportersByLeadership } from "@/hooks/use-supporters";
 import { LoadingState } from "@/components/common/LoadingState";
-import { SUPPORTER_STATUS_LABELS, SUPPORT_LEVEL_LABELS } from "@/types/domain";
-import { DEEP_LINK_HIGHLIGHT_CLASS } from "@/lib/search-deep-link";
+import { LeadershipCompactBar } from "@/components/liderancas/LeadershipCompactBar";
+import { LeadershipCardsView } from "@/components/liderancas/LeadershipCardsView";
+import { LeadershipTableView } from "@/components/liderancas/LeadershipTableView";
+import {
+  LeadershipDetailSheet,
+  type LeadershipListItem,
+} from "@/components/liderancas/LeadershipDetailSheet";
 import {
   parseLiderancasSearch,
   serializeLiderancasSearch,
-  type LiderancasListSearch,
+  liderancasSearchToFilterState,
+  filterStateToLiderancasSearch,
 } from "@/lib/list-search/liderancas";
 import { useSyncedListSearch } from "@/hooks/use-synced-list-search";
 import { ListUrlActions } from "@/components/common/ListUrlActions";
+import {
+  buildLeadershipExcelFilename,
+  downloadLeadershipsExcel,
+} from "@/lib/excel/leaderships-export";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app/liderancas")({
-  validateSearch: (search: Record<string, unknown>): LiderancasListSearch =>
-    parseLiderancasSearch(search),
+  validateSearch: (search: Record<string, unknown>) => parseLiderancasSearch(search),
   component: LiderancasPage,
 });
 
-type LeadershipRow = NonNullable<ReturnType<typeof useLeaderships>["data"]>[number];
-
 function LiderancasPage() {
-  const { tenantId } = useTenant();
+  const { tenantId, activeTenant } = useTenant();
   const urlSearch = Route.useSearch();
   const highlightId = urlSearch.id;
+  const filters = liderancasSearchToFilterState(urlSearch);
   const { localText: query, setLocalText: setQuery, setSearch } = useSyncedListSearch({
     search: urlSearch,
     serialize: serializeLiderancasSearch,
   });
+
+  const highlightCardRef = useRef<HTMLDivElement>(null);
+  const highlightRowRef = useRef<HTMLTableRowElement>(null);
 
   const { data: list, isLoading } = useLeaderships(tenantId);
   const createMutation = useCreateLeadership(tenantId);
@@ -70,333 +73,312 @@ function LiderancasPage() {
   const deleteMutation = useDeleteLeadership(tenantId);
   const perms = useCrudPermissions("leaderships");
 
-  const highlightRef = useRef<HTMLDivElement>(null);
-
   const [createOpen, setCreateOpen] = useState(false);
-  const [editTarget, setEditTarget] = useState<LeadershipRow | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<LeadershipRow | null>(null);
-  const [viewTarget, setViewTarget] = useState<LeadershipRow | null>(null);
+  const [detailTarget, setDetailTarget] = useState<LeadershipListItem | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<LeadershipListItem | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   const [name, setName] = useState("");
   const [region, setRegion] = useState("");
   const [estimatedVotes, setEstimatedVotes] = useState("0");
 
-  const [editName, setEditName] = useState("");
-  const [editRegion, setEditRegion] = useState("");
-  const [editVotes, setEditVotes] = useState("0");
+  const regions = useMemo(() => {
+    const set = new Set<string>();
+    for (const l of list ?? []) {
+      if (l.region?.trim()) set.add(l.region.trim());
+    }
+    return [...set].sort();
+  }, [list]);
 
   const filteredList = useMemo(() => {
     const q = query.toLowerCase();
-    return (list ?? []).filter(
-      (l) => !q || [l.name, l.region].some((f) => f?.toLowerCase().includes(q)),
-    );
-  }, [list, query]);
+    return (list ?? []).filter((l) => {
+      const matchesQuery =
+        !q || [l.name, l.region].some((f) => f?.toLowerCase().includes(q));
+      const matchesRegion = filters.regiao === "all" || l.region === filters.regiao;
+      return matchesQuery && matchesRegion;
+    }) as LeadershipListItem[];
+  }, [list, query, filters.regiao]);
+
+  const totals = useMemo(() => {
+    const items = filteredList;
+    return {
+      pledged: items.reduce((s, l) => s + (l.pledged_votes ?? 0), 0),
+      target: items.reduce((s, l) => s + (l.estimated_votes ?? 0), 0),
+    };
+  }, [filteredList]);
 
   useEffect(() => {
-    if (highlightId && highlightRef.current) {
-      highlightRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    const ref = filters.view === "table" ? highlightRowRef : highlightCardRef;
+    if (highlightId && ref.current) {
+      ref.current.scrollIntoView({ behavior: "smooth", block: "center" });
     }
-  }, [highlightId, filteredList]);
+  }, [highlightId, filteredList, filters.view]);
+
+  function patchFilter(patch: Partial<typeof filters>) {
+    setSearch(filterStateToLiderancasSearch({ ...filters, ...patch }, highlightId));
+  }
 
   function clearFilters() {
     setQuery("");
-    setSearch({});
+    setSearch(filterStateToLiderancasSearch({ busca: "", regiao: "all", view: filters.view }));
+  }
+
+  async function handleExportExcel() {
+    setExporting(true);
+    try {
+      const slug = activeTenant?.slug ?? "campanha";
+      await downloadLeadershipsExcel({
+        filename: buildLeadershipExcelFilename(slug),
+        rows: filteredList.map((l) => ({
+          name: l.name,
+          region: l.region,
+          estimated_votes: l.estimated_votes ?? 0,
+          pledged_votes: l.pledged_votes ?? 0,
+          apoiadores: l.apoiadores,
+          chapa_count: l.chapa_count ?? 0,
+        })),
+      });
+      toast.success("Planilha de lideranças exportada");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Falha ao exportar");
+    } finally {
+      setExporting(false);
+    }
   }
 
   if (isLoading) return <LoadingState />;
 
-  function openEdit(l: LeadershipRow) {
-    setEditTarget(l);
-    setEditName(l.name);
-    setEditRegion(l.region ?? "");
-    setEditVotes(String(l.estimated_votes ?? 0));
-  }
-
   return (
     <ModuleRouteGuard module="leaderships">
-    <div className="space-y-8">
-      <PageHeader
-        title="Lideranças"
-        description="Gerencie lideranças políticas e sua capilaridade regional."
-        actions={
-          perms.canCreate ? (
-          <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm">
-                <Plus className="mr-2 h-4 w-4" />
-                Nova liderança
+      <div className="liderancas-page space-y-6">
+        <PageHeader
+          title="Lideranças"
+          description="Rede política, chapas na landing e meta de associados ao partido — apoios somam na barra de cada liderança."
+          actions={
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={exporting || !filteredList.length}
+                onClick={() => void handleExportExcel()}
+              >
+                <FileSpreadsheet className="mr-2 h-4 w-4" />
+                Excel
               </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Cadastrar liderança</DialogTitle>
-              </DialogHeader>
-              <div className="grid gap-4">
-                <div className="grid gap-2">
-                  <Label>Nome</Label>
-                  <Input value={name} onChange={(e) => setName(e.target.value)} />
-                </div>
-                <div className="grid gap-2">
-                  <Label>Região</Label>
-                  <Input value={region} onChange={(e) => setRegion(e.target.value)} />
-                </div>
-                <div className="grid gap-2">
-                  <Label>Votos estimados</Label>
+              {perms.canCreate && (
+                <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+                  <DialogTrigger asChild>
+                    <Button size="sm">
+                      <Plus className="mr-2 h-4 w-4" />
+                      Nova liderança
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Cadastrar liderança</DialogTitle>
+                    </DialogHeader>
+                    <div className="grid gap-4">
+                      <div className="grid gap-2">
+                        <Label>Nome</Label>
+                        <Input value={name} onChange={(e) => setName(e.target.value)} />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label>Região</Label>
+                        <Input value={region} onChange={(e) => setRegion(e.target.value)} />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label>Meta de votos (associados ao partido)</Label>
+                        <Input
+                          type="number"
+                          min={0}
+                          value={estimatedVotes}
+                          onChange={(e) => setEstimatedVotes(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button
+                        disabled={!name.trim() || createMutation.isPending}
+                        onClick={() => {
+                          createMutation.mutate(
+                            {
+                              name: name.trim(),
+                              region: region.trim() || null,
+                              estimated_votes: Number(estimatedVotes) || 0,
+                            },
+                            {
+                              onSuccess: (row) => {
+                                setCreateOpen(false);
+                                setName("");
+                                setRegion("");
+                                setEstimatedVotes("0");
+                                setDetailTarget({
+                                  ...row,
+                                  apoiadores: 0,
+                                  pledged_votes: 0,
+                                  chapa_count: 0,
+                                });
+                              },
+                            },
+                          );
+                        }}
+                      >
+                        {createMutation.isPending ? "Salvando…" : "Salvar"}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              )}
+            </>
+          }
+        />
+
+        <LeadershipCompactBar
+          total={list?.length ?? 0}
+          filtered={filteredList.length}
+          totalPledged={totals.pledged}
+          totalTarget={totals.target}
+        />
+
+        <Card className="shadow-elegant overflow-hidden">
+          <CardContent className="p-0">
+            <div className="space-y-3 border-b border-border p-4">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+                <div className="relative min-w-0 flex-1">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
-                    type="number"
-                    min={0}
-                    value={estimatedVotes}
-                    onChange={(e) => setEstimatedVotes(e.target.value)}
+                    placeholder="Buscar nome ou região..."
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    className="pl-9"
                   />
                 </div>
-              </div>
-              <DialogFooter>
-                <Button
-                  disabled={!name.trim() || createMutation.isPending}
-                  onClick={() => {
-                    createMutation.mutate(
-                      {
-                        name: name.trim(),
-                        region: region.trim() || null,
-                        estimated_votes: Number(estimatedVotes) || 0,
-                      },
-                      {
-                        onSuccess: () => {
-                          setCreateOpen(false);
-                          setName("");
-                          setRegion("");
-                          setEstimatedVotes("0");
-                        },
-                      },
-                    );
-                  }}
+                <ToggleGroup
+                  type="single"
+                  value={filters.view}
+                  onValueChange={(v) => v && patchFilter({ view: v as typeof filters.view })}
                 >
-                  {createMutation.isPending ? "Salvando..." : "Salvar"}
+                  <ToggleGroupItem value="cards" className="gap-1.5 px-3">
+                    <LayoutGrid className="h-4 w-4" />
+                    Cards
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="table" className="gap-1.5 px-3">
+                    <LayoutList className="h-4 w-4" />
+                    Tabela
+                  </ToggleGroupItem>
+                </ToggleGroup>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Região
+                </span>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={filters.regiao === "all" ? "default" : "outline"}
+                  className="h-7 rounded-full px-3 text-xs"
+                  onClick={() => patchFilter({ regiao: "all" })}
+                >
+                  Todas
                 </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-          ) : null
-        }
-      />
-
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <div className="relative flex-1 max-w-md">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Buscar nome ou região..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-        {(query.trim() || highlightId) && <ListUrlActions onClear={clearFilters} />}
-      </div>
-
-      {!(list?.length) ? (
-        <EmptyState
-          icon={Crown}
-          title="Nenhuma liderança cadastrada"
-          description="Cadastre lideranças para organizar apoiadores por referência política."
-          actionLabel={perms.canCreate ? "Nova liderança" : undefined}
-          onAction={perms.canCreate ? () => setCreateOpen(true) : undefined}
-        />
-      ) : !filteredList.length ? (
-        <EmptyState
-          icon={Crown}
-          title="Nenhuma liderança encontrada"
-          description="Ajuste a busca ou cadastre uma nova liderança."
-        />
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {filteredList.map((l) => (
-            <Card
-              key={l.id}
-              ref={l.id === highlightId ? highlightRef : undefined}
-              className={[
-                "shadow-elegant",
-                l.id === highlightId ? DEEP_LINK_HIGHLIGHT_CLASS : "",
-              ].join(" ")}
-            >
-              <CardContent className="p-5">
-                <div className="mb-3 flex items-start justify-between">
-                  <div className="flex items-center gap-2">
-                    <Crown className="h-5 w-5 text-chart-3" />
-                    <div>
-                      <h3 className="font-semibold">{l.name}</h3>
-                      <p className="text-xs text-muted-foreground">{l.region ?? "Sem região"}</p>
-                    </div>
-                  </div>
-                  <div className="flex gap-1">
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setViewTarget(l)}>
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                    {perms.canUpdate && (
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(l)}>
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    )}
-                    {perms.canDelete && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-destructive"
-                      onClick={() => setDeleteTarget(l)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                    )}
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4 text-muted-foreground" />
-                    <span>
-                      <strong>{l.apoiadores}</strong> apoiadores
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Votos est.: </span>
-                    <strong>{l.estimated_votes ?? 0}</strong>
-                  </div>
-                </div>
-                {l.apoiadores > 0 && (
-                  <Badge className="mt-3" variant="secondary">
-                    Força regional ativa
-                  </Badge>
-                )}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
-
-      <Dialog open={!!editTarget} onOpenChange={(o) => !o && setEditTarget(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Editar liderança</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4">
-            <div className="grid gap-2">
-              <Label>Nome</Label>
-              <Input value={editName} onChange={(e) => setEditName(e.target.value)} />
-            </div>
-            <div className="grid gap-2">
-              <Label>Região</Label>
-              <Input value={editRegion} onChange={(e) => setEditRegion(e.target.value)} />
-            </div>
-            <div className="grid gap-2">
-              <Label>Votos estimados</Label>
-              <Input
-                type="number"
-                min={0}
-                value={editVotes}
-                onChange={(e) => setEditVotes(e.target.value)}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              disabled={!editName.trim() || updateMutation.isPending}
-              onClick={() => {
-                if (!editTarget) return;
-                updateMutation.mutate(
-                  {
-                    id: editTarget.id,
-                    name: editName.trim(),
-                    region: editRegion.trim() || null,
-                    estimated_votes: Number(editVotes) || 0,
-                  },
-                  { onSuccess: () => setEditTarget(null) },
-                );
-              }}
-            >
-              {updateMutation.isPending ? "Salvando..." : "Salvar alterações"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <LeadershipSupportersDialog
-        leadership={viewTarget}
-        tenantId={tenantId}
-        onClose={() => setViewTarget(null)}
-      />
-
-      <ConfirmDeleteDialog
-        open={!!deleteTarget}
-        onOpenChange={(o) => !o && setDeleteTarget(null)}
-        title="Excluir liderança"
-        description={
-          deleteTarget?.apoiadores
-            ? `"${deleteTarget.name}" possui ${deleteTarget.apoiadores} apoiador(es) vinculados. Eles serão desvinculados automaticamente antes da exclusão.`
-            : `Tem certeza que deseja excluir "${deleteTarget?.name}"?`
-        }
-        loading={deleteMutation.isPending}
-        onConfirm={() => {
-          if (deleteTarget) {
-            deleteMutation.mutate(deleteTarget.id, { onSuccess: () => setDeleteTarget(null) });
-          }
-        }}
-      />
-    </div>
-    </ModuleRouteGuard>
-  );
-}
-
-function LeadershipSupportersDialog({
-  leadership,
-  tenantId,
-  onClose,
-}: {
-  leadership: LeadershipRow | null;
-  tenantId: string;
-  onClose: () => void;
-}) {
-  const { data: supporters, isLoading } = useSupportersByLeadership(tenantId, leadership?.id ?? null);
-
-  return (
-    <Dialog open={!!leadership} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>Apoiadores de {leadership?.name}</DialogTitle>
-          <DialogDescription>
-            {leadership?.apoiadores ?? 0} apoiador(es) vinculados a esta liderança.
-          </DialogDescription>
-        </DialogHeader>
-        {isLoading ? (
-          <LoadingState />
-        ) : !(supporters?.length) ? (
-          <EmptyState
-            icon={Users}
-            title="Nenhum apoiador vinculado"
-            description="Vincule apoiadores pela tela de Eleitores."
-          />
-        ) : (
-          <div className="max-h-80 overflow-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Bairro</TableHead>
-                  <TableHead>Apoio</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {supporters.map((s) => (
-                  <TableRow key={s.id}>
-                    <TableCell className="font-medium">{s.name}</TableCell>
-                    <TableCell>{s.neighborhood ?? "—"}</TableCell>
-                    <TableCell>{SUPPORT_LEVEL_LABELS[s.support_level] ?? s.support_level}</TableCell>
-                    <TableCell>{SUPPORTER_STATUS_LABELS[s.status] ?? s.status}</TableCell>
-                  </TableRow>
+                {regions.map((r) => (
+                  <Button
+                    key={r}
+                    type="button"
+                    size="sm"
+                    variant={filters.regiao === r ? "default" : "outline"}
+                    className="h-7 rounded-full px-3 text-xs"
+                    onClick={() => patchFilter({ regiao: r })}
+                  >
+                    {r}
+                  </Button>
                 ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-      </DialogContent>
-    </Dialog>
+                {(query.trim() || filters.regiao !== "all") && (
+                  <ListUrlActions onClear={clearFilters} />
+                )}
+              </div>
+            </div>
+
+            {!list?.length ? (
+              <EmptyState
+                icon={Crown}
+                title="Nenhuma liderança cadastrada"
+                description="Cadastre lideranças, defina a meta de associados e adicione chapas para a landing."
+                actionLabel={perms.canCreate ? "Nova liderança" : undefined}
+                onAction={perms.canCreate ? () => setCreateOpen(true) : undefined}
+              />
+            ) : !filteredList.length ? (
+              <EmptyState
+                title="Nenhuma liderança encontrada"
+                description="Ajuste a busca ou o filtro de região."
+              />
+            ) : filters.view === "table" ? (
+              <LeadershipTableView
+                rows={filteredList}
+                highlightId={highlightId}
+                highlightRef={highlightRowRef}
+                onOpen={setDetailTarget}
+                onDelete={setDeleteTarget}
+                canUpdate={perms.canUpdate}
+                canDelete={perms.canDelete}
+              />
+            ) : (
+              <LeadershipCardsView
+                rows={filteredList}
+                highlightId={highlightId}
+                highlightRef={highlightCardRef}
+                onOpen={setDetailTarget}
+                onDelete={setDeleteTarget}
+                canUpdate={perms.canUpdate}
+                canDelete={perms.canDelete}
+              />
+            )}
+          </CardContent>
+        </Card>
+
+        <LeadershipDetailSheet
+          leadership={detailTarget}
+          tenantId={tenantId}
+          open={!!detailTarget}
+          onOpenChange={(o) => !o && setDetailTarget(null)}
+          canUpdate={perms.canUpdate}
+          savePending={updateMutation.isPending}
+          onSaveLeadership={(payload) => {
+            if (!detailTarget) return;
+            updateMutation.mutate(
+              { id: detailTarget.id, ...payload },
+              {
+                onSuccess: () => {
+                  setDetailTarget((prev) => (prev ? { ...prev, ...payload } : null));
+                },
+              },
+            );
+          }}
+        />
+
+        <ConfirmDeleteDialog
+          open={!!deleteTarget}
+          onOpenChange={(o) => !o && setDeleteTarget(null)}
+          title="Excluir liderança"
+          description={
+            deleteTarget
+              ? `"${deleteTarget.name}" possui ${deleteTarget.apoiadores} apoiador(es) e ${deleteTarget.chapa_count} chapa(s). Apoiadores serão desvinculados; chapas e apoios na landing serão removidos.`
+              : ""
+          }
+          loading={deleteMutation.isPending}
+          onConfirm={() => {
+            if (deleteTarget) {
+              deleteMutation.mutate(deleteTarget.id, {
+                onSuccess: () => {
+                  setDeleteTarget(null);
+                  if (detailTarget?.id === deleteTarget.id) setDetailTarget(null);
+                },
+              });
+            }
+          }}
+        />
+      </div>
+    </ModuleRouteGuard>
   );
 }

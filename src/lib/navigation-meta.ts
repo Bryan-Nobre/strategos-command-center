@@ -46,7 +46,7 @@ const APP_ROUTES: Record<string, RouteMeta> = {
   },
   pesquisas: {
     title: "Pesquisas",
-    subtitle: "Indicadores e cenário eleitoral",
+    subtitle: "Período, CRM e cenário eleitoral",
     icon: BarChart3,
   },
   relatorios: {
@@ -61,7 +61,7 @@ const APP_ROUTES: Record<string, RouteMeta> = {
   },
   equipe: {
     title: "Equipe",
-    subtitle: "Membros e convites da campanha",
+    subtitle: "Membros, cargos e acessos da campanha",
     icon: UsersRound,
   },
 };

@@ -130,11 +130,11 @@ export const PERMISSION_FIELD_META: Record<PermissionModule, ModuleMeta> = {
   team: {
     label: "Equipe",
     route: "/equipe",
-    description: "Membros, convites e cargos customizados da campanha.",
-    enforcement: "Convites/cargos: servidor (RLS)",
+    description: "Membros com login, cargos e permissões da campanha.",
+    enforcement: "Provisionamento/cargos: servidor (RLS + Edge)",
     actions: {
-      read: { label: "Ver equipe", description: "Lista de membros e convites." },
-      invite: { label: "Convidar membros", description: "Criar convites por e-mail." },
+      read: { label: "Ver equipe", description: "Lista de membros da campanha." },
+      invite: { label: "Adicionar membros", description: "Criar login e senha para novos assessores." },
       manage_roles: {
         label: "Gerenciar cargos",
         description: "Criar, editar e excluir cargos; alterar cargo de membros.",

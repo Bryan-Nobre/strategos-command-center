@@ -25,3 +25,9 @@ enable_signup = true
 
 [functions.signup-politician]
 verify_jwt = false
+
+[functions.provision-team-member]
+verify_jwt = true
+
+[functions.team-member-actions]
+verify_jwt = true

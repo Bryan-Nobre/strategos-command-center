@@ -60,7 +60,9 @@ export async function fetchAgendaForExport(tenantId: string, from: string, to: s
   const supabase = createClient();
   const { data, error } = await supabase
     .from("agenda_events")
-    .select("title, event_date, event_time, location, event_type, description")
+    .select(
+      "title, event_date, event_time, location, event_type, description, status, neighborhood, city",
+    )
     .eq("tenant_id", tenantId)
     .gte("event_date", from)
     .lte("event_date", to)

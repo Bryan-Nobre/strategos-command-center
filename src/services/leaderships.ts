@@ -23,9 +23,50 @@ export async function listLeaderships(tenantId: string) {
     }
   }
 
+  const leadershipIds = (data ?? []).map((l) => l.id);
+  const pledgedMap = new Map<string, number>();
+  const chapaCountMap = new Map<string, number>();
+
+  if (leadershipIds.length > 0) {
+    const { data: chapaRows, error: chapaError } = await supabase
+      .from("leadership_chapas")
+      .select("id, leadership_id, vote_weight")
+      .eq("tenant_id", tenantId)
+      .in("leadership_id", leadershipIds);
+    if (chapaError) throw chapaError;
+
+    for (const c of chapaRows ?? []) {
+      chapaCountMap.set(c.leadership_id, (chapaCountMap.get(c.leadership_id) ?? 0) + 1);
+    }
+
+    const allChapaIds = (chapaRows ?? []).map((c) => c.id);
+    if (allChapaIds.length > 0) {
+      const { data: pledges, error: pledgeError } = await supabase
+        .from("supporter_chapa_pledges")
+        .select("chapa_id")
+        .eq("tenant_id", tenantId)
+        .in("chapa_id", allChapaIds);
+      if (pledgeError) throw pledgeError;
+
+      const leadershipByChapa = new Map(
+        (chapaRows ?? []).map((c) => [c.id, { leadership_id: c.leadership_id, vote_weight: c.vote_weight }]),
+      );
+      for (const p of pledges ?? []) {
+        const chapa = leadershipByChapa.get(p.chapa_id);
+        if (!chapa) continue;
+        pledgedMap.set(
+          chapa.leadership_id,
+          (pledgedMap.get(chapa.leadership_id) ?? 0) + chapa.vote_weight,
+        );
+      }
+    }
+  }
+
   return (data ?? []).map((l) => ({
     ...l,
     apoiadores: countMap.get(l.id) ?? 0,
+    pledged_votes: pledgedMap.get(l.id) ?? 0,
+    chapa_count: chapaCountMap.get(l.id) ?? 0,
   }));
 }
 

@@ -117,7 +117,7 @@ export async function updateProfile(payload: {
   full_name?: string;
   phone?: string;
   bio?: string;
-  avatar_url?: string;
+  avatar_url?: string | null;
 }) {
   const supabase = createClient();
   const {

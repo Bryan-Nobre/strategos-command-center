@@ -4,6 +4,10 @@ import { parseDeepLinkSearch } from "@/lib/search-deep-link";
 
 const STATUSES = Constants.public.Enums.supporter_status;
 const SUPPORT_LEVELS = Constants.public.Enums.support_level;
+const SOURCES = Constants.public.Enums.supporter_source;
+
+export type EleitoresViewMode = "table" | "cards" | "landing";
+export type EleitoresPeriodPreset = "all" | "today" | "7d" | "30d";
 
 export type EleitoresListSearch = {
   busca?: string;
@@ -13,12 +17,18 @@ export type EleitoresListSearch = {
   lideranca?: string;
   apoio?: string;
   tag?: string;
+  origem?: string;
+  view?: EleitoresViewMode;
+  period?: EleitoresPeriodPreset;
 };
 
 export function parseEleitoresSearch(raw: Record<string, unknown>): EleitoresListSearch {
   const deep = parseDeepLinkSearch(raw);
   const status = pickEnum(raw.status, STATUSES);
   const apoio = pickEnum(raw.apoio, SUPPORT_LEVELS);
+  const origem = pickEnum(raw.origem, SOURCES);
+  const view = pickEnum(raw.view, ["table", "cards", "landing"] as const) ?? "table";
+  const period = pickEnum(raw.period, ["all", "today", "7d", "30d"] as const) ?? "all";
   const lideranca = trimParam(raw.lideranca);
   const validLideranca =
     lideranca === "none" || (lideranca && /^[0-9a-f-]{36}$/i.test(lideranca)) ? lideranca : undefined;
@@ -31,6 +41,9 @@ export function parseEleitoresSearch(raw: Record<string, unknown>): EleitoresLis
     lideranca: validLideranca,
     apoio,
     tag: trimParam(raw.tag),
+    origem,
+    view,
+    period,
   }) as EleitoresListSearch;
 }
 
@@ -48,6 +61,9 @@ export function serializeEleitoresSearch(filters: EleitoresListSearch): Eleitore
         : undefined,
     apoio: pickEnum(filters.apoio, SUPPORT_LEVELS),
     tag: trimParam(filters.tag),
+    origem: pickEnum(filters.origem, SOURCES),
+    view: pickEnum(filters.view, ["table", "cards", "landing"] as const) ?? "table",
+    period: pickEnum(filters.period, ["all", "today", "7d", "30d"] as const) ?? "all",
   }) as EleitoresListSearch;
 }
 
@@ -58,6 +74,9 @@ export type EleitoresFilterState = {
   lideranca: string;
   apoio: string;
   tag: string;
+  origem: string;
+  view: EleitoresViewMode;
+  period: EleitoresPeriodPreset;
 };
 
 export function eleitoresSearchToFilterState(search: EleitoresListSearch): EleitoresFilterState {
@@ -68,6 +87,9 @@ export function eleitoresSearchToFilterState(search: EleitoresListSearch): Eleit
     lideranca: search.lideranca ?? "all",
     apoio: search.apoio ?? "all",
     tag: search.tag ?? "",
+    origem: search.origem ?? "all",
+    view: search.view ?? "table",
+    period: search.period ?? "all",
   };
 }
 
@@ -83,5 +105,8 @@ export function filterStateToEleitoresSearch(
     lideranca: state.lideranca !== "all" ? state.lideranca : undefined,
     apoio: state.apoio !== "all" ? state.apoio : undefined,
     tag: state.tag || undefined,
+    origem: state.origem !== "all" ? state.origem : undefined,
+    view: state.view,
+    period: state.period !== "all" ? state.period : undefined,
   });
 }

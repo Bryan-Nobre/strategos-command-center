@@ -1,5 +1,15 @@
 import { createClient } from "@/lib/supabase/client";
-import type { TablesUpdate } from "@/types/supabase";
+import type { Enums, TablesUpdate } from "@/types/supabase";
+
+export type PublicLandingChapa = {
+  id: string;
+  name: string;
+  subtitle: string | null;
+  vote_weight: number;
+  leadership_id: string;
+  leadership_name: string;
+  leadership_region: string | null;
+};
 
 export type PublicLanding = {
   slug: string;
@@ -11,6 +21,7 @@ export type PublicLanding = {
   social_links: unknown;
   whatsapp: string | null;
   tenant_name: string;
+  chapas?: PublicLandingChapa[];
 };
 
 export async function getPublicLanding(slug: string): Promise<PublicLanding | null> {
@@ -30,6 +41,7 @@ export async function registerFromLanding(
     city?: string;
     interest?: string;
     notes?: string;
+    chapaIds?: string[];
   },
 ) {
   const supabase = createClient();
@@ -41,6 +53,34 @@ export async function registerFromLanding(
     p_city: payload.city ?? undefined,
     p_interest: payload.interest ?? undefined,
     p_notes: payload.notes ?? undefined,
+    p_chapa_ids: payload.chapaIds?.length ? payload.chapaIds : undefined,
+  });
+  if (error) throw error;
+  return data as string;
+}
+
+export async function registerDemandFromLanding(
+  slug: string,
+  payload: {
+    title: string;
+    description?: string;
+    category?: string;
+    neighborhood?: string;
+    city?: string;
+    requester_name?: string;
+    requester_phone?: string;
+  },
+) {
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc("register_demand_from_landing", {
+    p_slug: slug,
+    p_title: payload.title,
+    p_description: payload.description ?? undefined,
+    p_category: (payload.category as Enums<"demand_category"> | undefined) ?? undefined,
+    p_neighborhood: payload.neighborhood ?? undefined,
+    p_city: payload.city ?? undefined,
+    p_requester_name: payload.requester_name ?? undefined,
+    p_requester_phone: payload.requester_phone ?? undefined,
   });
   if (error) throw error;
   return data as string;

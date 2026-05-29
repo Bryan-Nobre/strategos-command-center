@@ -1,6 +1,7 @@
 import { createFileRoute, useRouteContext } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { Users, Crown, Vote, MessageSquareWarning } from "lucide-react";
+import { DashboardUpcomingAgenda } from "@/components/dashboard/DashboardUpcomingAgenda";
 import { ModuleRouteGuard } from "@/components/auth/PermissionGate";
 import { DashboardHero } from "@/components/dashboard/DashboardHero";
 import { DashboardPriorities } from "@/components/dashboard/DashboardPriorities";
@@ -21,6 +22,7 @@ import {
   resolveHeroCtas,
 } from "@/lib/dashboard-compose";
 import { useOperationalDashboard, useActivities, usePollSnapshots } from "@/hooks/use-dashboard";
+import { useAgendaEvents } from "@/hooks/use-agenda";
 import { greetingLabel } from "@/services/dashboard-intelligence";
 
 export const Route = createFileRoute("/_app/dashboard")({
@@ -30,11 +32,13 @@ export const Route = createFileRoute("/_app/dashboard")({
 function DashboardPage() {
   const { tenantId } = useTenant();
   const { profile } = useRouteContext({ from: "/_app" });
-  const { permissions } = useTenantPermissions(tenantId);
+  const { permissions, canRead } = useTenantPermissions(tenantId);
   const { data: operational, isLoading: opLoading, isError: opError } =
     useOperationalDashboard(tenantId);
   const { data: activities, isLoading: activitiesLoading } = useActivities(tenantId);
   const { data: polls, isLoading: pollsLoading } = usePollSnapshots(tenantId);
+  const canViewAgenda = canRead("agenda");
+  const { data: agendaEvents } = useAgendaEvents(canViewAgenda ? tenantId : "");
 
   const metrics = operational?.metrics;
   const insights = operational?.insights;
@@ -164,6 +168,9 @@ function DashboardPage() {
                     sectionIndex={4}
                   />
                   <DashboardPipelineSlim funnel={funnel} sectionIndex={5} />
+                  {canViewAgenda && agendaEvents && (
+                    <DashboardUpcomingAgenda events={agendaEvents} sectionIndex={6} />
+                  )}
                 </>
               )}
 
@@ -175,12 +182,12 @@ function DashboardPage() {
                 intencao={intencao}
                 aprovacao={aprovacao}
                 isLoading={pollsLoading}
-                sectionIndex={insights ? 6 : 2}
+                sectionIndex={insights ? (canViewAgenda && agendaEvents?.length ? 7 : 6) : 2}
               />
               <DashboardActivityTimeline
                 activities={activities ?? []}
                 isLoading={activitiesLoading}
-                sectionIndex={insights ? 7 : 3}
+                sectionIndex={insights ? (canViewAgenda && agendaEvents?.length ? 8 : 7) : 3}
               />
             </div>
           </>

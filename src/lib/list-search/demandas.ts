@@ -4,6 +4,7 @@ import { parseDeepLinkSearch } from "@/lib/search-deep-link";
 
 const CATEGORIES = Constants.public.Enums.demand_category;
 const STATUSES = Constants.public.Enums.demand_status;
+const SOURCES = ["manual", "landing"] as const;
 
 export type DemandasListSearch = {
   busca?: string;
@@ -12,6 +13,7 @@ export type DemandasListSearch = {
   categoria?: string;
   responsavel?: string;
   status?: string;
+  origem?: string;
 };
 
 export function parseDemandasSearch(raw: Record<string, unknown>): DemandasListSearch {
@@ -38,6 +40,7 @@ export function parseDemandasSearch(raw: Record<string, unknown>): DemandasListS
     categoria: pickEnum(raw.categoria, CATEGORIES),
     responsavel: validResponsavel,
     status: pickEnum(raw.status, STATUSES),
+    origem: pickEnum(raw.origem, SOURCES),
   }) as DemandasListSearch;
 }
 
@@ -54,6 +57,7 @@ export function serializeDemandasSearch(filters: DemandasListSearch): DemandasLi
           : trimParam(filters.responsavel)
         : undefined,
     status: pickEnum(filters.status, STATUSES),
+    origem: pickEnum(filters.origem, SOURCES),
   }) as DemandasListSearch;
 }
 
@@ -63,6 +67,7 @@ export type DemandasFilterState = {
   categoria: string;
   responsavel: string;
   status: string;
+  origem: string;
 };
 
 export function demandasSearchToFilterState(search: DemandasListSearch): DemandasFilterState {
@@ -72,6 +77,7 @@ export function demandasSearchToFilterState(search: DemandasListSearch): Demanda
     categoria: search.categoria ?? "all",
     responsavel: search.responsavel ?? "all",
     status: search.status ?? "all",
+    origem: search.origem ?? "all",
   };
 }
 
@@ -86,5 +92,6 @@ export function filterStateToDemandasSearch(
     categoria: state.categoria !== "all" ? state.categoria : undefined,
     responsavel: state.responsavel !== "all" ? state.responsavel : undefined,
     status: state.status !== "all" ? state.status : undefined,
+    origem: state.origem !== "all" ? state.origem : undefined,
   });
 }

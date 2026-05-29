@@ -4,7 +4,7 @@ export type PlanLimitResource = "supporters" | "team" | "polls" | "exports";
 
 const DEFAULT_MESSAGES: Record<PlanLimitResource, string> = {
   supporters: "Limite de apoiadores do seu plano foi atingido. Reduza a base ou solicite upgrade.",
-  team: "Limite de vagas na equipe (membros + convites pendentes) foi atingido.",
+  team: "Limite de vagas na equipe do seu plano foi atingido.",
   polls: "Pesquisas não estão disponíveis no seu plano atual.",
   exports: "Exportação não está disponível no seu plano atual.",
 };

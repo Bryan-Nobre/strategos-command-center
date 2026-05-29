@@ -13,9 +13,9 @@ export const PLAN_FIELD_META = {
   maxTeamMembers: {
     label: "Máximo de vagas na equipe",
     description:
-      "Conta membros ativos da campanha mais convites pendentes. " +
-      "Bloqueia novo convite ou aceite quando não houver vaga disponível.",
-    enforcement: "Servidor (triggers em tenant_members e team_invitations)",
+      "Conta apenas membros ativos da equipe. " +
+      "Bloqueia novo acesso quando não houver vaga disponível.",
+    enforcement: "Servidor (triggers em tenant_members)",
     modules: ["Configurações → Equipe"],
   },
   maxRegions: {

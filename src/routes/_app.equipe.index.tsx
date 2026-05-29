@@ -1,40 +1,61 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { Search } from "lucide-react";
+import { Plus, Search, UserPlus } from "lucide-react";
 import { LoadingState } from "@/components/common/LoadingState";
-import { Badge } from "@/components/ui/badge";
+import { ConfirmDeleteDialog } from "@/components/common/ConfirmDeleteDialog";
+import { PlanLimitNotice } from "@/components/common/PlanLimitNotice";
+import { PermissionGate } from "@/components/auth/PermissionGate";
+import { TeamCompactBar } from "@/components/team/TeamCompactBar";
+import { TeamMemberCard } from "@/components/team/TeamMemberCard";
+import { TeamMemberFormSheet } from "@/components/team/TeamMemberFormSheet";
+import { ResetPasswordDialog } from "@/components/team/ResetPasswordDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
-import { PlanLimitNotice } from "@/components/common/PlanLimitNotice";
-import { PermissionGate } from "@/components/auth/PermissionGate";
-import { useTeamMembers } from "@/hooks/use-team";
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  useProvisionTeamMember,
+  useRemoveTeamMember,
+  useResetTeamMemberPassword,
+  useSetTeamMemberStatus,
+  useTeamMembersEnriched,
+  useUpdateTeamMember,
+  type TeamMemberEnriched,
+} from "@/hooks/use-team-members";
 import { useTenant } from "@/hooks/use-tenant";
 import { usePlanGate } from "@/hooks/use-plan-gate";
 import { useTenantPermissions } from "@/hooks/use-tenant-permissions";
 import { queryKeys } from "@/lib/query-keys";
-import { planLimitUserMessage } from "@/lib/plan-errors";
-import { createInvitation, listInvitations, updateMemberRole } from "@/services/team";
 import { listTenantRoles } from "@/services/tenant-roles";
 import { parseEquipeSearch, serializeEquipeSearch } from "@/lib/list-search/equipe";
 import { useSyncedListSearch } from "@/hooks/use-synced-list-search";
 import { ListUrlActions } from "@/components/common/ListUrlActions";
-import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/equipe/")({
   validateSearch: (search: Record<string, unknown>) => parseEquipeSearch(search),
   component: EquipeMembrosPage,
 });
+
+type SheetState =
+  | { mode: "create" }
+  | { mode: "edit"; member: TeamMemberEnriched }
+  | null;
+
+type ConfirmState =
+  | { type: "block"; member: TeamMemberEnriched }
+  | { type: "remove"; member: TeamMemberEnriched }
+  | null;
 
 function EquipeMembrosPage() {
   const { tenantId } = useTenant();
@@ -46,124 +67,100 @@ function EquipeMembrosPage() {
 
   const planGate = usePlanGate(tenantId);
   const perms = useTenantPermissions(tenantId);
-  const qc = useQueryClient();
+  const canManage =
+    perms.can("team", "invite") || perms.can("team", "manage_roles");
+  const canCreate = perms.can("team", "invite");
 
-  const { data: team, isLoading: teamLoading } = useTeamMembers(tenantId);
+  const { data: members, isLoading } = useTeamMembersEnriched(tenantId);
   const { data: roles } = useQuery({
     queryKey: queryKeys.tenantRoles(tenantId),
     queryFn: () => listTenantRoles(tenantId),
     enabled: !!tenantId,
   });
 
-  const { data: invitations } = useQuery({
-    queryKey: queryKeys.invitations(tenantId),
-    queryFn: () => listInvitations(tenantId),
-    enabled: !!tenantId,
-  });
+  const provisionMutation = useProvisionTeamMember(tenantId);
+  const updateMutation = useUpdateTeamMember(tenantId);
+  const statusMutation = useSetTeamMemberStatus(tenantId);
+  const resetMutation = useResetTeamMemberPassword(tenantId);
+  const removeMutation = useRemoveTeamMember(tenantId);
 
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRoleId, setInviteRoleId] = useState<string>("");
+  const [sheet, setSheet] = useState<SheetState>(null);
+  const [confirm, setConfirm] = useState<ConfirmState>(null);
+  const [resetTarget, setResetTarget] = useState<TeamMemberEnriched | null>(null);
 
-  const inviteMutation = useMutation({
-    mutationFn: () => {
-      const role = roles?.find((r) => r.id === inviteRoleId);
-      if (!role) throw new Error("Selecione um cargo");
-      return createInvitation(tenantId, inviteEmail, role.id, role.name);
-    },
-    onSuccess: (data) => {
-      toast.success(`Convite criado. Link: /invite/${data.token}`);
-      qc.invalidateQueries({ queryKey: queryKeys.invitations(tenantId) });
-      qc.invalidateQueries({ queryKey: queryKeys.planUsage(tenantId) });
-      setInviteEmail("");
-    },
-    onError: (e: Error) => toast.error(planLimitUserMessage(e)),
-  });
+  const assignableRoles = useMemo(
+    () => (roles ?? []).filter((r) => !r.isFullAccess).map((r) => ({ id: r.id, name: r.name })),
+    [roles],
+  );
 
-  const roleMutation = useMutation({
-    mutationFn: ({ memberId, roleId }: { memberId: string; roleId: string }) =>
-      updateMemberRole(memberId, roleId),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.team(tenantId) });
-      toast.success("Cargo do membro atualizado");
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
+  const stats = useMemo(() => {
+    const list = members ?? [];
+    const active = list.filter((m) => m.status === "active").length;
+    const suspended = list.filter((m) => m.status === "suspended").length;
+    return { active, suspended };
+  }, [members]);
 
-  const assignableRoles = (roles ?? []).filter((r) => !r.isFullAccess);
-
-  useEffect(() => {
-    if (!inviteRoleId && assignableRoles.length > 0) {
-      setInviteRoleId(assignableRoles[0].id);
-    }
-  }, [assignableRoles, inviteRoleId]);
-
-  const q = busca.toLowerCase();
-  const filteredTeam = useMemo(() => {
-    if (!q) return team ?? [];
-    return (team ?? []).filter((m) =>
-      [m.profiles.full_name, m.customRoleName, m.role].some((f) =>
+  const q = busca.toLowerCase().trim();
+  const filtered = useMemo(() => {
+    const list = members ?? [];
+    if (!q) return list;
+    return list.filter((m) =>
+      [m.fullName, m.email, m.customRoleName, m.role, m.phone].some((f) =>
         f?.toLowerCase().includes(q),
       ),
     );
-  }, [team, q]);
-
-  const filteredInvitations = useMemo(() => {
-    if (!q) return invitations ?? [];
-    return (invitations ?? []).filter((inv) =>
-      [inv.email, inv.customRoleName, inv.role].some((f) => f?.toLowerCase().includes(q)),
-    );
-  }, [invitations, q]);
+  }, [members, q]);
 
   function clearFilters() {
     setBusca("");
     setSearch({});
   }
 
-  if (teamLoading) return <LoadingState />;
+  if (isLoading) return <LoadingState />;
 
   return (
     <>
       {!planGate.canInviteTeam() && (
-        <PlanLimitNotice message="Limite de vagas na equipe atingido (membros ativos + convites pendentes)." />
+        <PlanLimitNotice message="Limite de vagas na equipe do seu plano foi atingido. Remova ou bloqueie membros para liberar vagas." />
       )}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Card className="shadow-elegant">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Membros ativos</CardTitle>
-            <CardDescription>Usuários com acesso à campanha</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-semibold">{team?.length ?? 0}</p>
-          </CardContent>
-        </Card>
-        <Card className="shadow-elegant">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Convites pendentes</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-semibold">{invitations?.length ?? 0}</p>
-          </CardContent>
-        </Card>
-      </div>
+      <TeamCompactBar
+        active={stats.active}
+        suspended={stats.suspended}
+        slotsLabel={planGate.teamUsageLabel()}
+      />
 
       <Card className="shadow-elegant">
-        <CardHeader>
-          <CardTitle>Membros e convites</CardTitle>
-          <CardDescription>
-            Atribua cargos customizados. Permissões detalhadas em{" "}
-            <Link to="/equipe/cargos" className="text-primary underline-offset-4 hover:underline">
-              Cargos
-            </Link>
-            .
-          </CardDescription>
+        <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <CardTitle>Membros com acesso</CardTitle>
+            <CardDescription>
+              Cadastre logins para sua equipe entrar na plataforma da campanha. Cargos e permissões
+              em{" "}
+              <Link to="/equipe/cargos" className="text-primary underline-offset-4 hover:underline">
+                Cargos
+              </Link>
+              .
+            </CardDescription>
+          </div>
+          <PermissionGate module="team" action="invite">
+            <Button
+              size="sm"
+              className="shrink-0"
+              disabled={!planGate.canInviteTeam()}
+              onClick={() => setSheet({ mode: "create" })}
+            >
+              <UserPlus className="mr-2 h-4 w-4" />
+              Adicionar membro
+            </Button>
+          </PermissionGate>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <div className="relative flex-1 max-w-md">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Buscar membro ou convite..."
+                placeholder="Buscar por nome, e-mail ou cargo..."
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
                 className="pl-9"
@@ -172,95 +169,130 @@ function EquipeMembrosPage() {
             {busca.trim() && <ListUrlActions onClear={clearFilters} />}
           </div>
 
-          <PermissionGate module="team" action="invite">
-            <div className="grid gap-2 rounded-lg border bg-muted/30 p-4 md:grid-cols-12">
-              <Input
-                placeholder="e-mail"
-                value={inviteEmail}
-                onChange={(e) => setInviteEmail(e.target.value)}
-                className="md:col-span-5"
-              />
-              <Select value={inviteRoleId} onValueChange={setInviteRoleId}>
-                <SelectTrigger className="md:col-span-4">
-                  <SelectValue placeholder="Cargo" />
-                </SelectTrigger>
-                <SelectContent>
-                  {assignableRoles.map((r) => (
-                    <SelectItem key={r.id} value={r.id}>
-                      {r.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button
-                className="md:col-span-3"
-                size="sm"
-                onClick={() => inviteMutation.mutate()}
-                disabled={
-                  inviteMutation.isPending ||
-                  !inviteEmail.trim() ||
-                  !inviteRoleId ||
-                  !planGate.canInviteTeam()
-                }
-              >
-                Convidar
-              </Button>
-            </div>
-          </PermissionGate>
-
-          <Separator />
-
-          {(filteredTeam ?? []).map((m) => (
-            <div key={m.id} className="flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <div className="font-medium">{m.profiles.full_name ?? "Membro"}</div>
-                <div className="text-xs text-muted-foreground">
-                  {m.customRoleName ?? m.role}
-                </div>
-              </div>
-              {m.role === "owner" ? (
-                <Badge>Administrador</Badge>
-              ) : perms.can("team", "manage_roles") ? (
-                <Select
-                  value={m.customRoleId ?? ""}
-                  onValueChange={(v) => roleMutation.mutate({ memberId: m.id, roleId: v })}
-                >
-                  <SelectTrigger className="w-44">
-                    <SelectValue placeholder="Cargo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {assignableRoles.map((r) => (
-                      <SelectItem key={r.id} value={r.id}>
-                        {r.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <Badge variant="secondary">{m.customRoleName ?? m.role}</Badge>
+          {filtered.length === 0 ? (
+            <div className="rounded-xl border border-dashed p-10 text-center">
+              <UsersEmptyIcon />
+              <p className="mt-3 font-medium">
+                {q ? "Nenhum membro encontrado" : "Nenhum membro além do administrador"}
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground max-w-sm mx-auto">
+                {q
+                  ? "Tente outro termo de busca."
+                  : canCreate
+                    ? "Adicione assessores e coordenadores com e-mail e senha de acesso."
+                    : "Peça a um administrador para adicionar membros."}
+              </p>
+              {canCreate && !q && planGate.canInviteTeam() && (
+                <Button className="mt-4" size="sm" onClick={() => setSheet({ mode: "create" })}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Primeiro membro
+                </Button>
               )}
             </div>
-          ))}
-
-          {(filteredInvitations ?? []).map((inv) => (
-            <div
-              key={inv.id}
-              className="flex items-center justify-between rounded-lg border border-dashed p-4 text-sm text-muted-foreground"
-            >
-              <span>
-                {inv.email} · {inv.customRoleName ?? inv.role} (pendente)
-              </span>
-              <Link
-                to="/invite/$token"
-                params={{ token: inv.token }}
-                className="text-xs text-primary"
-              >
-                Link convite
-              </Link>
+          ) : (
+            <div className="space-y-3">
+              {filtered.map((m) => (
+                <TeamMemberCard
+                  key={m.id}
+                  member={m}
+                  canManage={canManage}
+                  onEdit={() => setSheet({ mode: "edit", member: m })}
+                  onBlock={() => setConfirm({ type: "block", member: m })}
+                  onActivate={() =>
+                    statusMutation.mutate({ memberId: m.id, status: "active" })
+                  }
+                  onResetPassword={() => setResetTarget(m)}
+                  onRemove={() => setConfirm({ type: "remove", member: m })}
+                />
+              ))}
             </div>
-          ))}
+          )}
         </CardContent>
       </Card>
+
+      <TeamMemberFormSheet
+        open={sheet !== null}
+        onOpenChange={(open) => !open && setSheet(null)}
+        mode={sheet?.mode === "edit" ? "edit" : "create"}
+        member={sheet?.mode === "edit" ? sheet.member : null}
+        roles={assignableRoles}
+        loading={provisionMutation.isPending || updateMutation.isPending}
+        onSubmitCreate={(values) => {
+          provisionMutation.mutate(
+            { tenantId, ...values },
+            { onSuccess: () => setSheet(null) },
+          );
+        }}
+        onSubmitEdit={(values) => {
+          if (sheet?.mode !== "edit") return;
+          updateMutation.mutate(
+            { memberId: sheet.member.id, ...values },
+            { onSuccess: () => setSheet(null) },
+          );
+        }}
+      />
+
+      <ResetPasswordDialog
+        open={resetTarget !== null}
+        onOpenChange={(open) => !open && setResetTarget(null)}
+        memberName={resetTarget?.fullName ?? "Membro"}
+        loading={resetMutation.isPending}
+        onConfirm={(password) => {
+          if (!resetTarget) return;
+          resetMutation.mutate(
+            { memberId: resetTarget.id, password },
+            { onSuccess: () => setResetTarget(null) },
+          );
+        }}
+      />
+
+      <AlertDialog open={confirm?.type === "block"} onOpenChange={(o) => !o && setConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Bloquear acesso?</AlertDialogTitle>
+            <AlertDialogDescription>
+              <strong>{confirm?.member.fullName}</strong> não poderá entrar na plataforma até ser
+              reativado. A vaga do plano será liberada.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={statusMutation.isPending}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={statusMutation.isPending}
+              onClick={(e) => {
+                e.preventDefault();
+                if (confirm?.type !== "block") return;
+                statusMutation.mutate(
+                  { memberId: confirm.member.id, status: "suspended" },
+                  { onSuccess: () => setConfirm(null) },
+                );
+              }}
+            >
+              {statusMutation.isPending ? "Bloqueando..." : "Bloquear"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <ConfirmDeleteDialog
+        open={confirm?.type === "remove"}
+        onOpenChange={(o) => !o && setConfirm(null)}
+        title="Remover da campanha?"
+        description={`${confirm?.member.fullName ?? "Este membro"} perderá o acesso a esta campanha. O login na plataforma permanece, mas sem vínculo com o mandato.`}
+        loading={removeMutation.isPending}
+        onConfirm={() => {
+          if (confirm?.type !== "remove") return;
+          removeMutation.mutate(confirm.member.id, { onSuccess: () => setConfirm(null) });
+        }}
+      />
     </>
+  );
+}
+
+function UsersEmptyIcon() {
+  return (
+    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+      <UserPlus className="h-6 w-6 text-muted-foreground" />
+    </div>
   );
 }

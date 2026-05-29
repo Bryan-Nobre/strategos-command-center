@@ -52,7 +52,7 @@ export function usePlanGate(tenantId: string) {
       if (isUnlimited(limits.maxTeamMembers)) {
         return `${used.teamSlots} vagas em uso`;
       }
-      return `${used.teamSlots} / ${limits.maxTeamMembers} vagas (membros + convites)`;
+      return `${used.teamSlots} / ${limits.maxTeamMembers} vagas na equipe`;
     };
 
     return {

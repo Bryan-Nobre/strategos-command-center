@@ -1,36 +1,20 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Plus,
-  Search,
-  Filter,
   Download,
   Upload,
   Users,
-  UserCheck,
-  UserX,
-  Crown,
-  Pencil,
-  Trash2,
-  MoreHorizontal,
+  FileSpreadsheet,
+  ChevronDown,
 } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { MetricCard } from "@/components/common/MetricCard";
 import { EmptyState } from "@/components/common/EmptyState";
 import { ListCountFooter } from "@/components/common/ListCountFooter";
 import { ConfirmDeleteDialog } from "@/components/common/ConfirmDeleteDialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -53,7 +37,6 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useTenant } from "@/hooks/use-tenant";
 import {
@@ -64,7 +47,6 @@ import {
   useImportSupporters,
 } from "@/hooks/use-supporters";
 import { useLeaderships } from "@/hooks/use-leaderships";
-import { useDashboardMetrics } from "@/hooks/use-dashboard";
 import { usePlanGate } from "@/hooks/use-plan-gate";
 import { useCrudPermissions } from "@/hooks/use-crud-permissions";
 import { ModuleRouteGuard } from "@/components/auth/PermissionGate";
@@ -73,11 +55,16 @@ import { LoadingState } from "@/components/common/LoadingState";
 import {
   SupporterFormFields,
   supporterFormToPayload,
-  supporterToFormValues,
 } from "@/components/supporters/SupporterFormFields";
+import { EleitoresCompactBar } from "@/components/eleitores/EleitoresCompactBar";
+import { EleitoresToolbar } from "@/components/eleitores/EleitoresToolbar";
+import { EleitoresTableView } from "@/components/eleitores/EleitoresTableView";
+import { EleitoresCardsView } from "@/components/eleitores/EleitoresCardsView";
+import { EleitoresEditSheet } from "@/components/eleitores/EleitoresEditSheet";
 import {
   SUPPORT_LEVEL_LABELS,
   SUPPORTER_STATUS_LABELS,
+  SUPPORTER_SOURCE_LABELS,
   type SupporterFormValues,
 } from "@/types/domain";
 import { downloadCsv, buildCsvFilename } from "@/lib/csv/download";
@@ -86,8 +73,9 @@ import {
   parseSupportersCsv,
   getSupporterImportTemplateCsv,
 } from "@/lib/csv/supporters-csv";
+import { buildExcelFilename, downloadSupportersExcel } from "@/lib/excel/supporters-export";
+import { filterSupporters, countNewInPeriod, type SupporterListItem } from "@/lib/eleitores-filter";
 import { toast } from "sonner";
-import { DEEP_LINK_HIGHLIGHT_CLASS } from "@/lib/search-deep-link";
 import {
   eleitoresSearchToFilterState,
   filterStateToEleitoresSearch,
@@ -105,14 +93,7 @@ export const Route = createFileRoute("/_app/eleitores")({
   component: EleitoresPage,
 });
 
-const apoioVariant: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-  forte: "default",
-  medio: "secondary",
-  indeciso: "outline",
-  fraco: "destructive",
-};
-
-type SupporterRow = NonNullable<ReturnType<typeof useSupporters>["data"]>[number];
+type SupporterRow = SupporterListItem;
 
 function EleitoresPage() {
   const { tenantId, activeTenant } = useTenant();
@@ -129,17 +110,25 @@ function EleitoresPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<SupporterRow | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<SupporterRow | null>(null);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [exporting, setExporting] = useState(false);
   const importRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (urlSearch.bairro || urlSearch.status || urlSearch.lideranca || urlSearch.apoio || urlSearch.tag) {
+    if (
+      urlSearch.bairro ||
+      urlSearch.status ||
+      urlSearch.lideranca ||
+      urlSearch.apoio ||
+      urlSearch.tag
+    ) {
       setFiltersOpen(true);
     }
   }, [urlSearch.bairro, urlSearch.status, urlSearch.lideranca, urlSearch.apoio, urlSearch.tag]);
 
   const { data: supporters, isLoading } = useSupporters(tenantId);
   const { data: leaderships } = useLeaderships(tenantId);
-  const { data: metrics } = useDashboardMetrics(tenantId);
   const createMutation = useCreateSupporter(tenantId);
   const updateMutation = useUpdateSupporter(tenantId);
   const deleteMutation = useDeleteSupporter(tenantId);
@@ -168,42 +157,22 @@ function EleitoresPage() {
     return [...set].sort();
   }, [supporters]);
 
-  const filtered = useMemo(() => {
-    return (supporters ?? []).filter((e) => {
-      const q = query.toLowerCase();
-      const matchesQuery =
-        !q ||
-        [e.name, e.phone, e.neighborhood, e.city, ...(e.tags ?? [])].some((f) =>
-          f?.toLowerCase().includes(q),
-        );
-      const matchesStatus = filters.status === "all" || e.status === filters.status;
-      const matchesNeighborhood =
-        filters.bairro === "all" || e.neighborhood === filters.bairro;
-      const matchesLeadership =
-        filters.lideranca === "all" ||
-        (filters.lideranca === "none" ? !e.leadership_id : e.leadership_id === filters.lideranca);
-      const matchesSupport = filters.apoio === "all" || e.support_level === filters.apoio;
-      const matchesTag =
-        !filters.tag ||
-        (e.tags ?? []).some((t) => t.toLowerCase().includes(filters.tag.toLowerCase()));
-      return (
-        matchesQuery &&
-        matchesStatus &&
-        matchesNeighborhood &&
-        matchesLeadership &&
-        matchesSupport &&
-        matchesTag
-      );
-    });
-  }, [
-    supporters,
-    query,
-    filters.status,
-    filters.bairro,
-    filters.lideranca,
-    filters.apoio,
-    filters.tag,
-  ]);
+  const filtered = useMemo(
+    () => filterSupporters((supporters ?? []) as SupporterRow[], filters, query),
+    [supporters, filters, query],
+  );
+
+  const landingCount = useMemo(
+    () => (supporters ?? []).filter((s) => s.source === "landing").length,
+    [supporters],
+  );
+
+  const new7d = useMemo(
+    () => countNewInPeriod((supporters ?? []) as SupporterRow[], 7),
+    [supporters],
+  );
+
+  const viewMode = filters.view === "landing" ? "cards" : filters.view;
 
   useEffect(() => {
     if (highlightId && highlightRef.current) {
@@ -211,24 +180,103 @@ function EleitoresPage() {
     }
   }, [highlightId, filtered]);
 
+  useEffect(() => {
+    setSelectedIds((prev) => {
+      const next = new Set([...prev].filter((id) => filtered.some((r) => r.id === id)));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [filtered]);
+
   const activeFilterCount = countActiveFilters([
     filters.status !== "all",
     filters.bairro !== "all",
     filters.lideranca !== "all",
     filters.apoio !== "all",
     !!filters.tag,
+    filters.origem !== "all",
+    filters.period !== "all",
     !!query.trim(),
   ]);
 
-  function handleExport() {
+  const allSelected = filtered.length > 0 && filtered.every((r) => selectedIds.has(r.id));
+  const someSelected = filtered.some((r) => selectedIds.has(r.id));
+
+  function patchFilter(patch: Partial<typeof filters>) {
+    const next = { ...filters, ...patch };
+    setSearch(filterStateToEleitoresSearch(next, highlightId));
+  }
+
+  function clearFilters() {
+    setQuery("");
+    setSearch(
+      filterStateToEleitoresSearch({
+        busca: "",
+        status: "all",
+        bairro: "all",
+        lideranca: "all",
+        apoio: "all",
+        tag: "",
+        origem: "all",
+        view: "table",
+        period: "all",
+      }),
+    );
+  }
+
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    if (allSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filtered.map((r) => r.id)));
+    }
+  }
+
+  async function handleExportExcel() {
+    if (!planGate.canExport) {
+      toast.error("Exportação não disponível no seu plano atual.");
+      return;
+    }
+    setExporting(true);
+    try {
+      const slug = activeTenant?.slug ?? "campanha";
+      await downloadSupportersExcel({
+        filename: buildExcelFilename(slug, "apoiadores"),
+        rows: filtered,
+        leadershipNames: leadershipMap,
+      });
+      toast.success(`${filtered.length} apoiador(es) exportado(s) em Excel`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Falha ao gerar Excel");
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  function handleExportCsv() {
     if (!planGate.canExport) {
       toast.error("Exportação não disponível no seu plano atual.");
       return;
     }
     const slug = activeTenant?.slug ?? "campanha";
-    const csv = supportersToCsv(filtered);
+    const csv = supportersToCsv(
+      filtered.map((r) => ({
+        ...r,
+        status: SUPPORTER_STATUS_LABELS[r.status] ?? r.status,
+        support_level: SUPPORT_LEVEL_LABELS[r.support_level] ?? r.support_level,
+        source: SUPPORTER_SOURCE_LABELS[r.source] ?? r.source,
+      })),
+    );
     downloadCsv(buildCsvFilename(slug, "apoiadores"), csv);
-    toast.success(`${filtered.length} apoiador(es) exportado(s)`);
+    toast.success(`${filtered.length} apoiador(es) exportado(s) em CSV`);
   }
 
   function handleImportFile(file: File) {
@@ -262,163 +310,170 @@ function EleitoresPage() {
     downloadCsv(buildCsvFilename(slug, "modelo-importacao"), getSupporterImportTemplateCsv());
   }
 
-  function patchFilter(patch: Partial<typeof filters>) {
-    const next = { ...filters, ...patch };
-    setSearch(filterStateToEleitoresSearch(next, highlightId));
+  const handleQuickSupport = useCallback(
+    (row: SupporterRow) => {
+      updateMutation.mutate({ id: row.id, support_level: "forte" });
+    },
+    [updateMutation],
+  );
+
+  const handleQuickStatus = useCallback(
+    (row: SupporterRow) => {
+      updateMutation.mutate({ id: row.id, status: "apoiador" });
+    },
+    [updateMutation],
+  );
+
+  function buildDeleteDescription(target: SupporterRow | null, count?: number) {
+    if (count && count > 1) {
+      return `Tem certeza que deseja excluir ${count} apoiadores selecionados? Esta ação não pode ser desfeita.`;
+    }
+    if (!target) return "";
+    const origem = SUPPORTER_SOURCE_LABELS[target.source] ?? target.source;
+    const data = new Date(target.created_at).toLocaleDateString("pt-BR");
+    let msg = `Excluir "${target.name}"? Cadastro via ${origem} em ${data}.`;
+    if (target.source === "landing" && target.interest) {
+      msg += ` Interesse declarado: ${target.interest}.`;
+    }
+    msg += " Esta ação não pode ser desfeita.";
+    return msg;
   }
 
-  function clearFilters() {
-    setQuery("");
-    setSearch(
-      filterStateToEleitoresSearch({
-        busca: "",
-        status: "all",
-        bairro: "all",
-        lideranca: "all",
-        apoio: "all",
-        tag: "",
-      }),
-    );
+  async function confirmBulkDelete() {
+    const ids = [...selectedIds];
+    try {
+      for (const id of ids) {
+        await deleteMutation.mutateAsync(id);
+      }
+      setSelectedIds(new Set());
+      setBulkDeleteOpen(false);
+      toast.success(`${ids.length} apoiador(es) removido(s)`);
+    } catch {
+      /* toast no hook */
+    }
   }
 
   if (isLoading) return <LoadingState />;
 
   return (
     <ModuleRouteGuard module="supporters">
-    <div className="space-y-8">
-      <PageHeader
-        title="Eleitores"
-        description={
-          planGate.supporterUsageLabel()
-            ? `Gerencie sua base de apoiadores. Uso do plano: ${planGate.supporterUsageLabel()}.`
-            : "Gerencie sua base de apoiadores cadastrados."
-        }
-        actions={
-          <>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleExport}
-              disabled={!planGate.canExport || !perms.canExport}
-            >
-              <Download className="mr-2 h-4 w-4" />
-              Exportar
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => importRef.current?.click()}
-              disabled={!planGate.canAddSupporters() || !perms.canImport}
-            >
-              <Upload className="mr-2 h-4 w-4" />
-              Importar
-            </Button>
-            <Button variant="ghost" size="sm" onClick={handleDownloadTemplate}>
-              Modelo CSV
-            </Button>
-            <input
-              ref={importRef}
-              type="file"
-              accept=".csv,text/csv"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) handleImportFile(file);
-                e.target.value = "";
-              }}
-            />
-            <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-              <DialogTrigger asChild>
-                <Button size="sm" disabled={!planGate.canAddSupporters() || !perms.canCreate}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Novo eleitor
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-lg">
-                <DialogHeader>
-                  <DialogTitle>Cadastrar novo eleitor</DialogTitle>
-                  <DialogDescription>
-                    Dados salvos no CRM com isolamento por campanha.
-                  </DialogDescription>
-                </DialogHeader>
-                <SupporterFormFields
-                  leaderships={(leaderships ?? []).map((l) => ({ id: l.id, name: l.name }))}
-                  loading={createMutation.isPending}
-                  submitLabel="Salvar eleitor"
-                  onSubmit={(v) => {
-                    createMutation.mutate(
-                      { ...supporterFormToPayload(v), source: "manual" },
-                      { onSuccess: () => setCreateOpen(false) },
-                    );
-                  }}
-                />
-              </DialogContent>
-            </Dialog>
-          </>
-        }
-      />
-
-      {!planGate.canAddSupporters() && (
-        <PlanLimitNotice message="Limite de apoiadores do plano atingido. Novos cadastros e importações estão bloqueados até upgrade ou redução da base." />
-      )}
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <MetricCard
-          label="Total cadastrados"
-          value={String(metrics?.total_supporters ?? 0)}
-          icon={Users}
-          tone="primary"
-          featured
-        />
-        <MetricCard
-          label="Apoio forte"
-          value={String(metrics?.strong_support ?? 0)}
-          icon={UserCheck}
-          tone="success"
-        />
-        <MetricCard
-          label="Indecisos"
-          value={String(metrics?.undecided ?? 0)}
-          icon={UserX}
-          tone="warning"
-        />
-        <MetricCard
-          label="Lideranças"
-          value={String(metrics?.leaderships ?? 0)}
-          icon={Crown}
-          tone="accent"
-          featured
-        />
-      </div>
-
-      <Card className="shadow-elegant">
-        <CardContent className="p-0">
-          <div className="flex flex-col gap-3 border-b border-border p-4 sm:flex-row sm:items-center">
-            <div className="relative flex-1">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Buscar nome, telefone, bairro..."
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                className="pl-9"
+      <div className="eleitores-page space-y-6">
+        <PageHeader
+          title="Eleitores"
+          description={
+            planGate.supporterUsageLabel()
+              ? `Base de apoiadores · ${planGate.supporterUsageLabel()}`
+              : "Gerencie apoiadores, leads da landing e importações."
+          }
+          actions={
+            <>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={!planGate.canExport || !perms.canExport || exporting}
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    Exportar
+                    <ChevronDown className="ml-1 h-3.5 w-3.5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => void handleExportExcel()}>
+                    <FileSpreadsheet className="mr-2 h-4 w-4 text-primary" />
+                    Excel formatado (.xlsx)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleExportCsv}>
+                    <Download className="mr-2 h-4 w-4" />
+                    CSV simples
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => importRef.current?.click()}
+                disabled={!planGate.canAddSupporters() || !perms.canImport}
+              >
+                <Upload className="mr-2 h-4 w-4" />
+                Importar
+              </Button>
+              <Button variant="ghost" size="sm" onClick={handleDownloadTemplate}>
+                Modelo CSV
+              </Button>
+              <input
+                ref={importRef}
+                type="file"
+                accept=".csv,text/csv"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleImportFile(file);
+                  e.target.value = "";
+                }}
               />
-            </div>
+              <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+                <DialogTrigger asChild>
+                  <Button size="sm" disabled={!planGate.canAddSupporters() || !perms.canCreate}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Novo eleitor
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-lg">
+                  <DialogHeader>
+                    <DialogTitle>Cadastrar novo eleitor</DialogTitle>
+                    <DialogDescription>
+                      Dados salvos no CRM com isolamento por campanha.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <SupporterFormFields
+                    leaderships={(leaderships ?? []).map((l) => ({ id: l.id, name: l.name }))}
+                    loading={createMutation.isPending}
+                    submitLabel="Salvar eleitor"
+                    onSubmit={(v) => {
+                      createMutation.mutate(
+                        { ...supporterFormToPayload(v), source: "manual" },
+                        { onSuccess: () => setCreateOpen(false) },
+                      );
+                    }}
+                  />
+                </DialogContent>
+              </Dialog>
+            </>
+          }
+        />
+
+        {!planGate.canAddSupporters() && (
+          <PlanLimitNotice message="Limite de apoiadores do plano atingido. Novos cadastros e importações estão bloqueados até upgrade ou redução da base." />
+        )}
+
+        <EleitoresCompactBar
+          total={supporters?.length ?? 0}
+          filtered={filtered.length}
+          new7d={new7d}
+          landingCount={landingCount}
+        />
+
+        <Card className="shadow-elegant overflow-hidden">
+          <CardContent className="p-0">
+            <EleitoresToolbar
+              query={query}
+              onQueryChange={setQuery}
+              filters={filters}
+              onPatchFilter={patchFilter}
+              activeFilterCount={activeFilterCount}
+              onOpenFilters={() => setFiltersOpen(true)}
+              selectedCount={selectedIds.size}
+              onBulkDelete={() => setBulkDeleteOpen(true)}
+              canDelete={perms.canDelete}
+            />
+
             <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
-              <SheetTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <Filter className="mr-2 h-4 w-4" />
-                  Filtros
-                  {activeFilterCount > 0 && (
-                    <Badge variant="secondary" className="ml-2 h-5 px-1.5">
-                      {activeFilterCount}
-                    </Badge>
-                  )}
-                </Button>
-              </SheetTrigger>
               <SheetContent>
                 <SheetHeader>
-                  <SheetTitle>Filtros</SheetTitle>
-                  <SheetDescription>Refine a lista de apoiadores.</SheetDescription>
+                  <SheetTitle>Filtros avançados</SheetTitle>
+                  <SheetDescription>Status, bairro, liderança, apoio e tags.</SheetDescription>
                 </SheetHeader>
                 <div className="mt-6 grid gap-4">
                   <div className="grid gap-2">
@@ -455,7 +510,10 @@ function EleitoresPage() {
                   </div>
                   <div className="grid gap-2">
                     <Label>Liderança</Label>
-                    <Select value={filters.lideranca} onValueChange={(v) => patchFilter({ lideranca: v })}>
+                    <Select
+                      value={filters.lideranca}
+                      onValueChange={(v) => patchFilter({ lideranca: v })}
+                    >
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -512,157 +570,105 @@ function EleitoresPage() {
                 </div>
               </SheetContent>
             </Sheet>
-          </div>
 
-          {!filtered.length ? (
-            <EmptyState
-              icon={Users}
-              title="Nenhum apoiador encontrado"
-              description={
-                supporters?.length
-                  ? "Ajuste os filtros ou a busca."
-                  : "Cadastre apoiadores manualmente ou importe um CSV."
-              }
-              actionLabel={!supporters?.length ? "Novo eleitor" : undefined}
-              onAction={!supporters?.length ? () => setCreateOpen(true) : undefined}
-            />
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/40">
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Telefone</TableHead>
-                    <TableHead>Bairro</TableHead>
-                    <TableHead>Liderança</TableHead>
-                    <TableHead>Apoio</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Tags</TableHead>
-                    <TableHead className="w-12" />
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filtered.map((e) => (
-                    <TableRow
-                      key={e.id}
-                      ref={e.id === highlightId ? highlightRef : undefined}
-                      className={e.id === highlightId ? DEEP_LINK_HIGHLIGHT_CLASS : undefined}
-                    >
-                      <TableCell className="font-medium">{e.name}</TableCell>
-                      <TableCell className="text-muted-foreground">{e.phone ?? "—"}</TableCell>
-                      <TableCell>
-                        {e.neighborhood ?? "—"}
-                        {e.city && (
-                          <div className="text-xs text-muted-foreground">{e.city}</div>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        {e.leadership_id ? leadershipMap.get(e.leadership_id) ?? "—" : "—"}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={apoioVariant[e.support_level]}>
-                          {SUPPORT_LEVEL_LABELS[e.support_level]}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">
-                          {SUPPORTER_STATUS_LABELS[e.status] ?? e.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-1">
-                          {(e.tags ?? []).slice(0, 2).map((t) => (
-                            <Badge key={t} variant="secondary" className="text-xs">
-                              {t}
-                            </Badge>
-                          ))}
-                          {(e.tags?.length ?? 0) > 2 && (
-                            <span className="text-xs text-muted-foreground">
-                              +{(e.tags?.length ?? 0) - 2}
-                            </span>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            {perms.canUpdate && (
-                              <DropdownMenuItem onClick={() => setEditTarget(e)}>
-                                <Pencil className="mr-2 h-4 w-4" />
-                                Editar
-                              </DropdownMenuItem>
-                            )}
-                            {perms.canDelete && (
-                              <DropdownMenuItem
-                                className="text-destructive"
-                                onClick={() => setDeleteTarget(e)}
-                              >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Excluir
-                              </DropdownMenuItem>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
+            {!filtered.length ? (
+              <EmptyState
+                icon={Users}
+                title={
+                  filters.view === "landing"
+                    ? "Nenhum lead da landing"
+                    : "Nenhum apoiador encontrado"
+                }
+                description={
+                  supporters?.length
+                    ? "Ajuste os filtros ou a busca."
+                    : "Cadastre apoiadores, use a landing pública ou importe um CSV."
+                }
+                actionLabel={!supporters?.length ? "Novo eleitor" : undefined}
+                onAction={!supporters?.length ? () => setCreateOpen(true) : undefined}
+              />
+            ) : viewMode === "table" ? (
+              <EleitoresTableView
+                rows={filtered}
+                highlightId={highlightId}
+                highlightRef={highlightRef}
+                leadershipMap={leadershipMap}
+                selectedIds={selectedIds}
+                onToggleSelect={toggleSelect}
+                onToggleSelectAll={toggleSelectAll}
+                allSelected={allSelected}
+                someSelected={someSelected}
+                onRowClick={setEditTarget}
+                onEdit={setEditTarget}
+                onDelete={setDeleteTarget}
+                onQuickSupport={handleQuickSupport}
+                onQuickStatus={handleQuickStatus}
+                canUpdate={perms.canUpdate}
+                canDelete={perms.canDelete}
+              />
+            ) : (
+              <EleitoresCardsView
+                rows={filtered}
+                highlightId={highlightId}
+                selectedIds={selectedIds}
+                onToggleSelect={toggleSelect}
+                onCardClick={setEditTarget}
+                onQuickSupport={handleQuickSupport}
+                onQuickStatus={handleQuickStatus}
+                onDelete={setDeleteTarget}
+                landingMode={filters.view === "landing"}
+                canUpdate={perms.canUpdate}
+                canDelete={perms.canDelete}
+              />
+            )}
 
-          {(supporters?.length ?? 0) > 0 && (
-            <ListCountFooter
-              shown={filtered.length}
-              total={supporters?.length ?? 0}
-              label="apoiadores"
-            />
-          )}
-        </CardContent>
-      </Card>
+            {(supporters?.length ?? 0) > 0 && (
+              <ListCountFooter
+                shown={filtered.length}
+                total={supporters?.length ?? 0}
+                label="apoiadores"
+              />
+            )}
+          </CardContent>
+        </Card>
 
-      <Dialog open={!!editTarget} onOpenChange={(o) => !o && setEditTarget(null)}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Editar apoiador</DialogTitle>
-            <DialogDescription>Atualize os dados do cadastro.</DialogDescription>
-          </DialogHeader>
-          {editTarget && (
-            <SupporterFormFields
-              key={editTarget.id}
-              defaultValues={supporterToFormValues(editTarget)}
-              leaderships={(leaderships ?? []).map((l) => ({ id: l.id, name: l.name }))}
-              loading={updateMutation.isPending}
-              submitLabel="Salvar alterações"
-              onSubmit={(v: SupporterFormValues) => {
-                updateMutation.mutate(
-                  { id: editTarget.id, ...supporterFormToPayload(v) },
-                  { onSuccess: () => setEditTarget(null) },
-                );
-              }}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
+        <EleitoresEditSheet
+          supporter={editTarget}
+          open={!!editTarget}
+          onOpenChange={(o) => !o && setEditTarget(null)}
+          leaderships={(leaderships ?? []).map((l) => ({ id: l.id, name: l.name }))}
+          loading={updateMutation.isPending}
+          onSubmit={(v: SupporterFormValues) => {
+            if (!editTarget) return;
+            updateMutation.mutate(
+              { id: editTarget.id, ...supporterFormToPayload(v) },
+              { onSuccess: () => setEditTarget(null) },
+            );
+          }}
+        />
 
-      <ConfirmDeleteDialog
-        open={!!deleteTarget}
-        onOpenChange={(o) => !o && setDeleteTarget(null)}
-        title="Excluir apoiador"
-        description={`Tem certeza que deseja excluir "${deleteTarget?.name}"? Esta ação não pode ser desfeita.`}
-        loading={deleteMutation.isPending}
-        onConfirm={() => {
-          if (deleteTarget) {
-            deleteMutation.mutate(deleteTarget.id, { onSuccess: () => setDeleteTarget(null) });
-          }
-        }}
-      />
-    </div>
+        <ConfirmDeleteDialog
+          open={!!deleteTarget}
+          onOpenChange={(o) => !o && setDeleteTarget(null)}
+          title="Excluir apoiador"
+          description={buildDeleteDescription(deleteTarget)}
+          loading={deleteMutation.isPending}
+          onConfirm={() => {
+            if (deleteTarget) {
+              deleteMutation.mutate(deleteTarget.id, { onSuccess: () => setDeleteTarget(null) });
+            }
+          }}
+        />
+
+        <ConfirmDeleteDialog
+          open={bulkDeleteOpen}
+          onOpenChange={setBulkDeleteOpen}
+          title="Excluir selecionados"
+          description={buildDeleteDescription(null, selectedIds.size)}
+          loading={deleteMutation.isPending}
+          onConfirm={() => void confirmBulkDelete()}
+        />
+      </div>
     </ModuleRouteGuard>
   );
 }

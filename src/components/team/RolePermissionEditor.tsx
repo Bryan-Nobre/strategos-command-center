@@ -319,7 +319,7 @@ export function RolePermissionEditor({
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
         title="Excluir cargo?"
-        description="Só é possível excluir cargos sem membros ou convites pendentes."
+        description="Só é possível excluir cargos que não tenham membros ativos vinculados."
         onConfirm={() => {
           onDelete?.();
           setDeleteOpen(false);
