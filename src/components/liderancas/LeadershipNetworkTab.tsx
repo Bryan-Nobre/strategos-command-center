@@ -21,6 +21,7 @@ import {
   LeadershipWeightBadge,
 } from "@/components/liderancas/LeadershipPoliticalBadges";
 import { SupporterEngagementBadge } from "@/components/supporters/SupporterEngagementBadge";
+import { SupporterGeoBadge } from "@/components/supporters/SupporterGeoBadge";
 import { useLeadershipOperationalDetail } from "@/hooks/use-leadership-operational-detail";
 import {
   LEADERSHIP_NETWORK_PAGE_SIZE,
@@ -188,6 +189,12 @@ export function LeadershipNetworkTab({
                         <div className="font-medium">{row.supporter_name}</div>
                         <div className="mt-1 flex flex-wrap gap-1">
                           <LeadershipPrimaryBadge isPrimary={row.is_primary} />
+                          <SupporterGeoBadge
+                            cep={row.cep}
+                            geo_pending={row.geo_pending}
+                            geo_enrichment_failed={row.geo_enrichment_failed}
+                            geo_enriched_at={row.geo_enriched_at}
+                          />
                         </div>
                       </TableCell>
                       <TableCell className="hidden sm:table-cell">

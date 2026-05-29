@@ -1,0 +1,12 @@
+  WITH supporter_agg AS (
+    SELECT
+      COALESCE(NULLIF(trim(s.neighborhood), ''), 'Sem bairro') AS neighborhood,
+      count(*)::int AS supporters,
+      count(*) FILTER (WHERE s.support_level = 'forte')::int AS strong,
+      count(*) FILTER (WHERE s.support_level = 'indeciso' OR s.status = 'indeciso')::int AS undecided,
+      count(*) FILTER (WHERE s.status = 'oposicao')::int AS opposition
+    FROM public.supporters s
+    WHERE s.tenant_id = p_tenant_id
+      AND (p_neighborhood IS NULL OR trim(p_neighborhood) = '' OR COALESCE(s.neighborhood, '') ILIKE '%' || trim(p_neighborhood) || '%')
+      AND (p_city IS NULL OR trim(p_city) = '' OR COALESCE(s.city, '') ILIKE '%' || trim(p_city) || '%')
+      AND (p_source IS NULL OR trim(p_source) = '' OR COALESCE(s.source::text, '') =

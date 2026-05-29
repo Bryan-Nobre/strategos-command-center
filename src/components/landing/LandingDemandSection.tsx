@@ -1,0 +1,124 @@
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation } from "@tanstack/react-query";
+import { z } from "zod";
+import { ClipboardList } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { TerritoryChip } from "@/components/territory/TerritoryChip";
+import { registerDemandFromLanding } from "@/services/landing";
+import { landingDemandSchema, DEMAND_CATEGORY_LABELS } from "@/types/domain";
+import { toast } from "sonner";
+
+type DemandForm = z.infer<typeof landingDemandSchema>;
+
+export function LandingDemandSection({
+  slug,
+  territoryLabel,
+  defaultNeighborhood,
+  defaultCity,
+}: {
+  slug: string;
+  territoryLabel?: string | null;
+  defaultNeighborhood?: string;
+  defaultCity?: string;
+}) {
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<DemandForm>({
+    resolver: zodResolver(landingDemandSchema),
+    defaultValues: { category: "outros" },
+  });
+
+  const mutation = useMutation({
+    mutationFn: (values: DemandForm) =>
+      registerDemandFromLanding(slug, {
+        ...values,
+        neighborhood: values.neighborhood ?? defaultNeighborhood ?? undefined,
+        city: values.city ?? defaultCity ?? undefined,
+      }),
+    onSuccess: () => {
+      toast.success("Sua solicitação foi registrada. A equipe vai analisar.");
+      reset({ category: "outros" });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return (
+    <details className="landing-demand rounded-xl border border-border/70 bg-muted/15">
+      <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm font-medium [&::-webkit-details-marker]:hidden">
+        <ClipboardList className="h-4 w-4 text-muted-foreground" />
+        Precisa de algo no seu bairro? <span className="text-xs text-muted-foreground">(opcional)</span>
+      </summary>
+      <div className="border-t border-border/60 px-4 pb-4 pt-3">
+        <p className="mb-3 text-xs text-muted-foreground">
+          Use este espaço para registrar uma demanda ou melhoria. Não substitui o cadastro de apoio acima.
+        </p>
+        {territoryLabel && (
+          <div className="mb-3">
+            <TerritoryChip label={territoryLabel} />
+          </div>
+        )}
+        <form
+          onSubmit={handleSubmit((v) => mutation.mutate(v))}
+          className="grid gap-3 sm:grid-cols-2"
+        >
+          <div className="space-y-2 sm:col-span-2">
+            <Label>Seu nome *</Label>
+            <Input {...register("requester_name")} />
+            {errors.requester_name && (
+              <p className="text-xs text-destructive">{errors.requester_name.message}</p>
+            )}
+          </div>
+          <div className="space-y-2">
+            <Label>Telefone</Label>
+            <Input {...register("requester_phone")} />
+          </div>
+          <div className="space-y-2">
+            <Label>Cidade</Label>
+            <Input {...register("city")} defaultValue={defaultCity} />
+          </div>
+          <div className="space-y-2">
+            <Label>Bairro</Label>
+            <Input {...register("neighborhood")} defaultValue={defaultNeighborhood} />
+          </div>
+          <div className="space-y-2">
+            <Label>Tipo *</Label>
+            <select
+              {...register("category")}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            >
+              {Object.entries(DEMAND_CATEGORY_LABELS).map(([k, l]) => (
+                <option key={k} value={k}>
+                  {l}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-2 sm:col-span-2">
+            <Label>Assunto *</Label>
+            <Input {...register("title")} placeholder="Ex.: Poste apagado na Rua X" />
+            {errors.title && <p className="text-xs text-destructive">{errors.title.message}</p>}
+          </div>
+          <div className="space-y-2 sm:col-span-2">
+            <Label>Descrição *</Label>
+            <Textarea {...register("description")} rows={3} />
+            {errors.description && (
+              <p className="text-xs text-destructive">{errors.description.message}</p>
+            )}
+          </div>
+          <div className="sm:col-span-2">
+            <Button type="submit" variant="secondary" disabled={isSubmitting} className="w-full sm:w-auto">
+              {mutation.isPending ? "Enviando..." : "Enviar solicitação"}
+            </Button>
+          </div>
+        </form>
+      </div>
+    </details>
+  );
+}

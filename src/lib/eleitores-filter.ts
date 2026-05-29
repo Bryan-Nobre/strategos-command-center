@@ -1,6 +1,7 @@
 import { subDays, startOfDay } from "date-fns";
 import type { EleitoresFilterState } from "@/lib/list-search/eleitores";
 import { matchesEngagementFilter } from "@/lib/supporter-engagement";
+import { territoryFilterMatches } from "@/lib/territory-match";
 
 export type SupporterListItem = {
   id: string;
@@ -31,6 +32,10 @@ export type SupporterListItem = {
   last_activity_at?: string | null;
   activity_score?: number | null;
   engagement_status?: string | null;
+  cep?: string | null;
+  geo_pending?: boolean | null;
+  geo_enrichment_failed?: boolean | null;
+  geo_enriched_at?: string | null;
 };
 
 function matchesPeriod(createdAt: string, period: EleitoresFilterState["period"]): boolean {
@@ -60,8 +65,7 @@ export function filterSupporters(
     const matchesStatus = filters.status === "all" || e.status === filters.status;
     const matchesNeighborhood =
       filters.bairro === "all" ||
-      e.neighborhood === filters.bairro ||
-      (e.normalized_neighborhood ?? e.neighborhood) === filters.bairro;
+      territoryFilterMatches(filters.bairro, e.neighborhood, e.normalized_neighborhood);
     const matchesLeadership = (() => {
       if (filters.lideranca === "all") return true;
       if (filters.lideranca === "none") {

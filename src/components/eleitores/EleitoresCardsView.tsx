@@ -6,6 +6,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { SupporterSourceBadge } from "@/components/supporters/SupporterSourceBadge";
 import { SupporterPossibleDuplicateBadge } from "@/components/supporters/SupporterPossibleDuplicateBadge";
 import { SupporterEngagementBadge } from "@/components/supporters/SupporterEngagementBadge";
+import { SupporterGeoBadge } from "@/components/supporters/SupporterGeoBadge";
 import {
   SUPPORT_LEVEL_LABELS,
   SUPPORTER_STATUS_LABELS,
@@ -67,6 +68,12 @@ export function EleitoresCardsView({
               <div className="flex flex-wrap items-center gap-1.5">
                 <h3 className="truncate font-semibold text-foreground">{e.name}</h3>
                 {e.is_possible_duplicate && <SupporterPossibleDuplicateBadge />}
+                <SupporterGeoBadge
+                  cep={e.cep}
+                  geo_pending={e.geo_pending}
+                  geo_enrichment_failed={e.geo_enrichment_failed}
+                  geo_enriched_at={e.geo_enriched_at}
+                />
               </div>
               <p className="mt-0.5 text-xs text-muted-foreground">
                 {format(new Date(e.created_at), "dd/MM/yyyy HH:mm")}

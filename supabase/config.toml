@@ -32,5 +32,8 @@ verify_jwt = true
 [functions.resolve-postal-code]
 verify_jwt = false
 
+[functions.geo-enrichment-worker]
+verify_jwt = false
+
 [functions.team-member-actions]
 verify_jwt = true

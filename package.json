@@ -13,7 +13,8 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "test:postal": "node --experimental-strip-types --test src/lib/postal-code.test.ts",
-    "test:normalize": "node --experimental-strip-types --test src/lib/postal-code.test.ts src/lib/normalize-phone.test.ts"
+    "test:normalize": "node --experimental-strip-types --test src/lib/postal-code.test.ts src/lib/normalize-phone.test.ts",
+    "test:geo": "node --experimental-strip-types --test src/lib/supporter-geo.test.ts src/lib/postal-code.test.ts src/lib/territory-match.test.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

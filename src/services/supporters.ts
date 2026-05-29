@@ -7,7 +7,7 @@ export async function listSupporters(tenantId: string) {
   const { data, error } = await supabase
     .from("supporters")
     .select(
-      "id, name, phone, email, neighborhood, normalized_neighborhood, normalized_city, city, electoral_zone, electoral_section, status, support_level, notes, tags, leadership_id, source, interest, is_possible_duplicate, last_activity_at, activity_score, engagement_status, created_at",
+      "id, name, phone, email, neighborhood, normalized_neighborhood, normalized_city, city, cep, electoral_zone, electoral_section, status, support_level, notes, tags, leadership_id, source, interest, is_possible_duplicate, last_activity_at, activity_score, engagement_status, geo_pending, geo_enrichment_failed, geo_enriched_at, created_at",
     )
     .eq("tenant_id", tenantId)
     .order("created_at", { ascending: false });

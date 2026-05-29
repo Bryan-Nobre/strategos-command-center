@@ -31,8 +31,8 @@ export function DashboardAnalyticsSection({
     <DashboardSection
       variant="analytics"
       index={sectionIndex}
-      title="Insights analíticos"
-      description="Leitura rápida da última pesquisa cadastrada. Análises completas em Pesquisas."
+      title="Cenário eleitoral (pesquisa manual)"
+      description="Dados de instituto ou levantamento interno — não refletem automaticamente a base de apoiadores do CRM."
       icon={BarChart3}
       actions={
         <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs" asChild>
@@ -65,7 +65,9 @@ export function DashboardAnalyticsSection({
         <div className="dashboard-analytics-card rounded-lg border border-border/70 bg-background/40 p-4">
           <div className="mb-3 space-y-1">
             <h3 className="text-sm font-semibold text-foreground">Aprovação por bairro</h3>
-            <p className="text-xs text-muted-foreground">Índice por região (último snapshot)</p>
+            <p className="text-xs text-muted-foreground">
+              Índice por região (snapshot manual · pode divergir do território operacional)
+            </p>
             {narrativeApr && (
               <p className="text-xs font-medium leading-relaxed text-primary/90">{narrativeApr}</p>
             )}

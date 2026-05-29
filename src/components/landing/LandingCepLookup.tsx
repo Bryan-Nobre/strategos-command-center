@@ -26,6 +26,9 @@ type Props = {
   onCityChange: (v: string) => void;
   stateUf: string;
   onStateUfChange: (v: string) => void;
+  /** Oculta inputs duplicados de bairro/cidade após confirmação. */
+  hideLocationFields?: boolean;
+  onTerritoryConfirmed?: (confirmed: boolean) => void;
 };
 
 const DEBOUNCE_MS = 450;
@@ -44,6 +47,8 @@ export function LandingCepLookup({
   onCityChange,
   stateUf,
   onStateUfChange,
+  hideLocationFields = false,
+  onTerritoryConfirmed,
 }: Props) {
   const [lookup, setLookup] = useState<LandingCepLookupState>({ status: "idle" });
   const [confirmed, setConfirmed] = useState(false);
@@ -52,6 +57,10 @@ export function LandingCepLookup({
   useEffect(() => {
     onLookupStateChange(lookup);
   }, [lookup, onLookupStateChange]);
+
+  useEffect(() => {
+    onTerritoryConfirmed?.(confirmed);
+  }, [confirmed, onTerritoryConfirmed]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -128,7 +137,7 @@ export function LandingCepLookup({
           )}
         </div>
         <p className="text-[11px] text-muted-foreground">
-          Ajuda a localizar seu bairro automaticamente (opcional).
+          Informe seu CEP para reconhecermos seu território na cidade (opcional, melhora o contato da equipe).
         </p>
         {lookup.status === "invalid" && (
           <p className="text-xs text-amber-600 dark:text-amber-500">
@@ -149,7 +158,7 @@ export function LandingCepLookup({
 
       {lookup.status === "found" && !confirmed && (
         <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm">
-          <p className="mb-2 font-medium text-foreground">Localização encontrada</p>
+          <p className="mb-2 font-medium text-foreground">Território reconhecido</p>
           <p className="text-xs text-muted-foreground">
             Confirme ou ajuste os dados abaixo antes de enviar.
           </p>
@@ -202,7 +211,7 @@ export function LandingCepLookup({
         <div className="flex items-start gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-sm">
           <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
           <div>
-            <p className="font-medium text-foreground">Localização confirmada</p>
+            <p className="font-medium text-foreground">Seu território na campanha</p>
             <p className="text-xs text-muted-foreground">
               {[neighborhood, city, stateUf].filter(Boolean).join(" · ") || "—"}
             </p>

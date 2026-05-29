@@ -595,6 +595,60 @@ export type Database = {
         }
         Relationships: []
       }
+      geo_enrichment_logs: {
+        Row: {
+          cache_hit: boolean
+          cep: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          latency_ms: number | null
+          provider: string | null
+          success: boolean
+          supporter_id: string
+          tenant_id: string
+        }
+        Insert: {
+          cache_hit?: boolean
+          cep?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          latency_ms?: number | null
+          provider?: string | null
+          success?: boolean
+          supporter_id: string
+          tenant_id: string
+        }
+        Update: {
+          cache_hit?: boolean
+          cep?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          latency_ms?: number | null
+          provider?: string | null
+          success?: boolean
+          supporter_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "geo_enrichment_logs_supporter_id_fkey"
+            columns: ["supporter_id"]
+            isOneToOne: false
+            referencedRelation: "supporters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "geo_enrichment_logs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       postal_code_cache: {
         Row: {
           cep: string
@@ -664,8 +718,13 @@ export type Database = {
           engagement_status: Database["public"]["Enums"]["supporter_engagement_status"]
           geo_confidence: string | null
           geo_enriched_at: string | null
+          geo_enrichment_attempts: number
+          geo_enrichment_failed: boolean
+          geo_last_attempt_at: string | null
+          geo_last_error: string | null
           geo_pending: boolean
           geo_precision: string | null
+          geo_processing_at: string | null
           geo_source: string | null
           ibge_city_code: string | null
           latitude: number | null
@@ -702,8 +761,13 @@ export type Database = {
           engagement_status?: Database["public"]["Enums"]["supporter_engagement_status"]
           geo_confidence?: string | null
           geo_enriched_at?: string | null
+          geo_enrichment_attempts?: number
+          geo_enrichment_failed?: boolean
+          geo_last_attempt_at?: string | null
+          geo_last_error?: string | null
           geo_pending?: boolean
           geo_precision?: string | null
+          geo_processing_at?: string | null
           geo_source?: string | null
           ibge_city_code?: string | null
           latitude?: number | null
@@ -740,8 +804,13 @@ export type Database = {
           engagement_status?: Database["public"]["Enums"]["supporter_engagement_status"]
           geo_confidence?: string | null
           geo_enriched_at?: string | null
+          geo_enrichment_attempts?: number
+          geo_enrichment_failed?: boolean
+          geo_last_attempt_at?: string | null
+          geo_last_error?: string | null
           geo_pending?: boolean
           geo_precision?: string | null
+          geo_processing_at?: string | null
           geo_source?: string | null
           ibge_city_code?: string | null
           latitude?: number | null
@@ -1059,6 +1128,19 @@ export type Database = {
       }
     }
     Views: {
+      geo_enrichment_metrics_v: {
+        Row: {
+          tenant_id: string
+          pending_count: number
+          failed_count: number
+          success_24h: number
+          cache_hit_ratio: number | null
+          avg_attempts: number
+          with_cep_pct: number | null
+          geo_enriched_pct: number | null
+        }
+        Relationships: []
+      }
       leadership_chapa_metrics_v: {
         Row: {
           chapa_id: string
@@ -1238,6 +1320,48 @@ export type Database = {
       apply_supporter_geo_from_cep: {
         Args: { p_geo_payload: Json; p_supporter_id: string }
         Returns: undefined
+      }
+      claim_geo_enrichment_batch: {
+        Args: { p_limit?: number }
+        Returns: {
+          supporter_id: string
+          tenant_id: string
+          cep: string
+          geo_source: string | null
+          geo_pending: boolean
+          geo_enrichment_attempts: number
+        }[]
+      }
+      process_pending_geo_enrichment: {
+        Args: { p_limit?: number }
+        Returns: Json
+      }
+      fail_geo_enrichment: {
+        Args: {
+          p_supporter_id: string
+          p_error: string
+          p_provider?: string | null
+          p_cache_hit?: boolean
+          p_latency_ms?: number | null
+        }
+        Returns: undefined
+      }
+      insert_geo_enrichment_log: {
+        Args: {
+          p_supporter_id: string
+          p_tenant_id: string
+          p_cep?: string | null
+          p_provider?: string | null
+          p_cache_hit?: boolean
+          p_success?: boolean
+          p_error_message?: string | null
+          p_latency_ms?: number | null
+        }
+        Returns: undefined
+      }
+      geo_source_priority: {
+        Args: { p_source?: string }
+        Returns: number
       }
       get_postal_code_cache: {
         Args: { p_cep: string }

@@ -33,6 +33,10 @@ export type LeadershipNetworkSupporterRow = {
   last_activity_at: string | null;
   activity_score?: number;
   engagement_status?: string | null;
+  geo_pending?: boolean;
+  geo_enrichment_failed?: boolean;
+  geo_enriched_at?: string | null;
+  cep?: string | null;
 };
 
 export type LeadershipNetworkTerritoryRow = {

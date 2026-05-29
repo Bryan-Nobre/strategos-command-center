@@ -17,9 +17,10 @@ function asInt(v: unknown, fallback = 0): number {
 
 type ReportTerritory = TerritoryInsight & { risk_level: string; display_score: number };
 
-function mapTerritory(row: JsonRecord): ReportTerritory {
+function mapTerritory(row: JsonRecord): ReportTerritory & { territory_key?: string } {
   return {
-    neighborhood: String(row.neighborhood ?? ""),
+    neighborhood: String(row.neighborhood ?? row.territory_label ?? ""),
+    territory_key: row.territory_key ? String(row.territory_key) : undefined,
     supporters: asInt(row.supporters),
     strongSupportPct: asInt(row.strong_support_pct),
     undecidedPct: asInt(row.undecided_pct),

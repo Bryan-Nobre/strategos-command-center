@@ -63,7 +63,10 @@ function TerritoryRow({
       </div>
       {canLink && (
         <Button variant="ghost" size="sm" className="mt-2 h-7 px-2 text-[11px]" asChild>
-          <Link to="/eleitores" search={{ bairro: territory.neighborhood }}>
+          <Link
+            to="/eleitores"
+            search={{ bairro: territory.territoryLabel || territory.neighborhood }}
+          >
             Ver território
           </Link>
         </Button>

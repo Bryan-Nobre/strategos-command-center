@@ -19,6 +19,7 @@ import {
 import { SupporterSourceBadge } from "@/components/supporters/SupporterSourceBadge";
 import { SupporterPossibleDuplicateBadge } from "@/components/supporters/SupporterPossibleDuplicateBadge";
 import { SupporterEngagementBadge } from "@/components/supporters/SupporterEngagementBadge";
+import { SupporterGeoBadge } from "@/components/supporters/SupporterGeoBadge";
 import {
   SUPPORT_LEVEL_LABELS,
   SUPPORTER_STATUS_LABELS,
@@ -124,6 +125,12 @@ export function EleitoresTableView({
                 <div className="flex flex-wrap items-center gap-1.5">
                   <span>{e.name}</span>
                   {e.is_possible_duplicate && <SupporterPossibleDuplicateBadge />}
+                  <SupporterGeoBadge
+                    cep={e.cep}
+                    geo_pending={e.geo_pending}
+                    geo_enrichment_failed={e.geo_enrichment_failed}
+                    geo_enriched_at={e.geo_enriched_at}
+                  />
                 </div>
                 {e.interest && (
                   <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">{e.interest}</p>
