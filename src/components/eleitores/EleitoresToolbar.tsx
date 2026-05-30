@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import type { EleitoresFilterState } from "@/lib/list-search/eleitores";
+import { DatePeriodFilter } from "@/components/filters/DatePeriodFilter";
 import { cn } from "@/lib/utils";
 
 type OriginChip = { key: string; label: string; origem: string };
@@ -20,13 +21,6 @@ const ORIGIN_CHIPS: OriginChip[] = [
   { key: "landing", label: "Landing", origem: "landing" },
   { key: "manual", label: "Manual", origem: "manual" },
   { key: "import", label: "Importados", origem: "import" },
-];
-
-const PERIOD_CHIPS = [
-  { key: "all", label: "Todo período", period: "all" as const },
-  { key: "today", label: "Hoje", period: "today" as const },
-  { key: "7d", label: "7 dias", period: "7d" as const },
-  { key: "30d", label: "30 dias", period: "30d" as const },
 ];
 
 export function EleitoresToolbar({
@@ -121,23 +115,19 @@ export function EleitoresToolbar({
           </Button>
         ))}
 
-        <span className="mx-1 hidden h-4 w-px bg-border sm:inline" aria-hidden />
-
-        <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-          Cadastro
-        </span>
-        {PERIOD_CHIPS.map((chip) => (
-          <Button
-            key={chip.key}
-            type="button"
-            size="sm"
-            variant={filters.period === chip.period ? "secondary" : "ghost"}
-            className="h-7 rounded-full px-3 text-xs"
-            onClick={() => onPatchFilter({ period: chip.period })}
-          >
-            {chip.label}
-          </Button>
-        ))}
+        <DatePeriodFilter
+          compact
+          allowAll
+          className="ml-1 flex-1 min-w-[280px]"
+          value={{ period: filters.period, from: filters.from, to: filters.to }}
+          onChange={(next) =>
+            onPatchFilter({
+              period: next.period ?? "all",
+              from: next.from ?? "",
+              to: next.to ?? "",
+            })
+          }
+        />
 
         {selectedCount > 0 && canDelete && (
           <Button

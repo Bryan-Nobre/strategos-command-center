@@ -8,6 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PhoneInput } from "@/components/ui/phone-input";
+import {
+  formatPhoneBrDisplay,
+  isValidBrPhoneOptional,
+  normalizeSupporterPhone,
+  PHONE_INVALID_MSG,
+} from "@/lib/normalize-phone";
 import { Textarea } from "@/components/ui/textarea";
 import { updateProfile } from "@/services/team";
 import { removeProfileAvatar, uploadProfileAvatar } from "@/services/profile-avatar";
@@ -33,24 +40,30 @@ export function ProfileSettingsCard({
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const [fullName, setFullName] = useState(profile?.full_name ?? "");
-  const [phone, setPhone] = useState(profile?.phone ?? "");
+  const [phone, setPhone] = useState(
+    profile?.phone ? formatPhoneBrDisplay(profile.phone) : "",
+  );
   const [bio, setBio] = useState(profile?.bio ?? "");
   const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url ?? "");
 
   useEffect(() => {
     setFullName(profile?.full_name ?? "");
-    setPhone(profile?.phone ?? "");
+    setPhone(profile?.phone ? formatPhoneBrDisplay(profile.phone) : "");
     setBio(profile?.bio ?? "");
     setAvatarUrl(profile?.avatar_url ?? "");
   }, [profile?.full_name, profile?.phone, profile?.bio, profile?.avatar_url]);
 
   const saveProfile = useMutation({
-    mutationFn: () =>
-      updateProfile({
+    mutationFn: () => {
+      if (!isValidBrPhoneOptional(phone)) {
+        throw new Error(PHONE_INVALID_MSG);
+      }
+      return updateProfile({
         full_name: fullName.trim(),
-        phone: phone.trim() || undefined,
+        phone: normalizeSupporterPhone(phone) ?? undefined,
         bio: bio.trim() || undefined,
-      }),
+      });
+    },
     onSuccess: async () => {
       toast.success("Perfil atualizado");
       await router.invalidate();
@@ -173,12 +186,11 @@ export function ProfileSettingsCard({
           </div>
           <div className="grid gap-2">
             <Label htmlFor="profile-phone">Telefone</Label>
-            <Input
+            <PhoneInput
               id="profile-phone"
               value={phone}
               disabled={!canEdit}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="(11) 99999-0000"
+              onValueChange={setPhone}
             />
           </div>
           <div className="grid gap-2">

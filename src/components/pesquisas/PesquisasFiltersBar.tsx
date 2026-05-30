@@ -1,6 +1,5 @@
 import { Filter, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -9,14 +8,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { TerritoryCepFilter } from "@/components/territory/TerritoryCepFilter";
+import { DatePeriodFilter } from "@/components/filters/DatePeriodFilter";
 import type { PesquisasListSearch } from "@/lib/list-search/pesquisas";
-
-const PERIOD_OPTIONS = [
-  { value: "today", label: "Hoje" },
-  { value: "7d", label: "7 dias" },
-  { value: "30d", label: "30 dias" },
-  { value: "custom", label: "Personalizado" },
-] as const;
 
 export function PesquisasFiltersBar({
   search,
@@ -29,8 +22,6 @@ export function PesquisasFiltersBar({
   onChange: (next: PesquisasListSearch) => void;
   onReset: () => void;
 }) {
-  const isCustom = search.period === "custom";
-
   return (
     <div className="reports-filters">
       <div className="reports-filters-head">
@@ -43,6 +34,19 @@ export function PesquisasFiltersBar({
           Limpar
         </Button>
       </div>
+
+      <DatePeriodFilter
+        className="mb-3 border-0 bg-transparent p-0"
+        value={{ period: search.period ?? "30d", from: search.from, to: search.to }}
+        onChange={(next) =>
+          onChange({
+            ...search,
+            period: next.period as PesquisasListSearch["period"],
+            from: next.from,
+            to: next.to,
+          })
+        }
+      />
 
       <div className="reports-filters-grid">
         <TerritoryCepFilter
@@ -62,50 +66,6 @@ export function PesquisasFiltersBar({
           }
           onClear={() => onChange({ ...search, bairro: undefined, cidade: undefined })}
         />
-
-        <div className="space-y-1.5">
-          <label className="text-[10px] font-medium text-muted-foreground">Período</label>
-          <Select
-            value={search.period ?? "30d"}
-            onValueChange={(v) =>
-              onChange({ ...search, period: v as PesquisasListSearch["period"] })
-            }
-          >
-            <SelectTrigger className="h-9">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {PERIOD_OPTIONS.map((o) => (
-                <SelectItem key={o.value} value={o.value}>
-                  {o.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {isCustom && (
-          <>
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-medium text-muted-foreground">De</label>
-              <Input
-                type="date"
-                className="h-9"
-                value={search.from ?? ""}
-                onChange={(e) => onChange({ ...search, from: e.target.value })}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-medium text-muted-foreground">Até</label>
-              <Input
-                type="date"
-                className="h-9"
-                value={search.to ?? ""}
-                onChange={(e) => onChange({ ...search, to: e.target.value })}
-              />
-            </div>
-          </>
-        )}
 
         <div className="space-y-1.5">
           <label className="text-[10px] font-medium text-muted-foreground">Bairro (CRM)</label>

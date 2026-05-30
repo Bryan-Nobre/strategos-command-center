@@ -1,5 +1,18 @@
 import { createFileRoute, useRouteContext } from "@tanstack/react-router";
 import { useCallback, useMemo, useState } from "react";
+import { useSyncedListSearch } from "@/hooks/use-synced-list-search";
+import { useReportsSummary } from "@/hooks/use-reports";
+import {
+  parseDashboardSearch,
+  serializeDashboardSearch,
+  type DashboardListSearch,
+} from "@/lib/list-search/dashboard";
+import {
+  formatDatePeriodLabel,
+  isTimestampInPeriod,
+  resolveDatePeriodRange,
+} from "@/lib/date-period";
+import { DatePeriodFilter } from "@/components/filters/DatePeriodFilter";
 import { Users, Crown, Vote, MessageSquareWarning } from "lucide-react";
 import { DashboardUpcomingAgenda } from "@/components/dashboard/DashboardUpcomingAgenda";
 import { ModuleRouteGuard } from "@/components/auth/PermissionGate";
@@ -7,7 +20,7 @@ import { DashboardHero } from "@/components/dashboard/DashboardHero";
 import { DashboardPriorities } from "@/components/dashboard/DashboardPriorities";
 import { DashboardKpiStrip } from "@/components/dashboard/DashboardKpiStrip";
 import { DashboardTerritoryMap } from "@/components/dashboard/DashboardTerritoryMap";
-import { DashboardGoalsAtRisk } from "@/components/dashboard/DashboardGoalsAtRisk";
+import { DashboardGoalsOverview } from "@/components/dashboard/DashboardGoalsOverview";
 import { DashboardPipelineSlim } from "@/components/dashboard/DashboardPipelineSlim";
 import { DashboardAnalyticsSection } from "@/components/dashboard/DashboardAnalyticsSection";
 import { DashboardActivityTimeline } from "@/components/dashboard/DashboardActivityTimeline";
@@ -29,16 +42,42 @@ import type { TerritoryFilter } from "@/lib/territory-filter";
 import { greetingLabel } from "@/services/dashboard-intelligence";
 
 export const Route = createFileRoute("/_app/dashboard")({
+  validateSearch: (search: Record<string, unknown>) => parseDashboardSearch(search),
   component: DashboardPage,
 });
 
+const DEFAULT_DASHBOARD_SEARCH: DashboardListSearch = { period: "30d" };
+
 function DashboardPage() {
   const { tenantId } = useTenant();
+  const urlSearch = Route.useSearch();
+  const { setSearch } = useSyncedListSearch({
+    search: urlSearch,
+    serialize: serializeDashboardSearch,
+  });
+  const periodRange = useMemo(
+    () => resolveDatePeriodRange(urlSearch, { defaultPreset: "30d" }),
+    [urlSearch],
+  );
   const { profile } = useRouteContext({ from: "/_app" });
   const { permissions, canRead } = useTenantPermissions(tenantId);
   const { data: operational, isLoading: opLoading, isError: opError } =
     useOperationalDashboard(tenantId);
-  const { data: activities, isLoading: activitiesLoading } = useActivities(tenantId);
+  const reportsParams = useMemo(
+    () =>
+      tenantId && periodRange
+        ? { tenantId, from: periodRange.from, to: periodRange.to }
+        : null,
+    [tenantId, periodRange],
+  );
+  const { data: periodReports } = useReportsSummary(reportsParams);
+
+  const { data: activitiesRaw, isLoading: activitiesLoading } = useActivities(tenantId);
+  const activities = useMemo(
+    () =>
+      (activitiesRaw ?? []).filter((a) => isTimestampInPeriod(a.created_at, periodRange)),
+    [activitiesRaw, periodRange],
+  );
   const { data: polls, isLoading: pollsLoading } = usePollSnapshots(tenantId);
   const canViewAgenda = canRead("agenda");
   const { data: agendaEvents } = useAgendaEvents(canViewAgenda ? tenantId : "");
@@ -54,7 +93,17 @@ function DashboardPage() {
     bairro: string;
     aprovacao: number;
   }[];
-  const funnel = (metrics?.funnel ?? {}) as Record<string, number>;
+  const funnel = useMemo(() => {
+    if (periodReports?.funnel) {
+      const f = periodReports.funnel;
+      return {
+        interessado: f.interessado,
+        apoiador: f.apoiador,
+        lideranca: f.lideranca,
+      } as Record<string, number>;
+    }
+    return (metrics?.funnel ?? {}) as Record<string, number>;
+  }, [periodReports?.funnel, metrics?.funnel]);
 
   const greeting = greetingLabel(profile?.full_name);
   const briefing =
@@ -125,8 +174,47 @@ function DashboardPage() {
     [insights?.operational.pills],
   );
 
-  const kpiItems = useMemo(
-    () => [
+  const periodLabel = formatDatePeriodLabel(periodRange);
+
+  const kpiItems = useMemo(() => {
+    if (periodReports) {
+      const s = periodReports.summary;
+      const growth =
+        periodReports.pulse.growthPct != null
+          ? `${periodReports.pulse.growthPct > 0 ? "+" : ""}${periodReports.pulse.growthPct}% vs período anterior`
+          : undefined;
+      return [
+        {
+          label: "Novos apoiadores",
+          value: String(s.newSupportersInPeriod),
+          icon: Users,
+          context: growth,
+          tone: "primary" as const,
+        },
+        {
+          label: "Apoio forte (base)",
+          value: String(s.strongSupport),
+          icon: Vote,
+          context: periodLabel,
+          tone: "primary" as const,
+        },
+        {
+          label: "Lideranças",
+          value: String(s.leaderships),
+          icon: Crown,
+          context: periodLabel,
+          tone: "primary" as const,
+        },
+        {
+          label: "Demandas abertas",
+          value: String(s.openDemands),
+          icon: MessageSquareWarning,
+          context: `${s.resolvedInPeriod} resolvidas no período`,
+          tone: "warning" as const,
+        },
+      ];
+    }
+    return [
       {
         label: "Apoiadores",
         value: String(metrics?.total_supporters ?? 0),
@@ -155,9 +243,8 @@ function DashboardPage() {
         context: insights?.operational.kpi.openDemands,
         tone: "warning" as const,
       },
-    ],
-    [metrics, insights?.operational.kpi],
-  );
+    ];
+  }, [periodReports, metrics, insights?.operational.kpi, periodLabel]);
 
   return (
     <ModuleRouteGuard module="dashboard">
@@ -178,6 +265,22 @@ function DashboardPage() {
             />
 
             <div className="dashboard-war-room-stack">
+              <DatePeriodFilter
+                value={{
+                  period: urlSearch.period ?? "30d",
+                  from: urlSearch.from,
+                  to: urlSearch.to,
+                }}
+                onChange={(next) =>
+                  setSearch({
+                    ...DEFAULT_DASHBOARD_SEARCH,
+                    ...urlSearch,
+                    period: next.period as DashboardListSearch["period"],
+                    from: next.from,
+                    to: next.to,
+                  })
+                }
+              />
               <DashboardTerritoryCepBar
                 activeFilter={territoryFilter}
                 onResolved={handleTerritoryResolved}
@@ -187,7 +290,7 @@ function DashboardPage() {
                 <>
                   <DashboardPriorities items={priorities} sectionIndex={1} />
                   <DashboardKpiStrip items={kpiItems} sectionIndex={2} />
-                  <DashboardGoalsAtRisk goals={insights.weeklyGoals} sectionIndex={3} />
+                  <DashboardGoalsOverview goals={insights.weeklyGoals} sectionIndex={3} />
                   <DashboardTerritoryMap
                     critical={critical}
                     promising={promising}

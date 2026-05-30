@@ -1,4 +1,5 @@
-import { MoreHorizontal, Pencil, Phone, Trash2, UserCheck, Vote } from "lucide-react";
+import { MoreHorizontal, Pencil, Trash2, UserCheck, Vote } from "lucide-react";
+import { PhoneDisplay } from "@/components/common/PhoneDisplay";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -140,18 +141,9 @@ export function EleitoresTableView({
                 <SupporterSourceBadge source={e.source} />
               </TableCell>
               <TableCell className="text-muted-foreground">
-                {e.phone ? (
-                  <a
-                    href={`tel:${e.phone.replace(/\D/g, "")}`}
-                    className="inline-flex items-center gap-1 hover:text-primary"
-                    onClick={(ev) => ev.stopPropagation()}
-                  >
-                    <Phone className="h-3 w-3" />
-                    {e.phone}
-                  </a>
-                ) : (
-                  "—"
-                )}
+                <span onClick={(ev) => ev.stopPropagation()}>
+                  <PhoneDisplay phone={e.phone} className="text-sm" />
+                </span>
               </TableCell>
               <TableCell>
                 {e.neighborhood ?? "—"}

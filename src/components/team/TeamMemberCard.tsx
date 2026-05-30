@@ -1,4 +1,5 @@
 import { MoreHorizontal, Pencil, Shield } from "lucide-react";
+import { formatPhoneBrDisplay } from "@/lib/normalize-phone";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -75,7 +76,7 @@ export function TeamMemberCard({
           <p className="text-sm text-muted-foreground truncate">{member.email ?? "—"}</p>
           <p className="text-xs text-muted-foreground mt-0.5">
             {member.customRoleName ?? member.role}
-            {member.phone ? ` · ${member.phone}` : ""}
+            {member.phone ? ` · ${formatPhoneBrDisplay(member.phone)}` : ""}
           </p>
         </div>
       </div>

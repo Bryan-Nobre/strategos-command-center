@@ -10,6 +10,14 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PhoneInput } from "@/components/ui/phone-input";
+import {
+  formatPhoneBrDisplay,
+  isValidBrPhoneOptional,
+  normalizeSupporterPhone,
+  PHONE_INVALID_MSG,
+} from "@/lib/normalize-phone";
+import { toast } from "sonner";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -73,7 +81,7 @@ export function TeamMemberFormSheet({
     if (mode === "edit" && member) {
       setFullName(member.fullName ?? "");
       setEmail(member.email ?? "");
-      setPhone(member.phone ?? "");
+      setPhone(member.phone ? formatPhoneBrDisplay(member.phone) : "");
       setCustomRoleId(member.customRoleId ?? roles[0]?.id ?? "");
       setPassword("");
     } else {
@@ -160,12 +168,7 @@ export function TeamMemberFormSheet({
 
           <div className="grid gap-2">
             <Label htmlFor="tm-phone">Telefone</Label>
-            <Input
-              id="tm-phone"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="Opcional"
-            />
+            <PhoneInput id="tm-phone" value={phone} onValueChange={setPhone} />
           </div>
 
           <div className="grid gap-2">
@@ -195,18 +198,23 @@ export function TeamMemberFormSheet({
               (isCreate && (!email.trim() || password.length < 8))
             }
             onClick={() => {
+              if (!isValidBrPhoneOptional(phone)) {
+                toast.error(PHONE_INVALID_MSG);
+                return;
+              }
+              const normalized = normalizeSupporterPhone(phone) ?? "";
               if (isCreate) {
                 onSubmitCreate({
                   fullName: fullName.trim(),
                   email: email.trim().toLowerCase(),
                   password,
-                  phone: phone.trim(),
+                  phone: normalized,
                   customRoleId,
                 });
               } else {
                 onSubmitEdit({
                   fullName: fullName.trim(),
-                  phone: phone.trim(),
+                  phone: normalized,
                   customRoleId,
                 });
               }

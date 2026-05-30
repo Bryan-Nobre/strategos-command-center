@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
+import { normalizeSupporterPhone } from "@/lib/normalize-phone";
 
 export type TeamMemberEnriched = {
   id: string;
@@ -58,7 +59,7 @@ export async function provisionTeamMember(payload: {
       email: payload.email,
       password: payload.password,
       fullName: payload.fullName,
-      phone: payload.phone,
+      phone: normalizeSupporterPhone(payload.phone) ?? undefined,
       customRoleId: payload.customRoleId,
     }),
   });
@@ -81,7 +82,7 @@ export async function updateTeamMemberDetails(
   const { error } = await supabase.rpc("update_team_member_details", {
     p_member_id: memberId,
     p_full_name: payload.fullName ?? null,
-    p_phone: payload.phone ?? null,
+    p_phone: normalizeSupporterPhone(payload.phone),
     p_custom_role_id: payload.customRoleId ?? null,
   });
   if (error) throw error;

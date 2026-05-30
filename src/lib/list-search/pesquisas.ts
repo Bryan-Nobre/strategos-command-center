@@ -12,7 +12,7 @@ export type PesquisasListSearch = {
 };
 
 export function parsePesquisasSearch(raw: Record<string, unknown>): PesquisasListSearch {
-  const period = pickEnum(raw.period, ["today", "7d", "30d", "custom"] as const) ?? "30d";
+  const period = pickEnum(raw.period, ["today", "7d", "30d", "90d", "custom"] as const) ?? "30d";
   const from = trimParam(raw.from);
   const to = trimParam(raw.to);
 

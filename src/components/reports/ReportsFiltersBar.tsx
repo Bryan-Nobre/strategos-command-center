@@ -1,6 +1,5 @@
 import { Filter, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -9,16 +8,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { TerritoryCepFilter } from "@/components/territory/TerritoryCepFilter";
+import { DatePeriodFilter } from "@/components/filters/DatePeriodFilter";
 import { SUPPORT_LEVEL_LABELS, SUPPORTER_STATUS_LABELS } from "@/types/domain";
 import type { RelatoriosListSearch } from "@/lib/list-search/relatorios";
 import type { ReportsSummary } from "@/services/reports";
-
-const PERIOD_OPTIONS = [
-  { value: "7d", label: "7 dias" },
-  { value: "30d", label: "30 dias" },
-  { value: "90d", label: "90 dias" },
-  { value: "custom", label: "Personalizado" },
-] as const;
 
 const SOURCE_LABELS: Record<string, string> = {
   landing: "Landing",
@@ -37,8 +30,6 @@ export function ReportsFiltersBar({
   onChange: (next: RelatoriosListSearch) => void;
   onReset: () => void;
 }) {
-  const isCustom = search.period === "custom";
-
   return (
     <div className="reports-filters">
       <div className="reports-filters-head">
@@ -51,6 +42,39 @@ export function ReportsFiltersBar({
           Limpar
         </Button>
       </div>
+
+      <DatePeriodFilter
+        className="mb-3 border-0 bg-transparent p-0"
+        value={{
+          period:
+            search.period === "7d"
+              ? "7d"
+              : search.period === "90d"
+                ? "90d"
+                : search.period === "custom"
+                  ? "custom"
+                  : "30d",
+          from: search.from,
+          to: search.to,
+        }}
+        onChange={(next) =>
+          onChange({
+            ...search,
+            period:
+              next.period === "today"
+                ? "30d"
+                : (next.period as RelatoriosListSearch["period"]) ?? "30d",
+            from: next.from,
+            to: next.to,
+          })
+        }
+        presets={[
+          { value: "7d", label: "7 dias" },
+          { value: "30d", label: "30 dias" },
+          { value: "90d", label: "90 dias" },
+          { value: "custom", label: "Personalizado" },
+        ]}
+      />
 
       <div className="reports-filters-grid">
         <TerritoryCepFilter
@@ -72,36 +96,6 @@ export function ReportsFiltersBar({
           }
           onClear={() => onChange({ ...search, bairro: undefined, cidade: undefined })}
         />
-
-        <FilterSelect
-          label="Período"
-          value={search.period ?? "30d"}
-          onValueChange={(v) => onChange({ ...search, period: v as RelatoriosListSearch["period"] })}
-          options={PERIOD_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
-        />
-
-        {isCustom && (
-          <>
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-medium text-muted-foreground">De</label>
-              <Input
-                type="date"
-                className="h-9"
-                value={search.from ?? ""}
-                onChange={(e) => onChange({ ...search, from: e.target.value })}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-medium text-muted-foreground">Até</label>
-              <Input
-                type="date"
-                className="h-9"
-                value={search.to ?? ""}
-                onChange={(e) => onChange({ ...search, to: e.target.value })}
-              />
-            </div>
-          </>
-        )}
 
         <FilterSelect
           label="Bairro"

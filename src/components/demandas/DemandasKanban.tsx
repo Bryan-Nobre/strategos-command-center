@@ -11,6 +11,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { formatPhoneBrDisplay } from "@/lib/normalize-phone";
 import { DEMAND_CATEGORY_LABELS, DEMAND_PRIORITY_LABELS } from "@/types/domain";
 import type { Enums } from "@/types/supabase";
 import { DEEP_LINK_HIGHLIGHT_CLASS } from "@/lib/search-deep-link";
@@ -190,7 +191,9 @@ export function DemandasKanban({
                           {d.source === "landing" && d.requester_name && (
                             <p className="mt-1 text-[10px] text-muted-foreground">
                               Por: {d.requester_name}
-                              {d.requester_phone ? ` · ${d.requester_phone}` : ""}
+                              {d.requester_phone
+                                ? ` · ${formatPhoneBrDisplay(d.requester_phone)}`
+                                : ""}
                             </p>
                           )}
                           {d.assigned_to && (

@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
+import { normalizeSupporterPhone } from "@/lib/normalize-phone";
 import { parseLandingRegisterResult, type LandingRegisterResult } from "@/lib/landing-register";
 import { parseLandingTheme, type LandingTheme } from "@/lib/landing-theme";
 import type { Enums, TablesUpdate } from "@/types/supabase";
@@ -79,7 +80,7 @@ export async function registerFromLanding(
   const { data, error } = await supabase.rpc("register_supporter_from_landing", {
     p_public_code: publicCode.trim().toLowerCase(),
     p_name: payload.name,
-    p_phone: payload.phone ?? null,
+    p_phone: normalizeSupporterPhone(payload.phone),
     p_neighborhood: payload.neighborhood ?? null,
     p_city: payload.city ?? null,
     p_interest: payload.interest ?? null,
@@ -114,7 +115,7 @@ export async function registerDemandFromLanding(
     p_neighborhood: payload.neighborhood ?? undefined,
     p_city: payload.city ?? undefined,
     p_requester_name: payload.requester_name ?? undefined,
-    p_requester_phone: payload.requester_phone ?? undefined,
+    p_requester_phone: normalizeSupporterPhone(payload.requester_phone) ?? undefined,
   });
   if (error) throw error;
   return data as string;

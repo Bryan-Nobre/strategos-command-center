@@ -20,15 +20,30 @@ export function serializeConfiguracoesSearch(search: ConfiguracoesSearch): Confi
   return omitEmpty({ tab: search.tab }) as ConfiguracoesSearch;
 }
 
-export function resolveDefaultConfigTab(perms: {
+export type ConfigTabPermissions = {
   canEditProfile: boolean;
   canEditLanding: boolean;
   canEditGoals: boolean;
   canEditNotifications: boolean;
-}): ConfigTab {
-  if (perms.canEditProfile) return "perfil";
-  if (perms.canEditLanding) return "landing";
-  if (perms.canEditGoals) return "metas";
-  if (perms.canEditNotifications) return "notificacoes";
-  return "plano";
+};
+
+/** Primeira aba que o usuário pode abrir (sempre inclui plano). */
+export function resolveDefaultConfigTab(perms: ConfigTabPermissions): ConfigTab {
+  return resolveAllowedConfigTab(undefined, perms);
+}
+
+/** Garante que a aba ativa existe nas permissões atuais (evita Tabs controlado órfão). */
+export function resolveAllowedConfigTab(
+  requested: ConfigTab | undefined,
+  perms: ConfigTabPermissions,
+): ConfigTab {
+  const allowed: ConfigTab[] = [];
+  if (perms.canEditProfile) allowed.push("perfil");
+  if (perms.canEditLanding) allowed.push("landing");
+  if (perms.canEditGoals) allowed.push("metas");
+  if (perms.canEditNotifications) allowed.push("notificacoes");
+  allowed.push("plano");
+
+  if (requested && allowed.includes(requested)) return requested;
+  return allowed[0] ?? "plano";
 }

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { Constants } from "@/types/supabase";
+import { zPhoneBrOptional } from "@/lib/phone-schema";
 
 export const supporterStatusSchema = z.enum(
   Constants.public.Enums.supporter_status as unknown as [string, ...string[]],
@@ -25,7 +26,7 @@ export const tenantRoleSchema = z.enum(
 
 export const supporterFormSchema = z.object({
   name: z.string().min(2, "Nome obrigatório"),
-  phone: z.string().optional(),
+  phone: zPhoneBrOptional,
   neighborhood: z.string().optional(),
   city: z.string().optional(),
   electoral_zone: z.string().optional(),
@@ -107,7 +108,7 @@ export const AGENDA_ATTENDEE_ROLE_LABELS: Record<string, string> = {
 
 export const landingCaptureSchema = z.object({
   name: z.string().min(2),
-  phone: z.string().optional(),
+  phone: zPhoneBrOptional,
   cep: z.string().optional(),
   neighborhood: z.string().optional(),
   city: z.string().optional(),
@@ -191,7 +192,7 @@ export const DEMAND_SOURCE_LABELS: Record<string, string> = {
 
 export const landingDemandSchema = z.object({
   requester_name: z.string().min(2, "Informe seu nome"),
-  requester_phone: z.string().optional(),
+  requester_phone: zPhoneBrOptional,
   neighborhood: z.string().optional(),
   city: z.string().optional(),
   category: z.enum(

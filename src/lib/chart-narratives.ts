@@ -1,20 +1,36 @@
-type GrowthPoint = { mes: string; apoiadores: number };
+type GrowthPoint = { label: string; apoiadores: number };
 type IntentionPoint = { candidato: string; valor: number };
 type ApprovalPoint = { bairro: string; aprovacao: number };
 
 export function narrativeGrowth(data: GrowthPoint[]): string | null {
-  if (data.length < 2) return null;
-  const sorted = [...data];
-  const last = sorted[sorted.length - 1]?.apoiadores ?? 0;
-  const prev = sorted[sorted.length - 2]?.apoiadores ?? 0;
-  if (prev === 0)
-    return last > 0 ? "Base de apoiadores em expansão no último período registrado." : null;
+  if (!data.length) return null;
+
+  const total = data.reduce((s, d) => s + d.apoiadores, 0);
+  if (total === 0) return "Nenhum novo cadastro no período selecionado.";
+
+  const last = data[data.length - 1]?.apoiadores ?? 0;
+  const prev = data.length >= 2 ? (data[data.length - 2]?.apoiadores ?? 0) : 0;
+
+  if (data.length < 2) {
+    return last > 0
+      ? `${last} ${last === 1 ? "cadastro" : "cadastros"} no único dia do intervalo.`
+      : null;
+  }
+
+  if (prev === 0) {
+    return last > 0
+      ? `Último dia: ${last} ${last === 1 ? "novo apoiador" : "novos apoiadores"} (dia anterior sem cadastros).`
+      : `Total de ${total} cadastros no período; último dia sem entradas.`;
+  }
+
   const pct = Math.round(((last - prev) / prev) * 100);
-  if (pct > 0)
-    return `Apoio cresceu ${pct}% no último mês registrado (${sorted[sorted.length - 1]?.mes}).`;
-  if (pct < 0)
-    return `Queda de ${Math.abs(pct)}% no último mês registrado — vale reforçar captação.`;
-  return "Estabilidade no último mês registrado.";
+  if (pct > 0) {
+    return `Último dia: ${last} cadastros (+${pct}% vs. dia anterior). Total no período: ${total}.`;
+  }
+  if (pct < 0) {
+    return `Último dia: ${last} cadastros (${pct}% vs. dia anterior). Total no período: ${total}.`;
+  }
+  return `Último dia estável (${last} cadastros). Total no período: ${total}.`;
 }
 
 export function narrativeIntention(data: IntentionPoint[]): string | null {

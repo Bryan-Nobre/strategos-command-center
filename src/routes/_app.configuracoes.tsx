@@ -4,8 +4,10 @@ import { useQuery } from "@tanstack/react-query";
 import { Bell, ExternalLink, Shield, Target, User } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { LoadingState } from "@/components/common/LoadingState";
 import { useTenant } from "@/hooks/use-tenant";
 import { useCrudPermissions } from "@/hooks/use-crud-permissions";
+import { useTenantPermissions } from "@/hooks/use-tenant-permissions";
 import { ModuleRouteGuard } from "@/components/auth/PermissionGate";
 import { getLandingPage } from "@/services/landing";
 import {
@@ -13,9 +15,10 @@ import {
   parseLandingTheme,
   type LandingTheme,
 } from "@/lib/landing-theme";
+import { formatPhoneBrDisplay } from "@/lib/normalize-phone";
 import {
   parseConfiguracoesSearch,
-  resolveDefaultConfigTab,
+  resolveAllowedConfigTab,
   serializeConfiguracoesSearch,
   type ConfigTab,
 } from "@/lib/list-search/configuracoes";
@@ -35,17 +38,41 @@ export const Route = createFileRoute("/_app/configuracoes")({
 
 function ConfigPage() {
   const { tenantId, activeTenant } = useTenant();
+  const permsQuery = useTenantPermissions(tenantId);
   const perms = useCrudPermissions("settings");
   const { profile } = useRouteContext({ from: "/_app" });
   const urlSearch = Route.useSearch();
   const navigate = Route.useNavigate();
 
-  const defaultTab = useMemo(
-    () => resolveDefaultConfigTab(perms),
-    [perms.canEditProfile, perms.canEditLanding, perms.canEditGoals, perms.canEditNotifications],
+  const tabPerms = useMemo(
+    () => ({
+      canEditProfile: !permsQuery.isLoading && perms.canEditProfile,
+      canEditLanding: !permsQuery.isLoading && perms.canEditLanding,
+      canEditGoals: !permsQuery.isLoading && perms.canEditGoals,
+      canEditNotifications: !permsQuery.isLoading && perms.canEditNotifications,
+    }),
+    [
+      permsQuery.isLoading,
+      perms.canEditProfile,
+      perms.canEditLanding,
+      perms.canEditGoals,
+      perms.canEditNotifications,
+    ],
   );
 
-  const activeTab = urlSearch.tab ?? defaultTab;
+  const activeTab = useMemo(
+    () => resolveAllowedConfigTab(urlSearch.tab, tabPerms),
+    [urlSearch.tab, tabPerms],
+  );
+
+  useEffect(() => {
+    if (permsQuery.isLoading) return;
+    if (urlSearch.tab === activeTab) return;
+    void navigate({
+      search: serializeConfiguracoesSearch({ tab: activeTab }) as never,
+      replace: true,
+    });
+  }, [activeTab, navigate, permsQuery.isLoading, urlSearch.tab]);
 
   const { data: landing } = useQuery({
     queryKey: ["landing", tenantId],
@@ -64,7 +91,7 @@ function ConfigPage() {
     if (landing) {
       setHeadline(landing.headline ?? "");
       setLandingBio(landing.bio ?? "");
-      setWhatsapp(landing.whatsapp ?? "");
+      setWhatsapp(landing.whatsapp ? formatPhoneBrDisplay(landing.whatsapp) : "");
       setDisplayName(landing.display_name ?? "");
       setPhotoUrl(landing.photo_url ?? "");
       setTheme(parseLandingTheme(landing.theme));
@@ -72,10 +99,22 @@ function ConfigPage() {
   }, [landing]);
 
   function setTab(tab: ConfigTab) {
-    void navigate({ search: serializeConfiguracoesSearch({ tab }) });
+    const next = resolveAllowedConfigTab(tab, tabPerms);
+    void navigate({
+      search: serializeConfiguracoesSearch({ tab: next }) as never,
+      replace: true,
+    });
   }
 
   const publicCode = landing?.public_code ?? "";
+
+  if (permsQuery.isLoading) {
+    return (
+      <ModuleRouteGuard module="settings">
+        <LoadingState label="Carregando configurações…" />
+      </ModuleRouteGuard>
+    );
+  }
 
   return (
     <ModuleRouteGuard module="settings">
@@ -94,25 +133,25 @@ function ConfigPage() {
 
         <Tabs value={activeTab} onValueChange={(v) => setTab(v as ConfigTab)} className="space-y-4">
           <TabsList className="settings-tabs-list h-auto w-full flex-wrap justify-start gap-1 bg-muted/50 p-1.5">
-            {perms.canEditProfile && (
+            {tabPerms.canEditProfile && (
               <TabsTrigger value="perfil" className="settings-tab-trigger gap-2">
                 <User className="h-4 w-4" />
                 Perfil
               </TabsTrigger>
             )}
-            {perms.canEditLanding && (
+            {tabPerms.canEditLanding && (
               <TabsTrigger value="landing" className="settings-tab-trigger gap-2">
                 <ExternalLink className="h-4 w-4" />
                 Landing
               </TabsTrigger>
             )}
-            {perms.canEditGoals && (
+            {tabPerms.canEditGoals && (
               <TabsTrigger value="metas" className="settings-tab-trigger gap-2">
                 <Target className="h-4 w-4" />
                 Metas
               </TabsTrigger>
             )}
-            {perms.canEditNotifications && (
+            {tabPerms.canEditNotifications && (
               <TabsTrigger value="notificacoes" className="settings-tab-trigger gap-2">
                 <Bell className="h-4 w-4" />
                 Notificações
@@ -124,13 +163,13 @@ function ConfigPage() {
             </TabsTrigger>
           </TabsList>
 
-          {perms.canEditProfile && (
+          {tabPerms.canEditProfile && (
             <TabsContent value="perfil">
               <ProfileSettingsCard profile={profile} canEdit={perms.canEditProfile} />
             </TabsContent>
           )}
 
-          {perms.canEditLanding && (
+          {tabPerms.canEditLanding && (
             <TabsContent value="landing">
               <LandingSettingsCard
                 tenantId={tenantId}
@@ -153,13 +192,13 @@ function ConfigPage() {
             </TabsContent>
           )}
 
-          {perms.canEditGoals && (
+          {tabPerms.canEditGoals && (
             <TabsContent value="metas">
               <GoalsSettingsSection tenantId={tenantId} canEdit={perms.canEditGoals} />
             </TabsContent>
           )}
 
-          {perms.canEditNotifications && (
+          {tabPerms.canEditNotifications && (
             <TabsContent value="notificacoes">
               <NotificationsSettingsSection
                 tenantId={tenantId}

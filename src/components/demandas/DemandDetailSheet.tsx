@@ -1,6 +1,7 @@
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { MapPin, Pencil, Phone, User } from "lucide-react";
+import { MapPin, Pencil, User } from "lucide-react";
+import { PhoneDisplay } from "@/components/common/PhoneDisplay";
 import {
   Sheet,
   SheetContent,
@@ -90,8 +91,7 @@ export function DemandDetailSheet({
               )}
               {demand.requester_phone && (
                 <p className="flex items-center gap-2">
-                  <Phone className="h-4 w-4 text-muted-foreground" />
-                  {demand.requester_phone}
+                  <PhoneDisplay phone={demand.requester_phone} showIcon />
                 </p>
               )}
             </div>

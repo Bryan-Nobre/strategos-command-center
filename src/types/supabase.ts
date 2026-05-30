@@ -999,6 +999,41 @@ export type Database = {
           },
         ]
       }
+      tenant_admin_crm: {
+        Row: {
+          comment: string | null
+          plan_period_end: string | null
+          plan_period_start: string | null
+          tenant_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          comment?: string | null
+          plan_period_end?: string | null
+          plan_period_start?: string | null
+          tenant_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          comment?: string | null
+          plan_period_end?: string | null
+          plan_period_start?: string | null
+          tenant_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_admin_crm_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenants: {
         Row: {
           created_at: string
@@ -1448,6 +1483,22 @@ export type Database = {
           p_offset?: number
         }
         Returns: Json
+      }
+      get_manual_goals_config: {
+        Args: { p_tenant_id: string }
+        Returns: Json
+      }
+      upsert_tenant_admin_crm: {
+        Args: {
+          p_clear_comment?: boolean
+          p_clear_plan_period_end?: boolean
+          p_clear_plan_period_start?: boolean
+          p_comment?: string | null
+          p_plan_period_end?: string | null
+          p_plan_period_start?: string | null
+          p_tenant_id: string
+        }
+        Returns: undefined
       }
       upsert_manual_goals_config: {
         Args: { p_goals?: Json; p_tenant_id: string }

@@ -14,16 +14,14 @@ export function PesquisasGrowthSection({
   isLoading?: boolean;
   index?: number;
 }) {
-  const narrative = narrativeGrowth(
-    growthSeries.map((g) => ({ mes: g.label, apoiadores: g.apoiadores })),
-  );
+  const narrative = narrativeGrowth(growthSeries);
 
   return (
     <ReportsSection
       variant="summary"
       index={index}
       title="Crescimento de apoiadores"
-      description="Novos cadastros no período — dados reais do CRM, atualizados automaticamente."
+      description="Entrada diária de apoiadores no período — cada dia do filtro aparece no gráfico (dias sem cadastro = zero)."
       icon={TrendingUp}
       unstyledBody
     >

@@ -1,8 +1,10 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { PhoneFormField } from "@/components/common/PhoneFormField";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { formatPhoneBrDisplay, normalizeSupporterPhone } from "@/lib/normalize-phone";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
@@ -35,6 +37,7 @@ export function SupporterFormFields({
     handleSubmit,
     setValue,
     watch,
+    control,
     formState: { errors },
   } = useForm<SupporterFormValues>({
     resolver: zodResolver(supporterFormSchema),
@@ -55,10 +58,7 @@ export function SupporterFormFields({
         {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
       </div>
       <div className="grid grid-cols-2 gap-3">
-        <div className="grid gap-2">
-          <Label>Telefone</Label>
-          <Input {...register("phone")} />
-        </div>
+        <PhoneFormField control={control} name="phone" label="Telefone" />
         <div className="grid gap-2">
           <Label>Cidade</Label>
           <Input {...register("city")} />
@@ -166,7 +166,7 @@ export function supporterFormToPayload(values: SupporterFormValues) {
     : [];
   return {
     name: values.name,
-    phone: values.phone || null,
+    phone: normalizeSupporterPhone(values.phone),
     neighborhood: values.neighborhood || null,
     city: values.city || null,
     electoral_zone: values.electoral_zone || null,
@@ -198,7 +198,7 @@ export function supporterToFormValues(
 ): SupporterFormValues {
   return {
     name: s.name,
-    phone: s.phone ?? undefined,
+    phone: s.phone ? formatPhoneBrDisplay(s.phone) : undefined,
     neighborhood: s.neighborhood ?? undefined,
     city: s.city ?? undefined,
     electoral_zone: s.electoral_zone ?? undefined,

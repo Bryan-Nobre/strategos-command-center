@@ -1,6 +1,7 @@
 import { Constants } from "@/types/supabase";
 import { omitEmpty, pickEnum, trimParam } from "@/lib/list-search/utils";
 import { parseDeepLinkSearch } from "@/lib/search-deep-link";
+import type { DatePeriodPreset } from "@/lib/date-period";
 
 const CATEGORIES = Constants.public.Enums.demand_category;
 const STATUSES = Constants.public.Enums.demand_status;
@@ -14,7 +15,13 @@ export type DemandasListSearch = {
   responsavel?: string;
   status?: string;
   origem?: string;
+  period?: DatePeriodPreset;
+  from?: string;
+  to?: string;
 };
+
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const PERIODS = ["all", "today", "7d", "30d", "90d", "custom"] as const;
 
 export function parseDemandasSearch(raw: Record<string, unknown>): DemandasListSearch {
   const deep = parseDeepLinkSearch(raw);
@@ -33,6 +40,10 @@ export function parseDemandasSearch(raw: Record<string, unknown>): DemandasListS
       ? responsavel
       : undefined;
 
+  const period = pickEnum(raw.period, PERIODS) ?? "all";
+  const from = trimParam(raw.from);
+  const to = trimParam(raw.to);
+
   return omitEmpty({
     busca: deep.busca,
     id: deep.id,
@@ -41,6 +52,9 @@ export function parseDemandasSearch(raw: Record<string, unknown>): DemandasListS
     responsavel: validResponsavel,
     status: pickEnum(raw.status, STATUSES),
     origem: pickEnum(raw.origem, SOURCES),
+    period: period !== "all" ? period : undefined,
+    from: from && DATE_RE.test(from) ? from : undefined,
+    to: to && DATE_RE.test(to) ? to : undefined,
   }) as DemandasListSearch;
 }
 
@@ -58,6 +72,9 @@ export function serializeDemandasSearch(filters: DemandasListSearch): DemandasLi
         : undefined,
     status: pickEnum(filters.status, STATUSES),
     origem: pickEnum(filters.origem, SOURCES),
+    period: pickEnum(filters.period, PERIODS) !== "all" ? pickEnum(filters.period, PERIODS) : undefined,
+    from: filters.from,
+    to: filters.to,
   }) as DemandasListSearch;
 }
 
@@ -68,6 +85,9 @@ export type DemandasFilterState = {
   responsavel: string;
   status: string;
   origem: string;
+  period: DatePeriodPreset;
+  from: string;
+  to: string;
 };
 
 export function demandasSearchToFilterState(search: DemandasListSearch): DemandasFilterState {
@@ -78,6 +98,9 @@ export function demandasSearchToFilterState(search: DemandasListSearch): Demanda
     responsavel: search.responsavel ?? "all",
     status: search.status ?? "all",
     origem: search.origem ?? "all",
+    period: search.period ?? "all",
+    from: search.from ?? "",
+    to: search.to ?? "",
   };
 }
 
@@ -93,5 +116,8 @@ export function filterStateToDemandasSearch(
     responsavel: state.responsavel !== "all" ? state.responsavel : undefined,
     status: state.status !== "all" ? state.status : undefined,
     origem: state.origem !== "all" ? state.origem : undefined,
+    period: state.period !== "all" ? state.period : undefined,
+    from: state.period === "custom" && state.from ? state.from : undefined,
+    to: state.period === "custom" && state.to ? state.to : undefined,
   });
 }

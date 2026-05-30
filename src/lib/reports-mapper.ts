@@ -73,7 +73,7 @@ export type ReportsSummary = {
     avgResolutionDays: number;
     byCategory: { category: string; count: number }[];
   };
-  growthSeries: { label: string; apoiadores: number }[];
+  growthSeries: { label: string; date?: string; apoiadores: number }[];
   distribution: {
     bySupportLevel: Record<string, number>;
     byStatus: Record<string, number>;
@@ -172,7 +172,12 @@ export function mapReportsSummaryPayload(raw: unknown): ReportsSummary {
     },
     growthSeries: asArray(root.growth_series).map((g) => {
       const row = asRecord(g) ?? {};
-      return { label: String(row.label ?? ""), apoiadores: asInt(row.apoiadores) };
+      const date = row.date ? String(row.date) : undefined;
+      return {
+        label: String(row.label ?? ""),
+        date,
+        apoiadores: asInt(row.apoiadores),
+      };
     }),
     distribution: {
       bySupportLevel: bySupportMapped,

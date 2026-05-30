@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PhoneInput } from "@/components/ui/phone-input";
+import { isValidBrPhoneOptional, normalizeSupporterPhone, PHONE_INVALID_MSG } from "@/lib/normalize-phone";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -73,11 +75,14 @@ export function LandingSettingsCard({
     mutationFn: () => {
       const colorError = validateLandingThemeColors(theme);
       if (colorError) throw new Error(colorError);
+      if (!isValidBrPhoneOptional(whatsapp)) {
+        throw new Error(PHONE_INVALID_MSG);
+      }
       return updateLandingPage(tenantId, {
         display_name: displayName.trim() || null,
         headline: headline.trim() || null,
         bio: landingBio.trim() || null,
-        whatsapp: whatsapp.trim() || null,
+        whatsapp: normalizeSupporterPhone(whatsapp),
         photo_url: photoUrl.trim() || null,
         theme: serializeLandingTheme(theme) as never,
       });
@@ -475,12 +480,14 @@ export function LandingSettingsCard({
           </div>
           <div className="grid gap-2 sm:max-w-sm">
             <Label>WhatsApp</Label>
-            <Input
+            <PhoneInput
               value={whatsapp}
               disabled={!canEdit}
-              onChange={(e) => onWhatsappChange(e.target.value)}
-              placeholder="5511999990000"
+              onValueChange={onWhatsappChange}
             />
+            <p className="text-xs text-muted-foreground">
+              Exibido no botão da landing. Salvo com DDD (apenas números).
+            </p>
           </div>
         </section>
 

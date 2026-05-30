@@ -1,5 +1,6 @@
 import { format } from "date-fns";
 import { Phone, Trash2, UserCheck, Vote } from "lucide-react";
+import { formatPhoneBrDisplay, telHref } from "@/lib/normalize-phone";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -134,14 +135,14 @@ export function EleitoresCardsView({
           )}
 
           <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border/60 pt-3">
-            {e.phone && (
+            {telHref(e.phone) && (
               <a
-                href={`tel:${e.phone.replace(/\D/g, "")}`}
+                href={telHref(e.phone)!}
                 className="inline-flex items-center gap-1 text-xs font-medium text-primary"
                 onClick={(ev) => ev.stopPropagation()}
               >
                 <Phone className="h-3.5 w-3.5" />
-                Ligar
+                {formatPhoneBrDisplay(e.phone)}
               </a>
             )}
             {canUpdate && (

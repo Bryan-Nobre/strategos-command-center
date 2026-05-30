@@ -1,5 +1,6 @@
 import { subDays, startOfDay } from "date-fns";
 import type { EleitoresFilterState } from "@/lib/list-search/eleitores";
+import { isCreatedInPeriod, resolveDatePeriodRange } from "@/lib/date-period";
 import { matchesEngagementFilter } from "@/lib/supporter-engagement";
 import { territoryFilterMatches } from "@/lib/territory-match";
 
@@ -38,22 +39,16 @@ export type SupporterListItem = {
   geo_enriched_at?: string | null;
 };
 
-function matchesPeriod(createdAt: string, period: EleitoresFilterState["period"]): boolean {
-  if (period === "all") return true;
-  const created = startOfDay(new Date(createdAt));
-  const today = startOfDay(new Date());
-  if (period === "today") return created.getTime() === today.getTime();
-  const days = period === "7d" ? 7 : 30;
-  const from = startOfDay(subDays(today, days - 1));
-  return created >= from && created <= today;
-}
-
 export function filterSupporters(
   supporters: SupporterListItem[],
   filters: EleitoresFilterState,
   query: string,
 ): SupporterListItem[] {
   const effectiveOrigem = filters.view === "landing" ? "landing" : filters.origem;
+  const periodRange = resolveDatePeriodRange(
+    { period: filters.period, from: filters.from, to: filters.to },
+    { defaultPreset: "all" },
+  );
 
   return supporters.filter((e) => {
     const q = query.toLowerCase();
@@ -82,7 +77,7 @@ export function filterSupporters(
       !filters.tag ||
       (e.tags ?? []).some((t) => t.toLowerCase().includes(filters.tag.toLowerCase()));
     const matchesOrigem = effectiveOrigem === "all" || e.source === effectiveOrigem;
-    const matchesPeriodFilter = matchesPeriod(e.created_at, filters.period);
+    const matchesPeriodFilter = isCreatedInPeriod(e.created_at, periodRange);
     const matchesEngagement = matchesEngagementFilter(e, filters.engagement);
 
     return (

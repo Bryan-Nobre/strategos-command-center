@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
+import { generateId } from "@/lib/generate-id";
 import { mapOperationalDashboardPayload } from "@/lib/dashboard-mapper";
 import type { Enums, Json } from "@/types/supabase";
 import type { EnrichedTerritory, OperationalAlert, OperationalBrief } from "@/services/dashboard-intelligence";
@@ -37,7 +38,7 @@ export type WeeklyGoal = {
   status: "no_ritmo" | "risco" | "atrasado";
 };
 
-export type ManualGoalMetric = "new_supporters" | "resolved_demands" | "new_strong_supporters";
+export type ManualGoalMetric = "new_supporters" | "resolved_demands";
 
 export type ManualGoalConfig = {
   id: string;
@@ -72,7 +73,7 @@ export async function getOperationalDashboard(tenantId: string): Promise<Operati
   return mapOperationalDashboardPayload(data);
 }
 
-export async function listActivities(tenantId: string, limit = 10) {
+export async function listActivities(tenantId: string, limit = 40) {
   const supabase = createClient();
   const { data, error } = await supabase
     .from("activities")
@@ -152,17 +153,13 @@ function isIsoDate(value: unknown): value is string {
 function parseManualGoal(input: unknown): ManualGoalConfig | null {
   if (!input || typeof input !== "object") return null;
   const row = input as Record<string, unknown>;
-  const id = typeof row.id === "string" && row.id ? row.id : crypto.randomUUID();
+  const id = typeof row.id === "string" && row.id ? row.id : generateId();
   const name = typeof row.name === "string" ? row.name.trim() : "";
   const metric = row.metric;
   const startDate = row.startDate;
   const endDate = row.endDate;
   if (!name) return null;
-  if (
-    metric !== "new_supporters" &&
-    metric !== "resolved_demands" &&
-    metric !== "new_strong_supporters"
-  ) {
+  if (metric !== "new_supporters" && metric !== "resolved_demands") {
     return null;
   }
   if (!isIsoDate(startDate) || !isIsoDate(endDate)) return null;
@@ -178,17 +175,12 @@ function parseManualGoal(input: unknown): ManualGoalConfig | null {
 
 export async function getManualGoalsConfig(tenantId: string): Promise<ManualGoalConfig[]> {
   const supabase = createClient();
-  const { data, error } = await supabase
-    .from("poll_snapshots")
-    .select("data")
-    .eq("tenant_id", tenantId)
-    .eq("snapshot_type", "custom")
-    .eq("title", "manual_goals")
-    .limit(1)
-    .maybeSingle();
+  const { data, error } = await supabase.rpc("get_manual_goals_config", {
+    p_tenant_id: tenantId,
+  });
   if (error) throw error;
 
-  const payload = (data?.data ?? {}) as Record<string, unknown>;
+  const payload = (data ?? {}) as Record<string, unknown>;
   if (!Array.isArray(payload.goals)) return DEFAULT_MANUAL_GOALS;
   return payload.goals.map(parseManualGoal).filter((g): g is ManualGoalConfig => g !== null);
 }

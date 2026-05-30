@@ -8,7 +8,7 @@ const SUPPORT_LEVELS = Constants.public.Enums.support_level;
 const SOURCES = Constants.public.Enums.supporter_source;
 
 export type EleitoresViewMode = "table" | "cards" | "landing";
-export type EleitoresPeriodPreset = "all" | "today" | "7d" | "30d";
+export type EleitoresPeriodPreset = "all" | "today" | "7d" | "30d" | "90d" | "custom";
 
 export type EleitoresListSearch = {
   busca?: string;
@@ -21,8 +21,12 @@ export type EleitoresListSearch = {
   origem?: string;
   view?: EleitoresViewMode;
   period?: EleitoresPeriodPreset;
+  from?: string;
+  to?: string;
   engagement?: EleitoresEngagementFilter;
 };
+
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 const ENGAGEMENT_FILTERS = [
   "all",
@@ -39,7 +43,9 @@ export function parseEleitoresSearch(raw: Record<string, unknown>): EleitoresLis
   const apoio = pickEnum(raw.apoio, SUPPORT_LEVELS);
   const origem = pickEnum(raw.origem, SOURCES);
   const view = pickEnum(raw.view, ["table", "cards", "landing"] as const) ?? "table";
-  const period = pickEnum(raw.period, ["all", "today", "7d", "30d"] as const) ?? "all";
+  const period = pickEnum(raw.period, ["all", "today", "7d", "30d", "90d", "custom"] as const) ?? "all";
+  const from = trimParam(raw.from);
+  const to = trimParam(raw.to);
   const engagement = pickEnum(raw.engagement, ENGAGEMENT_FILTERS) ?? "all";
   const lideranca = trimParam(raw.lideranca);
   const validLideranca =
@@ -56,6 +62,8 @@ export function parseEleitoresSearch(raw: Record<string, unknown>): EleitoresLis
     origem,
     view,
     period,
+    from: from && DATE_RE.test(from) ? from : undefined,
+    to: to && DATE_RE.test(to) ? to : undefined,
     engagement: engagement !== "all" ? engagement : undefined,
   }) as EleitoresListSearch;
 }
@@ -76,7 +84,9 @@ export function serializeEleitoresSearch(filters: EleitoresListSearch): Eleitore
     tag: trimParam(filters.tag),
     origem: pickEnum(filters.origem, SOURCES),
     view: pickEnum(filters.view, ["table", "cards", "landing"] as const) ?? "table",
-    period: pickEnum(filters.period, ["all", "today", "7d", "30d"] as const) ?? "all",
+    period: pickEnum(filters.period, ["all", "today", "7d", "30d", "90d", "custom"] as const) ?? "all",
+    from: filters.from,
+    to: filters.to,
     engagement:
       pickEnum(filters.engagement, ENGAGEMENT_FILTERS) !== "all"
         ? pickEnum(filters.engagement, ENGAGEMENT_FILTERS)
@@ -94,6 +104,8 @@ export type EleitoresFilterState = {
   origem: string;
   view: EleitoresViewMode;
   period: EleitoresPeriodPreset;
+  from: string;
+  to: string;
   engagement: EleitoresEngagementFilter;
 };
 
@@ -108,6 +120,8 @@ export function eleitoresSearchToFilterState(search: EleitoresListSearch): Eleit
     origem: search.origem ?? "all",
     view: search.view ?? "table",
     period: search.period ?? "all",
+    from: search.from ?? "",
+    to: search.to ?? "",
     engagement: search.engagement ?? "all",
   };
 }
@@ -127,6 +141,8 @@ export function filterStateToEleitoresSearch(
     origem: state.origem !== "all" ? state.origem : undefined,
     view: state.view,
     period: state.period !== "all" ? state.period : undefined,
+    from: state.period === "custom" && state.from ? state.from : undefined,
+    to: state.period === "custom" && state.to ? state.to : undefined,
     engagement: state.engagement !== "all" ? state.engagement : undefined,
   });
 }

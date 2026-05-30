@@ -47,6 +47,8 @@ import { DemandasOriginChips } from "@/components/demandas/DemandasOriginChips";
 import { DemandasKanban, type DemandRow } from "@/components/demandas/DemandasKanban";
 import { DemandDetailSheet } from "@/components/demandas/DemandDetailSheet";
 import { DemandFormDialog } from "@/components/demandas/DemandFormDialog";
+import { DatePeriodFilter } from "@/components/filters/DatePeriodFilter";
+import { isCreatedInPeriod, resolveDatePeriodRange } from "@/lib/date-period";
 
 export const Route = createFileRoute("/_app/demandas")({
   validateSearch: (search: Record<string, unknown>): DemandasListSearch =>
@@ -114,6 +116,15 @@ function DemandasPage() {
     };
   }, [demands]);
 
+  const periodRange = useMemo(
+    () =>
+      resolveDatePeriodRange(
+        { period: filters.period, from: filters.from, to: filters.to },
+        { defaultPreset: "all" },
+      ),
+    [filters.period, filters.from, filters.to],
+  );
+
   const filtered = useMemo(() => {
     const q = query.toLowerCase();
     return (demands ?? []).filter((d) => {
@@ -136,13 +147,15 @@ function DemandasPage() {
       const matchOrigem =
         filters.origem === "all" ||
         (filters.origem === "landing" ? d.source === "landing" : d.source !== "landing");
+      const matchPeriod = isCreatedInPeriod(d.created_at, periodRange);
       return (
         matchQuery &&
         matchCategory &&
         matchNeighborhood &&
         matchAssignee &&
         matchStatus &&
-        matchOrigem
+        matchOrigem &&
+        matchPeriod
       );
     });
   }, [
@@ -153,6 +166,7 @@ function DemandasPage() {
     filters.responsavel,
     filters.status,
     filters.origem,
+    periodRange,
   ]);
 
   const grouped = {
@@ -175,6 +189,9 @@ function DemandasPage() {
         responsavel: "all",
         status: "all",
         origem: "all",
+        period: "all",
+        from: "",
+        to: "",
       }),
     );
   }
@@ -185,6 +202,7 @@ function DemandasPage() {
     filters.responsavel !== "all",
     filters.status !== "all",
     filters.origem !== "all",
+    filters.period !== "all",
     !!query.trim(),
   ]);
 
@@ -229,6 +247,21 @@ function DemandasPage() {
                     <SheetDescription>Refine as demandas exibidas no kanban.</SheetDescription>
                   </SheetHeader>
                   <div className="mt-6 grid gap-4">
+                    <DatePeriodFilter
+                      allowAll
+                      value={{
+                        period: filters.period,
+                        from: filters.from,
+                        to: filters.to,
+                      }}
+                      onChange={(next) =>
+                        patchFilter({
+                          period: next.period ?? "all",
+                          from: next.from ?? "",
+                          to: next.to ?? "",
+                        })
+                      }
+                    />
                     <FilterSelect
                       label="Categoria"
                       value={filters.categoria}

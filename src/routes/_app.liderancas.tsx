@@ -46,6 +46,8 @@ import {
 } from "@/lib/excel/leaderships-export";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { DatePeriodFilter } from "@/components/filters/DatePeriodFilter";
+import { isCreatedInPeriod, resolveDatePeriodRange } from "@/lib/date-period";
 
 export const Route = createFileRoute("/_app/liderancas")({
   validateSearch: (search: Record<string, unknown>) => parseLiderancasSearch(search),
@@ -88,15 +90,25 @@ function LiderancasPage() {
     return [...set].sort();
   }, [list]);
 
+  const periodRange = useMemo(
+    () =>
+      resolveDatePeriodRange(
+        { period: filters.period, from: filters.from, to: filters.to },
+        { defaultPreset: "all" },
+      ),
+    [filters.period, filters.from, filters.to],
+  );
+
   const filteredList = useMemo(() => {
     const q = query.toLowerCase();
     return (list ?? []).filter((l) => {
       const matchesQuery =
         !q || [l.name, l.leadership_region].some((f) => f?.toLowerCase().includes(q));
       const matchesRegion = filters.regiao === "all" || l.leadership_region === filters.regiao;
-      return matchesQuery && matchesRegion;
+      const matchesPeriod = isCreatedInPeriod(l.created_at, periodRange);
+      return matchesQuery && matchesRegion && matchesPeriod;
     }) as LeadershipListItem[];
-  }, [list, query, filters.regiao]);
+  }, [list, query, filters.regiao, periodRange]);
 
   const totals = useMemo(() => {
     const items = filteredList;
@@ -120,7 +132,16 @@ function LiderancasPage() {
 
   function clearFilters() {
     setQuery("");
-    setSearch(filterStateToLiderancasSearch({ busca: "", regiao: "all", view: filters.view }));
+    setSearch(
+      filterStateToLiderancasSearch({
+        busca: "",
+        regiao: "all",
+        view: filters.view,
+        period: "all",
+        from: "",
+        to: "",
+      }),
+    );
   }
 
   async function handleExportExcel() {
@@ -300,6 +321,18 @@ function LiderancasPage() {
                   </ToggleGroupItem>
                 </ToggleGroup>
               </div>
+              <DatePeriodFilter
+                compact
+                allowAll
+                value={{ period: filters.period, from: filters.from, to: filters.to }}
+                onChange={(next) =>
+                  patchFilter({
+                    period: next.period ?? "all",
+                    from: next.from ?? "",
+                    to: next.to ?? "",
+                  })
+                }
+              />
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Região

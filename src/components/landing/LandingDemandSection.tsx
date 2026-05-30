@@ -3,6 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { ClipboardList } from "lucide-react";
+import { PhoneFormField } from "@/components/common/PhoneFormField";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,6 +39,7 @@ export function LandingDemandSection({
     reset,
     setValue,
     watch,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<DemandForm>({
     resolver: zodResolver(landingDemandSchema),
@@ -108,10 +110,12 @@ export function LandingDemandSection({
               <p className="text-xs text-destructive">{errors.requester_name.message}</p>
             )}
           </div>
-          <div className="space-y-2 sm:col-span-2">
-            <Label>Telefone</Label>
-            <Input {...register("requester_phone")} inputMode="tel" autoComplete="tel" />
-          </div>
+          <PhoneFormField
+            className="sm:col-span-2"
+            control={control}
+            name="requester_phone"
+            label="Telefone"
+          />
           <LandingCepLookup
             inputId="landing-demand-cep"
             cepValue={cepInput}

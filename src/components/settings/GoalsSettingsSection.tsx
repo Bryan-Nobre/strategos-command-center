@@ -13,20 +13,17 @@ import {
 } from "@/components/ui/select";
 import { useManualGoalsConfig, useSaveManualGoalsConfig } from "@/hooks/use-dashboard";
 import type { ManualGoalConfig, ManualGoalMetric } from "@/services/dashboard";
+import { GOAL_METRIC_HINTS, GOAL_METRIC_LABELS } from "@/lib/goal-metrics";
+import { generateId } from "@/lib/generate-id";
 import { cn } from "@/lib/utils";
-
-const METRIC_LABELS: Record<ManualGoalMetric, string> = {
-  new_supporters: "Novos apoiadores",
-  resolved_demands: "Demandas resolvidas",
-  new_strong_supporters: "Novos apoio forte",
-};
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 function newGoalTemplate(index: number): ManualGoalConfig {
   const today = new Date();
   const end = new Date(today);
   end.setDate(today.getDate() + 6);
   return {
-    id: crypto.randomUUID(),
+    id: generateId(),
     name: `Meta ${index + 1}`,
     metric: "new_supporters",
     startDate: today.toISOString().slice(0, 10),
@@ -42,7 +39,7 @@ export function GoalsSettingsSection({
   tenantId: string;
   canEdit: boolean;
 }) {
-  const { data: goalsConfig, isLoading } = useManualGoalsConfig(tenantId);
+  const { data: goalsConfig, isLoading, isError, error, refetch } = useManualGoalsConfig(tenantId);
   const saveMutation = useSaveManualGoalsConfig(tenantId);
   const [goals, setGoals] = useState<ManualGoalConfig[]>([]);
   const dirtyRef = useRef(false);
@@ -82,8 +79,8 @@ export function GoalsSettingsSection({
               Metas da campanha
             </CardTitle>
             <CardDescription className="mt-1 max-w-xl">
-              Defina objetivos por período. O progresso aparece no Dashboard em “Metas em
-              atenção”.
+              Defina objetivos por período. Na visão geral do Dashboard, cada meta usa sua própria
+              métrica: cadastros pela landing ou demandas concluídas — sem misturar os dois.
             </CardDescription>
           </div>
           {canEdit && (
@@ -94,11 +91,25 @@ export function GoalsSettingsSection({
           )}
         </CardHeader>
         <CardContent className="space-y-4">
-          {isLoading && (
+          {isError && (
+            <Alert variant="destructive">
+              <AlertTitle>Não foi possível carregar as metas</AlertTitle>
+              <AlertDescription className="flex flex-wrap items-center gap-2">
+                <span>
+                  {error instanceof Error ? error.message : "Erro desconhecido. Tente novamente."}
+                </span>
+                <Button type="button" variant="outline" size="sm" onClick={() => void refetch()}>
+                  Tentar de novo
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {isLoading && !isError && (
             <p className="text-sm text-muted-foreground py-8 text-center">Carregando metas…</p>
           )}
 
-          {!isLoading && goals.length === 0 && (
+          {!isLoading && !isError && goals.length === 0 && (
             <div className="settings-goals-empty rounded-xl border border-dashed p-8 text-center">
               <Target className="mx-auto h-10 w-10 text-muted-foreground/60" />
               <p className="mt-3 font-medium">Nenhuma meta configurada</p>
@@ -169,13 +180,16 @@ export function GoalsSettingsSection({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {(Object.keys(METRIC_LABELS) as ManualGoalMetric[]).map((key) => (
+                        {(Object.keys(GOAL_METRIC_LABELS) as ManualGoalMetric[]).map((key) => (
                           <SelectItem key={key} value={key}>
-                            {METRIC_LABELS[key]}
+                            {GOAL_METRIC_LABELS[key]}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
+                    <p className="text-[10px] text-muted-foreground">
+                      {GOAL_METRIC_HINTS[goal.metric]}
+                    </p>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div className="grid gap-2">

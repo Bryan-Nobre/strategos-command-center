@@ -10,6 +10,7 @@ import {
   type PublicLandingChapa,
 } from "@/services/landing";
 import { landingCaptureSchema } from "@/types/domain";
+import { PhoneFormField } from "@/components/common/PhoneFormField";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -101,6 +102,7 @@ function PublicLandingPage() {
     reset,
     setValue,
     watch,
+    control,
     formState: { isSubmitting },
   } = useForm<CaptureForm>({
     resolver: zodResolver(landingCaptureSchema),
@@ -244,10 +246,12 @@ function PublicLandingPage() {
                   <Label>Nome *</Label>
                   <Input {...register("name")} required autoComplete="name" />
                 </div>
-                <div className="space-y-2 sm:col-span-2">
-                  <Label>Telefone / WhatsApp</Label>
-                  <Input {...register("phone")} inputMode="tel" autoComplete="tel" />
-                </div>
+                <PhoneFormField
+                  className="sm:col-span-2"
+                  control={control}
+                  name="phone"
+                  label="Telefone / WhatsApp"
+                />
                 <LandingCepLookup
                   cepValue={cepInput}
                   onCepChange={setCepInput}

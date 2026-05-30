@@ -63,7 +63,7 @@ export function ReportsElectoralSection({
         <div className="reports-electoral-card rounded-lg border border-primary/20 bg-primary/[0.03] p-4">
           <div className="mb-2 flex flex-wrap items-center gap-2">
             <span className="reports-data-badge reports-data-badge--real">Base real do CRM</span>
-            <span className="text-xs text-muted-foreground">Novos cadastros por mês no período</span>
+            <span className="text-xs text-muted-foreground">Novos cadastros por dia no período</span>
           </div>
           <ReportsGrowthChart data={growthSeries} />
         </div>

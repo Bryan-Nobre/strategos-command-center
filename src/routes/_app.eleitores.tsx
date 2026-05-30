@@ -238,6 +238,8 @@ function EleitoresPage() {
         origem: "all",
         view: "table",
         period: "all",
+        from: "",
+        to: "",
         engagement: "all",
       }),
     );
