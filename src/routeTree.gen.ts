@@ -15,6 +15,7 @@ import { Route as AppRouteImport } from './routes/_app'
 import { Route as AdminRouteImport } from './routes/_admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PSlugRouteImport } from './routes/p.$slug'
+import { Route as LandpageCodeRouteImport } from './routes/landpage.$code'
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as AppRelatoriosRouteImport } from './routes/_app.relatorios'
@@ -59,6 +60,11 @@ const IndexRoute = IndexRouteImport.update({
 const PSlugRoute = PSlugRouteImport.update({
   id: '/p/$slug',
   path: '/p/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LandpageCodeRoute = LandpageCodeRouteImport.update({
+  id: '/landpage/$code',
+  path: '/landpage/$code',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InviteTokenRoute = InviteTokenRouteImport.update({
@@ -166,6 +172,7 @@ export interface FileRoutesByFullPath {
   '/relatorios': typeof AppRelatoriosRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/invite/$token': typeof InviteTokenRoute
+  '/landpage/$code': typeof LandpageCodeRoute
   '/p/$slug': typeof PSlugRoute
   '/equipe/cargos': typeof AppEquipeCargosRoute
   '/equipe/': typeof AppEquipeIndexRoute
@@ -188,6 +195,7 @@ export interface FileRoutesByTo {
   '/relatorios': typeof AppRelatoriosRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/invite/$token': typeof InviteTokenRoute
+  '/landpage/$code': typeof LandpageCodeRoute
   '/p/$slug': typeof PSlugRoute
   '/equipe/cargos': typeof AppEquipeCargosRoute
   '/equipe': typeof AppEquipeIndexRoute
@@ -214,6 +222,7 @@ export interface FileRoutesById {
   '/_app/relatorios': typeof AppRelatoriosRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/invite/$token': typeof InviteTokenRoute
+  '/landpage/$code': typeof LandpageCodeRoute
   '/p/$slug': typeof PSlugRoute
   '/_app/equipe/cargos': typeof AppEquipeCargosRoute
   '/_app/equipe/': typeof AppEquipeIndexRoute
@@ -239,6 +248,7 @@ export interface FileRouteTypes {
     | '/relatorios'
     | '/auth/callback'
     | '/invite/$token'
+    | '/landpage/$code'
     | '/p/$slug'
     | '/equipe/cargos'
     | '/equipe/'
@@ -261,6 +271,7 @@ export interface FileRouteTypes {
     | '/relatorios'
     | '/auth/callback'
     | '/invite/$token'
+    | '/landpage/$code'
     | '/p/$slug'
     | '/equipe/cargos'
     | '/equipe'
@@ -286,6 +297,7 @@ export interface FileRouteTypes {
     | '/_app/relatorios'
     | '/auth/callback'
     | '/invite/$token'
+    | '/landpage/$code'
     | '/p/$slug'
     | '/_app/equipe/cargos'
     | '/_app/equipe/'
@@ -299,6 +311,7 @@ export interface RootRouteChildren {
   SignupRoute: typeof SignupRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
   InviteTokenRoute: typeof InviteTokenRoute
+  LandpageCodeRoute: typeof LandpageCodeRoute
   PSlugRoute: typeof PSlugRoute
 }
 
@@ -344,6 +357,13 @@ declare module '@tanstack/react-router' {
       path: '/p/$slug'
       fullPath: '/p/$slug'
       preLoaderRoute: typeof PSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/landpage/$code': {
+      id: '/landpage/$code'
+      path: '/landpage/$code'
+      fullPath: '/landpage/$code'
+      preLoaderRoute: typeof LandpageCodeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/invite/$token': {
@@ -532,6 +552,7 @@ const rootRouteChildren: RootRouteChildren = {
   SignupRoute: SignupRoute,
   AuthCallbackRoute: AuthCallbackRoute,
   InviteTokenRoute: InviteTokenRoute,
+  LandpageCodeRoute: LandpageCodeRoute,
   PSlugRoute: PSlugRoute,
 }
 export const routeTree = rootRouteImport

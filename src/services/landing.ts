@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/client";
 import { parseLandingRegisterResult, type LandingRegisterResult } from "@/lib/landing-register";
+import { parseLandingTheme, type LandingTheme } from "@/lib/landing-theme";
 import type { Enums, TablesUpdate } from "@/types/supabase";
 
 export type { LandingRegisterResult };
@@ -21,6 +22,7 @@ export type PublicLandingLeadership = {
 };
 
 export type PublicLanding = {
+  public_code: string;
   slug: string;
   headline: string | null;
   bio: string | null;
@@ -30,20 +32,37 @@ export type PublicLanding = {
   social_links: unknown;
   whatsapp: string | null;
   tenant_name: string;
+  display_name?: string | null;
+  theme?: LandingTheme;
   chapas?: PublicLandingChapa[];
   leaderships?: PublicLandingLeadership[];
 };
 
-export async function getPublicLanding(slug: string): Promise<PublicLanding | null> {
+export async function getPublicLanding(publicCode: string): Promise<PublicLanding | null> {
   const supabase = createClient();
-  const { data, error } = await supabase.rpc("get_public_landing", { p_slug: slug });
+  const { data, error } = await supabase.rpc("get_public_landing", {
+    p_public_code: publicCode.trim().toLowerCase(),
+  });
   if (error) throw error;
   if (!data) return null;
-  return data as PublicLanding;
+  const landing = data as PublicLanding;
+  return {
+    ...landing,
+    theme: parseLandingTheme(landing.theme as never),
+  };
+}
+
+export async function resolveLandingPublicCode(ref: string): Promise<string | null> {
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc("resolve_landing_public_code", {
+    p_ref: ref.trim(),
+  });
+  if (error) throw error;
+  return typeof data === "string" ? data : null;
 }
 
 export async function registerFromLanding(
-  slug: string,
+  publicCode: string,
   payload: {
     name: string;
     phone?: string;
@@ -58,7 +77,7 @@ export async function registerFromLanding(
 ) {
   const supabase = createClient();
   const { data, error } = await supabase.rpc("register_supporter_from_landing", {
-    p_slug: slug,
+    p_public_code: publicCode.trim().toLowerCase(),
     p_name: payload.name,
     p_phone: payload.phone ?? null,
     p_neighborhood: payload.neighborhood ?? null,
@@ -75,7 +94,7 @@ export async function registerFromLanding(
 }
 
 export async function registerDemandFromLanding(
-  slug: string,
+  publicCode: string,
   payload: {
     title: string;
     description?: string;
@@ -88,7 +107,7 @@ export async function registerDemandFromLanding(
 ) {
   const supabase = createClient();
   const { data, error } = await supabase.rpc("register_demand_from_landing", {
-    p_slug: slug,
+    p_public_code: publicCode.trim().toLowerCase(),
     p_title: payload.title,
     p_description: payload.description ?? undefined,
     p_category: (payload.category as Enums<"demand_category"> | undefined) ?? undefined,

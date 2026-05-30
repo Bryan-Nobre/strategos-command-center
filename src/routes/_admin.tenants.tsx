@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { listAllTenants, updateTenant, TENANT_STATUS_LABELS } from "@/services/admin";
 import { TENANT_PLAN_LABELS } from "@/types/tenant";
 import { queryKeys } from "@/lib/query-keys";
+import { landingPublicPath } from "@/lib/landing-routes";
 import { LoadingState } from "@/components/common/LoadingState";
 import { EmptyState } from "@/components/common/EmptyState";
 import { Card, CardContent } from "@/components/ui/card";
@@ -229,7 +230,17 @@ function AdminTenantsPage() {
                   </SelectContent>
                 </Select>
                 <Button variant="outline" size="sm" asChild>
-                  <a href={`/p/${t.slug}`} target="_blank" rel="noreferrer">
+                  <a
+                    href={
+                      t.landing_public_code
+                        ? landingPublicPath(t.landing_public_code)
+                        : "#"
+                    }
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-disabled={!t.landing_public_code}
+                    className={!t.landing_public_code ? "pointer-events-none opacity-50" : undefined}
+                  >
                     <ExternalLink className="mr-2 h-4 w-4" />
                     Landing
                   </a>

@@ -54,7 +54,7 @@ export const NOTIFICATION_PREF_GROUPS: NotificationPrefGroupMeta[] = [
       {
         key: "landing_new",
         label: "Cadastro na landing pública",
-        description: "Novo interessado via página /p/{slug}.",
+        description: "Novo interessado via landing pública (/landpage/{código}).",
       },
       {
         key: "import_done",

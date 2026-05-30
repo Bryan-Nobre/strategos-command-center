@@ -257,14 +257,17 @@ export type Database = {
         Row: {
           bio: string | null
           created_at: string
+          display_name: string | null
           headline: string | null
           id: string
           is_published: boolean
           photo_url: string | null
           proposals: Json
+          public_code: string
           slug: string
           social_links: Json
           tenant_id: string
+          theme: Json
           updated_at: string
           video_url: string | null
           whatsapp: string | null
@@ -272,14 +275,17 @@ export type Database = {
         Insert: {
           bio?: string | null
           created_at?: string
+          display_name?: string | null
           headline?: string | null
           id?: string
           is_published?: boolean
           photo_url?: string | null
           proposals?: Json
+          public_code?: string
           slug: string
           social_links?: Json
           tenant_id: string
+          theme?: Json
           updated_at?: string
           video_url?: string | null
           whatsapp?: string | null
@@ -287,14 +293,17 @@ export type Database = {
         Update: {
           bio?: string | null
           created_at?: string
+          display_name?: string | null
           headline?: string | null
           id?: string
           is_published?: boolean
           photo_url?: string | null
           proposals?: Json
+          public_code?: string
           slug?: string
           social_links?: Json
           tenant_id?: string
+          theme?: Json
           updated_at?: string
           video_url?: string | null
           whatsapp?: string | null
@@ -1212,7 +1221,8 @@ export type Database = {
       accept_team_invitation: { Args: { p_token: string }; Returns: string }
       can_manage_tenant: { Args: { p_tenant_id: string }; Returns: boolean }
       can_write_tenant: { Args: { p_tenant_id: string }; Returns: boolean }
-      get_public_landing: { Args: { p_slug: string }; Returns: Json }
+      get_public_landing: { Args: { p_public_code: string }; Returns: Json }
+      resolve_landing_public_code: { Args: { p_ref: string }; Returns: string }
       get_tenant_operational_dashboard: {
         Args: { p_tenant_id: string }
         Returns: Json
@@ -1383,7 +1393,7 @@ export type Database = {
           p_notes?: string
           p_phone?: string
           p_primary_leadership_id?: string
-          p_slug: string
+          p_public_code: string
         }
         Returns: Json
       }
@@ -1448,7 +1458,7 @@ export type Database = {
           p_priority?: Database["public"]["Enums"]["demand_priority"]
           p_requester_name?: string
           p_requester_phone?: string
-          p_slug: string
+          p_public_code: string
           p_title: string
         }
         Returns: string

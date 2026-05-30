@@ -2672,12 +2672,377 @@
   );
 }
 
+.landing-page--decorated {
+  background-image:
+    radial-gradient(circle at 12% 8%, hsl(var(--primary) / 0.08), transparent 42%),
+    radial-gradient(circle at 88% 18%, hsl(var(--primary) / 0.06), transparent 38%),
+    linear-gradient(180deg, hsl(var(--background)) 0%, hsl(var(--muted) / 0.35) 100%);
+}
+
 .landing-hero {
   background: linear-gradient(
     135deg,
     hsl(var(--card)) 0%,
     hsl(var(--primary) / 0.04) 100%
   );
+}
+
+.landing-hero--decorated {
+  position: relative;
+}
+
+.landing-hero--decorated::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at top right, hsl(var(--primary) / 0.12), transparent 55%),
+    radial-gradient(circle at bottom left, hsl(var(--primary) / 0.06), transparent 50%);
+  pointer-events: none;
+}
+
+.landing-hero--minimal {
+  background: hsl(var(--card));
+  box-shadow: none;
+}
+
+.landing-hero--stamped {
+  background: linear-gradient(
+    135deg,
+    hsl(var(--card)) 0%,
+    hsl(var(--primary) / 0.08) 100%
+  );
+}
+
+.landing-hero-watermark {
+  position: absolute;
+  inset: 0;
+  opacity: 0.08;
+  background-repeat: no-repeat;
+  background-position: right -10% center;
+  background-size: min(48vw, 320px);
+  filter: grayscale(1);
+}
+
+.landing-hero-photo {
+  object-fit: cover;
+  border: 1px solid hsl(var(--border));
+  box-shadow: var(--shadow-elegant, 0 10px 30px rgb(0 0 0 / 0.08));
+}
+
+.landing-hero-photo--rounded {
+  height: 6rem;
+  width: 6rem;
+  border-radius: 1rem;
+}
+
+@media (min-width: 768px) {
+  .landing-hero-photo--rounded {
+    height: 7rem;
+    width: 7rem;
+  }
+}
+
+.landing-hero-photo--circle {
+  height: 6rem;
+  width: 6rem;
+  border-radius: 9999px;
+}
+
+@media (min-width: 768px) {
+  .landing-hero-photo--circle {
+    height: 7rem;
+    width: 7rem;
+  }
+}
+
+.landing-hero-photo--stamped {
+  height: 6.5rem;
+  width: 6.5rem;
+  border-radius: 1.25rem;
+  border-width: 3px;
+  border-color: hsl(var(--primary) / 0.35);
+  box-shadow:
+    0 0 0 6px hsl(var(--primary) / 0.08),
+    0 16px 32px rgb(0 0 0 / 0.12);
+}
+
+@media (min-width: 768px) {
+  .landing-hero-photo--stamped {
+    height: 7.5rem;
+    width: 7.5rem;
+  }
+}
+
+.landing-hero--custom-bg.landing-hero--minimal,
+.landing-hero--custom-bg.landing-hero--stamped,
+.landing-hero--custom-bg {
+  background-image: none;
+}
+
+.landing-hero--custom-bg.landing-hero--decorated::before {
+  opacity: 0.55;
+}
+
+.landing-zone--filled {
+  border-radius: 1rem;
+  padding: 1.25rem;
+}
+
+@media (min-width: 768px) {
+  .landing-zone--filled {
+    padding: 1.5rem;
+  }
+}
+
+.landing-page--with-icons {
+  overflow-x: clip;
+}
+
+.landing-political-decor {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.landing-decor-icon {
+  position: absolute;
+  color: var(--landing-icon-color, hsl(var(--primary)));
+  opacity: 0.14;
+}
+
+.landing-decor-icon--1 {
+  top: 6%;
+  left: 4%;
+  width: 2.75rem;
+  height: 2.75rem;
+  transform: rotate(-14deg);
+}
+
+.landing-decor-icon--2 {
+  top: 18%;
+  right: 6%;
+  width: 3.25rem;
+  height: 3.25rem;
+  transform: rotate(11deg);
+}
+
+.landing-decor-icon--3 {
+  top: 42%;
+  left: 3%;
+  width: 2.5rem;
+  height: 2.5rem;
+  transform: rotate(8deg);
+}
+
+.landing-decor-icon--4 {
+  top: 55%;
+  right: 4%;
+  width: 3rem;
+  height: 3rem;
+  transform: rotate(-9deg);
+}
+
+.landing-decor-icon--5 {
+  bottom: 22%;
+  right: 8%;
+  width: 2.75rem;
+  height: 2.75rem;
+  transform: rotate(16deg);
+}
+
+.landing-decor-icon--6 {
+  bottom: 34%;
+  left: 5%;
+  width: 2.25rem;
+  height: 2.25rem;
+  transform: rotate(-18deg);
+}
+
+.landing-decor-icon--7 {
+  top: 10%;
+  left: 42%;
+  width: 2rem;
+  height: 2rem;
+  transform: rotate(6deg);
+  opacity: 0.1;
+}
+
+.landing-decor-icon--8 {
+  bottom: 8%;
+  left: 38%;
+  width: 2.5rem;
+  height: 2.5rem;
+  transform: rotate(-11deg);
+  opacity: 0.12;
+}
+
+.landing-decor-icon--9 {
+  top: 28%;
+  left: 14%;
+  width: 2rem;
+  height: 2rem;
+  transform: rotate(12deg);
+  opacity: 0.11;
+}
+
+.landing-decor-icon--10 {
+  top: 32%;
+  right: 16%;
+  width: 2.25rem;
+  height: 2.25rem;
+  transform: rotate(-7deg);
+  opacity: 0.1;
+}
+
+.landing-decor-icon--11 {
+  top: 68%;
+  left: 12%;
+  width: 2.5rem;
+  height: 2.5rem;
+  transform: rotate(15deg);
+  opacity: 0.12;
+}
+
+.landing-decor-icon--12 {
+  top: 72%;
+  right: 18%;
+  width: 2rem;
+  height: 2rem;
+  transform: rotate(-13deg);
+  opacity: 0.11;
+}
+
+.landing-decor-icon--13 {
+  top: 4%;
+  right: 22%;
+  width: 2.15rem;
+  height: 2.15rem;
+  transform: rotate(9deg);
+  opacity: 0.1;
+}
+
+.landing-decor-icon--14 {
+  top: 50%;
+  left: 8%;
+  width: 2.35rem;
+  height: 2.35rem;
+  transform: rotate(-16deg);
+  opacity: 0.13;
+}
+
+.landing-decor-icon--15 {
+  top: 78%;
+  left: 28%;
+  width: 2rem;
+  height: 2rem;
+  transform: rotate(5deg);
+  opacity: 0.1;
+}
+
+.landing-decor-icon--16 {
+  top: 22%;
+  right: 28%;
+  width: 2.1rem;
+  height: 2.1rem;
+  transform: rotate(-10deg);
+  opacity: 0.11;
+}
+
+.landing-decor-icon--17 {
+  bottom: 16%;
+  right: 22%;
+  width: 2.4rem;
+  height: 2.4rem;
+  transform: rotate(14deg);
+  opacity: 0.12;
+}
+
+.landing-decor-icon--18 {
+  bottom: 42%;
+  left: 18%;
+  width: 2.15rem;
+  height: 2.15rem;
+  transform: rotate(-6deg);
+  opacity: 0.1;
+}
+
+.landing-decor-icon--19 {
+  top: 58%;
+  right: 12%;
+  width: 1.9rem;
+  height: 1.9rem;
+  transform: rotate(18deg);
+  opacity: 0.09;
+}
+
+.landing-decor-icon--20 {
+  top: 38%;
+  left: 22%;
+  width: 2rem;
+  height: 2rem;
+  transform: rotate(-12deg);
+  opacity: 0.1;
+}
+
+.landing-decor-icon--21 {
+  bottom: 28%;
+  left: 42%;
+  width: 2.25rem;
+  height: 2.25rem;
+  transform: rotate(7deg);
+  opacity: 0.11;
+}
+
+.landing-decor-icon--22 {
+  top: 86%;
+  right: 6%;
+  width: 2rem;
+  height: 2rem;
+  transform: rotate(-15deg);
+  opacity: 0.1;
+}
+
+.landing-decor-icon--23 {
+  top: 14%;
+  left: 24%;
+  width: 1.85rem;
+  height: 1.85rem;
+  transform: rotate(11deg);
+  opacity: 0.09;
+}
+
+.landing-decor-icon--24 {
+  bottom: 52%;
+  right: 26%;
+  width: 2.1rem;
+  height: 2.1rem;
+  transform: rotate(-8deg);
+  opacity: 0.1;
+}
+
+@media (max-width: 640px) {
+  .landing-decor-icon--7,
+  .landing-decor-icon--8,
+  .landing-decor-icon--12,
+  .landing-decor-icon--15,
+  .landing-decor-icon--19,
+  .landing-decor-icon--21,
+  .landing-decor-icon--22,
+  .landing-decor-icon--24 {
+    display: none;
+  }
+
+  .landing-decor-icon--1,
+  .landing-decor-icon--2,
+  .landing-decor-icon--3,
+  .landing-decor-icon--4,
+  .landing-decor-icon--5,
+  .landing-decor-icon--6 {
+    opacity: 0.11;
+  }
 }
 
 .landing-chapas summary:hover,

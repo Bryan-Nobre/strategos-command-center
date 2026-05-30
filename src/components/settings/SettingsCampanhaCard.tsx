@@ -1,3 +1,4 @@
+import { landingPublicPath } from "@/lib/landing-routes";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -5,12 +6,12 @@ export function SettingsCampanhaCard({
   tenantName,
   plan,
   status,
-  slug,
+  publicCode,
 }: {
   tenantName: string;
   plan: string;
   status: string;
-  slug: string;
+  publicCode: string;
 }) {
   return (
     <Card className="settings-campanha-card shadow-elegant">
@@ -24,7 +25,7 @@ export function SettingsCampanhaCard({
         </Badge>
         <Badge variant="outline">Status: {status}</Badge>
         <Badge variant="outline" className="font-mono text-[10px]">
-          /p/{slug}
+          {publicCode ? landingPublicPath(publicCode) : "Sem landing"}
         </Badge>
       </CardContent>
     </Card>

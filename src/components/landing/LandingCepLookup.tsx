@@ -18,6 +18,7 @@ export type LandingCepLookupState =
 
 type Props = {
   cepValue: string;
+  inputId?: string;
   onCepChange: (masked: string) => void;
   onLookupStateChange: (state: LandingCepLookupState) => void;
   onNeighborhoodChange: (v: string) => void;
@@ -33,6 +34,7 @@ function isAbortError(error: unknown): boolean {
 
 export function LandingCepLookup({
   cepValue,
+  inputId = "landing-cep",
   onCepChange,
   onLookupStateChange,
   onNeighborhoodChange,
@@ -107,10 +109,10 @@ export function LandingCepLookup({
   return (
     <div className="space-y-2 sm:col-span-2">
       <div className="space-y-2">
-        <Label htmlFor="landing-cep">CEP</Label>
+        <Label htmlFor={inputId}>CEP</Label>
         <div className="relative">
           <Input
-            id="landing-cep"
+            id={inputId}
             inputMode="numeric"
             autoComplete="postal-code"
             placeholder="00000-000"

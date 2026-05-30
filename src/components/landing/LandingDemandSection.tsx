@@ -1,41 +1,51 @@
-import { useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
-import { z } from "zod";
 import { ClipboardList } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { TerritoryChip } from "@/components/territory/TerritoryChip";
+import {
+  LandingCepLookup,
+} from "@/components/landing/LandingCepLookup";
 import { registerDemandFromLanding } from "@/services/landing";
 import { landingDemandSchema, DEMAND_CATEGORY_LABELS } from "@/types/domain";
 import { toast } from "sonner";
+import type { z } from "zod";
 
 type DemandForm = z.infer<typeof landingDemandSchema>;
 
 export function LandingDemandSection({
-  slug,
+  publicCode,
   neighborhood,
   city,
   stateUf,
 }: {
-  slug: string;
+  publicCode: string;
   neighborhood?: string;
   city?: string;
   stateUf?: string;
 }) {
+  const [cepInput, setCepInput] = useState("");
+  const [demandStateUf, setDemandStateUf] = useState("");
+
   const {
     register,
     handleSubmit,
     reset,
     setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<DemandForm>({
     resolver: zodResolver(landingDemandSchema),
     defaultValues: { category: "outros" },
   });
+
+  const formNeighborhood = watch("neighborhood") ?? "";
+  const formCity = watch("city") ?? "";
 
   useEffect(() => {
     if (neighborhood) setValue("neighborhood", neighborhood);
@@ -45,11 +55,19 @@ export function LandingDemandSection({
     if (city) setValue("city", city);
   }, [city, setValue]);
 
-  const territoryLabel = [neighborhood, city, stateUf].filter(Boolean).join(" · ") || null;
+  useEffect(() => {
+    if (stateUf) setDemandStateUf(stateUf);
+  }, [stateUf]);
+
+  const setNeighborhood = useCallback((v: string) => setValue("neighborhood", v), [setValue]);
+  const setCity = useCallback((v: string) => setValue("city", v), [setValue]);
+
+  const territoryLabel =
+    [formNeighborhood, formCity, demandStateUf || stateUf].filter(Boolean).join(" · ") || null;
 
   const mutation = useMutation({
     mutationFn: (values: DemandForm) =>
-      registerDemandFromLanding(slug, {
+      registerDemandFromLanding(publicCode, {
         ...values,
         neighborhood: values.neighborhood ?? neighborhood ?? undefined,
         city: values.city ?? city ?? undefined,
@@ -57,6 +75,8 @@ export function LandingDemandSection({
     onSuccess: () => {
       toast.success("Demanda registrada! A equipe verá na aba Demandas da campanha.");
       reset({ category: "outros", neighborhood: neighborhood ?? "", city: city ?? "" });
+      setCepInput("");
+      setDemandStateUf(stateUf ?? "");
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -88,10 +108,19 @@ export function LandingDemandSection({
               <p className="text-xs text-destructive">{errors.requester_name.message}</p>
             )}
           </div>
-          <div className="space-y-2">
+          <div className="space-y-2 sm:col-span-2">
             <Label>Telefone</Label>
-            <Input {...register("requester_phone")} />
+            <Input {...register("requester_phone")} inputMode="tel" autoComplete="tel" />
           </div>
+          <LandingCepLookup
+            inputId="landing-demand-cep"
+            cepValue={cepInput}
+            onCepChange={setCepInput}
+            onLookupStateChange={() => {}}
+            onNeighborhoodChange={setNeighborhood}
+            onCityChange={setCity}
+            onStateUfChange={setDemandStateUf}
+          />
           <div className="space-y-2">
             <Label>Cidade</Label>
             <Input {...register("city")} />
@@ -100,6 +129,12 @@ export function LandingDemandSection({
             <Label>Bairro</Label>
             <Input {...register("neighborhood")} />
           </div>
+          {demandStateUf && (
+            <div className="space-y-2 sm:col-span-2">
+              <Label>UF</Label>
+              <Input value={demandStateUf} readOnly className="bg-muted/40" />
+            </div>
+          )}
           <div className="space-y-2">
             <Label>Tipo *</Label>
             <select

@@ -33,6 +33,7 @@ export type AdminTenantRow = {
   owner_user_id: string | null;
   member_count: number;
   supporter_count: number;
+  landing_public_code: string | null;
 };
 
 export async function listAllTenants(filters?: {
@@ -58,16 +59,19 @@ export async function listAllTenants(filters?: {
 
   const ids = tenants.map((t) => t.id);
 
-  const [members, supporters] = await Promise.all([
+  const [members, supporters, landings] = await Promise.all([
     supabase.from("tenant_members").select("tenant_id").in("tenant_id", ids),
     supabase.from("supporters").select("tenant_id").in("tenant_id", ids),
+    supabase.from("landing_pages").select("tenant_id, public_code").in("tenant_id", ids),
   ]);
 
   if (members.error) throw members.error;
   if (supporters.error) throw supporters.error;
+  if (landings.error) throw landings.error;
 
   const memberCounts = new Map<string, number>();
   const supporterCounts = new Map<string, number>();
+  const landingCodes = new Map<string, string>();
 
   for (const row of members.data ?? []) {
     memberCounts.set(row.tenant_id, (memberCounts.get(row.tenant_id) ?? 0) + 1);
@@ -75,11 +79,15 @@ export async function listAllTenants(filters?: {
   for (const row of supporters.data ?? []) {
     supporterCounts.set(row.tenant_id, (supporterCounts.get(row.tenant_id) ?? 0) + 1);
   }
+  for (const row of landings.data ?? []) {
+    landingCodes.set(row.tenant_id, row.public_code);
+  }
 
   return tenants.map((t) => ({
     ...t,
     member_count: memberCounts.get(t.id) ?? 0,
     supporter_count: supporterCounts.get(t.id) ?? 0,
+    landing_public_code: landingCodes.get(t.id) ?? null,
   }));
 }
 

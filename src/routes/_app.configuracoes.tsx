@@ -9,6 +9,11 @@ import { useCrudPermissions } from "@/hooks/use-crud-permissions";
 import { ModuleRouteGuard } from "@/components/auth/PermissionGate";
 import { getLandingPage } from "@/services/landing";
 import {
+  DEFAULT_LANDING_THEME,
+  parseLandingTheme,
+  type LandingTheme,
+} from "@/lib/landing-theme";
+import {
   parseConfiguracoesSearch,
   resolveDefaultConfigTab,
   serializeConfiguracoesSearch,
@@ -50,12 +55,18 @@ function ConfigPage() {
   const [headline, setHeadline] = useState("");
   const [landingBio, setLandingBio] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [photoUrl, setPhotoUrl] = useState("");
+  const [theme, setTheme] = useState<LandingTheme>(DEFAULT_LANDING_THEME);
 
   useEffect(() => {
     if (landing) {
       setHeadline(landing.headline ?? "");
       setLandingBio(landing.bio ?? "");
       setWhatsapp(landing.whatsapp ?? "");
+      setDisplayName(landing.display_name ?? "");
+      setPhotoUrl(landing.photo_url ?? "");
+      setTheme(parseLandingTheme(landing.theme));
     }
   }, [landing]);
 
@@ -63,7 +74,7 @@ function ConfigPage() {
     void navigate({ search: serializeConfiguracoesSearch({ tab }) });
   }
 
-  const slug = landing?.slug ?? activeTenant?.slug ?? "";
+  const publicCode = landing?.public_code ?? "";
 
   return (
     <ModuleRouteGuard module="settings">
@@ -77,7 +88,7 @@ function ConfigPage() {
           tenantName={activeTenant?.name ?? "Sem campanha"}
           plan={activeTenant?.plan ?? "trial"}
           status={activeTenant?.status ?? "—"}
-          slug={slug}
+          publicCode={publicCode}
         />
 
         <Tabs value={activeTab} onValueChange={(v) => setTab(v as ConfigTab)} className="space-y-4">
@@ -122,14 +133,21 @@ function ConfigPage() {
             <TabsContent value="landing">
               <LandingSettingsCard
                 tenantId={tenantId}
-                slug={slug}
+                tenantName={activeTenant?.name ?? "Campanha"}
+                publicCode={publicCode}
+                displayName={displayName}
                 headline={headline}
                 landingBio={landingBio}
                 whatsapp={whatsapp}
+                photoUrl={photoUrl}
+                theme={theme}
                 canEdit={perms.canEditLanding}
+                onDisplayNameChange={setDisplayName}
                 onHeadlineChange={setHeadline}
                 onBioChange={setLandingBio}
                 onWhatsappChange={setWhatsapp}
+                onPhotoUrlChange={setPhotoUrl}
+                onThemeChange={setTheme}
               />
             </TabsContent>
           )}

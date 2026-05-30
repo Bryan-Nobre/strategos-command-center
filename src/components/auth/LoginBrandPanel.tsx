@@ -1,32 +1,11 @@
-import {
-  BarChart3,
-  Crown,
-  Flag,
-  Landmark,
-  MapPin,
-  Megaphone,
-  Users,
-  Vote,
-} from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { POLITICAL_DECOR_ICONS } from "@/lib/political-decor-icons";
 
 const LOGO_WHITE_LATERAL = "/brand/strategos-logo-white-lateral.png";
 
-type DecorIcon = {
-  Icon: LucideIcon;
-  className: string;
-};
-
-const decorIcons: DecorIcon[] = [
-  { Icon: Vote, className: "login-split__decor-icon login-split__decor-icon--1" },
-  { Icon: Landmark, className: "login-split__decor-icon login-split__decor-icon--2" },
-  { Icon: MapPin, className: "login-split__decor-icon login-split__decor-icon--3" },
-  { Icon: Users, className: "login-split__decor-icon login-split__decor-icon--4" },
-  { Icon: BarChart3, className: "login-split__decor-icon login-split__decor-icon--5" },
-  { Icon: Flag, className: "login-split__decor-icon login-split__decor-icon--6" },
-  { Icon: Crown, className: "login-split__decor-icon login-split__decor-icon--7" },
-  { Icon: Megaphone, className: "login-split__decor-icon login-split__decor-icon--8" },
-];
+const decorIcons = POLITICAL_DECOR_ICONS.map((item, index) => ({
+  Icon: item.Icon,
+  className: `login-split__decor-icon login-split__decor-icon--${index + 1}`,
+}));
 
 export function LoginBrandPanel() {
   return (
