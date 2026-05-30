@@ -1,5 +1,8 @@
 import { createClient } from "@/lib/supabase/client";
+import { parseLandingRegisterResult, type LandingRegisterResult } from "@/lib/landing-register";
 import type { Enums, TablesUpdate } from "@/types/supabase";
+
+export type { LandingRegisterResult };
 
 export type PublicLandingChapa = {
   id: string;
@@ -9,6 +12,12 @@ export type PublicLandingChapa = {
   leadership_id: string;
   leadership_name: string;
   leadership_region: string | null;
+};
+
+export type PublicLandingLeadership = {
+  id: string;
+  name: string;
+  region: string | null;
 };
 
 export type PublicLanding = {
@@ -22,6 +31,7 @@ export type PublicLanding = {
   whatsapp: string | null;
   tenant_name: string;
   chapas?: PublicLandingChapa[];
+  leaderships?: PublicLandingLeadership[];
 };
 
 export async function getPublicLanding(slug: string): Promise<PublicLanding | null> {
@@ -43,22 +53,25 @@ export async function registerFromLanding(
     interest?: string;
     notes?: string;
     chapaIds?: string[];
+    primaryLeadershipId?: string;
   },
 ) {
   const supabase = createClient();
   const { data, error } = await supabase.rpc("register_supporter_from_landing", {
     p_slug: slug,
     p_name: payload.name,
-    p_phone: payload.phone ?? undefined,
-    p_cep: payload.cep ?? undefined,
-    p_neighborhood: payload.neighborhood ?? undefined,
-    p_city: payload.city ?? undefined,
-    p_interest: payload.interest ?? undefined,
-    p_notes: payload.notes ?? undefined,
-    p_chapa_ids: payload.chapaIds?.length ? payload.chapaIds : undefined,
+    p_phone: payload.phone ?? null,
+    p_neighborhood: payload.neighborhood ?? null,
+    p_city: payload.city ?? null,
+    p_interest: payload.interest ?? null,
+    p_notes: payload.notes ?? null,
+    p_chapa_ids: payload.chapaIds?.length ? payload.chapaIds : null,
+    p_email: null,
+    p_cep: payload.cep ?? null,
+    p_primary_leadership_id: payload.primaryLeadershipId ?? null,
   });
   if (error) throw error;
-  return data as string;
+  return parseLandingRegisterResult(data);
 }
 
 export async function registerDemandFromLanding(

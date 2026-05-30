@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { CheckCircle2, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatCepMask, isCepCompleteForLookup } from "@/lib/postal-code";
@@ -20,15 +20,9 @@ type Props = {
   cepValue: string;
   onCepChange: (masked: string) => void;
   onLookupStateChange: (state: LandingCepLookupState) => void;
-  neighborhood: string;
-  city: string;
   onNeighborhoodChange: (v: string) => void;
   onCityChange: (v: string) => void;
-  stateUf: string;
   onStateUfChange: (v: string) => void;
-  /** Oculta inputs duplicados de bairro/cidade após confirmação. */
-  hideLocationFields?: boolean;
-  onTerritoryConfirmed?: (confirmed: boolean) => void;
 };
 
 const DEBOUNCE_MS = 450;
@@ -41,26 +35,19 @@ export function LandingCepLookup({
   cepValue,
   onCepChange,
   onLookupStateChange,
-  neighborhood,
-  city,
   onNeighborhoodChange,
   onCityChange,
-  stateUf,
   onStateUfChange,
-  hideLocationFields = false,
-  onTerritoryConfirmed,
 }: Props) {
   const [lookup, setLookup] = useState<LandingCepLookupState>({ status: "idle" });
-  const [confirmed, setConfirmed] = useState(false);
   const requestId = useRef(0);
 
-  useEffect(() => {
-    onLookupStateChange(lookup);
-  }, [lookup, onLookupStateChange]);
+  const onLookupStateChangeRef = useRef(onLookupStateChange);
+  onLookupStateChangeRef.current = onLookupStateChange;
 
   useEffect(() => {
-    onTerritoryConfirmed?.(confirmed);
-  }, [confirmed, onTerritoryConfirmed]);
+    onLookupStateChangeRef.current(lookup);
+  }, [lookup]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -68,7 +55,6 @@ export function LandingCepLookup({
 
     if (!raw) {
       setLookup({ status: "idle" });
-      setConfirmed(false);
       return () => controller.abort();
     }
 
@@ -78,13 +64,11 @@ export function LandingCepLookup({
       } else {
         setLookup({ status: "idle" });
       }
-      setConfirmed(false);
       return () => controller.abort();
     }
 
     const id = ++requestId.current;
     setLookup({ status: "loading" });
-    setConfirmed(false);
 
     const timer = window.setTimeout(() => {
       void (async () => {
@@ -104,6 +88,9 @@ export function LandingCepLookup({
           }
 
           setLookup({ status: "found", geo: result });
+          if (result.neighborhood) onNeighborhoodChange(result.neighborhood);
+          if (result.city) onCityChange(result.city);
+          if (result.state_uf) onStateUfChange(result.state_uf);
         } catch (error) {
           if (isAbortError(error) || requestId.current !== id) return;
           setLookup({ status: "error" });
@@ -115,12 +102,10 @@ export function LandingCepLookup({
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [cepValue]);
-
-  const showFound = lookup.status === "found" && confirmed;
+  }, [cepValue, onNeighborhoodChange, onCityChange, onStateUfChange]);
 
   return (
-    <div className="space-y-3 sm:col-span-2">
+    <div className="space-y-2 sm:col-span-2">
       <div className="space-y-2">
         <Label htmlFor="landing-cep">CEP</Label>
         <div className="relative">
@@ -137,7 +122,7 @@ export function LandingCepLookup({
           )}
         </div>
         <p className="text-[11px] text-muted-foreground">
-          Informe seu CEP para reconhecermos seu território na cidade (opcional, melhora o contato da equipe).
+          Ao informar o CEP, cidade e bairro são preenchidos automaticamente nos campos abaixo.
         </p>
         {lookup.status === "invalid" && (
           <p className="text-xs text-amber-600 dark:text-amber-500">
@@ -155,69 +140,6 @@ export function LandingCepLookup({
           </p>
         )}
       </div>
-
-      {lookup.status === "found" && !confirmed && (
-        <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm">
-          <p className="mb-2 font-medium text-foreground">Território reconhecido</p>
-          <p className="text-xs text-muted-foreground">
-            Confirme ou ajuste os dados abaixo antes de enviar.
-          </p>
-          <div className="mt-3 grid gap-3 sm:grid-cols-3">
-            <div className="space-y-1">
-              <Label className="text-[10px]">Bairro</Label>
-              <Input
-                value={neighborhood || lookup.geo.neighborhood || ""}
-                onChange={(e) => onNeighborhoodChange(e.target.value)}
-              />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-[10px]">Cidade</Label>
-              <Input
-                value={city || lookup.geo.city || ""}
-                onChange={(e) => onCityChange(e.target.value)}
-              />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-[10px]">UF</Label>
-              <Input
-                maxLength={2}
-                value={stateUf || lookup.geo.state_uf || ""}
-                onChange={(e) => onStateUfChange(e.target.value.toUpperCase())}
-              />
-            </div>
-          </div>
-          <button
-            type="button"
-            className="mt-3 text-xs font-medium text-primary hover:underline"
-            onClick={() => {
-              if (!neighborhood && lookup.geo.neighborhood) {
-                onNeighborhoodChange(lookup.geo.neighborhood);
-              }
-              if (!city && lookup.geo.city) {
-                onCityChange(lookup.geo.city);
-              }
-              if (!stateUf && lookup.geo.state_uf) {
-                onStateUfChange(lookup.geo.state_uf);
-              }
-              setConfirmed(true);
-            }}
-          >
-            Usar estes dados
-          </button>
-        </div>
-      )}
-
-      {showFound && (
-        <div className="flex items-start gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-sm">
-          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
-          <div>
-            <p className="font-medium text-foreground">Seu território na campanha</p>
-            <p className="text-xs text-muted-foreground">
-              {[neighborhood, city, stateUf].filter(Boolean).join(" · ") || "—"}
-            </p>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

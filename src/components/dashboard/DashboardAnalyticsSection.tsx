@@ -1,10 +1,11 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useMemo } from "react";
 import { Link } from "@tanstack/react-router";
 import { BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DashboardSection } from "@/components/dashboard/DashboardSection";
 import { narrativeApproval, narrativeIntention } from "@/lib/chart-narratives";
+import { filterApprovalByNeighborhood } from "@/lib/territory-filter";
 
 const DashboardCharts = lazy(() =>
   import("./DashboardCharts").then((m) => ({ default: m.DashboardCharts })),
@@ -16,16 +17,23 @@ type AprovacaoRow = { bairro: string; aprovacao: number };
 export function DashboardAnalyticsSection({
   intencao,
   aprovacao,
+  neighborhoodFilter,
   isLoading,
   sectionIndex,
 }: {
   intencao: IntencaoRow[];
   aprovacao: AprovacaoRow[];
+  neighborhoodFilter?: string | null;
   isLoading: boolean;
   sectionIndex: number;
 }) {
+  const filteredAprovacao = useMemo(
+    () => filterApprovalByNeighborhood(aprovacao, neighborhoodFilter),
+    [aprovacao, neighborhoodFilter],
+  );
+
   const narrativeInt = narrativeIntention(intencao);
-  const narrativeApr = narrativeApproval(aprovacao);
+  const narrativeApr = narrativeApproval(filteredAprovacao);
 
   return (
     <DashboardSection
@@ -66,7 +74,9 @@ export function DashboardAnalyticsSection({
           <div className="mb-3 space-y-1">
             <h3 className="text-sm font-semibold text-foreground">Aprovação por bairro</h3>
             <p className="text-xs text-muted-foreground">
-              Índice por região (snapshot manual · pode divergir do território operacional)
+              {neighborhoodFilter
+                ? `Filtrado pelo bairro do CEP: ${neighborhoodFilter}.`
+                : "Índice por região (snapshot manual · pode divergir do território operacional)"}
             </p>
             {narrativeApr && (
               <p className="text-xs font-medium leading-relaxed text-primary/90">{narrativeApr}</p>
@@ -74,9 +84,15 @@ export function DashboardAnalyticsSection({
           </div>
           {isLoading ? (
             <Skeleton className="h-52 w-full rounded-lg" />
+          ) : filteredAprovacao.length === 0 ? (
+            <p className="flex h-52 items-center justify-center text-xs text-muted-foreground">
+              {neighborhoodFilter
+                ? `Nenhum dado de aprovação para "${neighborhoodFilter}" no snapshot.`
+                : "Nenhum snapshot de aprovação cadastrado."}
+            </p>
           ) : (
             <Suspense fallback={<Skeleton className="h-52 w-full rounded-lg" />}>
-              <DashboardCharts type="aprovacao" data={aprovacao} />
+              <DashboardCharts type="aprovacao" data={filteredAprovacao} />
             </Suspense>
           )}
         </div>

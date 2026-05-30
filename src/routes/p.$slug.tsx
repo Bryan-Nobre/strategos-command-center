@@ -1,4 +1,3 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
@@ -16,6 +15,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { LoadingState } from "@/components/common/LoadingState";
 import { LandingHero } from "@/components/landing/LandingHero";
 import { LandingChapasSection } from "@/components/landing/LandingChapasSection";
@@ -25,9 +31,11 @@ import {
   LandingCepLookup,
   type LandingCepLookupState,
 } from "@/components/landing/LandingCepLookup";
+import { buildLandingSuccessMessage } from "@/lib/landing-register";
 import { normalizeCep } from "@/lib/postal-code";
 import { applySupporterGeoFromCep } from "@/services/postal-code";
 import { toast } from "sonner";
+import { createFileRoute, Link } from "@tanstack/react-router";
 
 type CaptureForm = z.infer<typeof landingCaptureSchema>;
 
@@ -42,7 +50,6 @@ function PublicLandingPage() {
   const [cepInput, setCepInput] = useState("");
   const [stateUf, setStateUf] = useState("");
   const [cepLookup, setCepLookup] = useState<LandingCepLookupState>({ status: "idle" });
-  const [territoryConfirmed, setTerritoryConfirmed] = useState(false);
 
   const { data: landing, isLoading, error } = useQuery({
     queryKey: ["public-landing", slug],
@@ -50,6 +57,15 @@ function PublicLandingPage() {
   });
 
   const chapas = landing?.chapas ?? [];
+  const leaderships = landing?.leaderships ?? [];
+
+  const chapaLeadershipMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const c of chapas) {
+      map.set(c.id, c.leadership_id);
+    }
+    return map;
+  }, [chapas]);
 
   const chapasByLeadership = useMemo(() => {
     const map = new Map<string, { name: string; region: string | null; items: PublicLandingChapa[] }>();
@@ -75,35 +91,38 @@ function PublicLandingPage() {
     formState: { isSubmitting },
   } = useForm<CaptureForm>({
     resolver: zodResolver(landingCaptureSchema),
+    defaultValues: { primary_leadership_id: undefined },
   });
 
   const neighborhood = watch("neighborhood") ?? "";
   const city = watch("city") ?? "";
-
-  const territoryLabel = useMemo(() => {
-    const parts = [neighborhood, city, stateUf].filter(Boolean);
-    return parts.length ? parts.join(" · ") : null;
-  }, [neighborhood, city, stateUf]);
+  const primaryLeadershipId = watch("primary_leadership_id") ?? "";
 
   const handleCepLookupChange = useCallback((state: LandingCepLookupState) => {
     setCepLookup(state);
-    if (state.status !== "found") {
-      setTerritoryConfirmed(false);
-    }
   }, []);
+
+  const setNeighborhood = useCallback((v: string) => setValue("neighborhood", v), [setValue]);
+  const setCity = useCallback((v: string) => setValue("city", v), [setValue]);
 
   const mutation = useMutation({
     mutationFn: (values: CaptureForm) =>
       registerFromLanding(slug, {
-        ...values,
+        name: values.name,
+        phone: values.phone,
         cep: normalizeCep(cepInput) ?? undefined,
+        neighborhood: values.neighborhood,
+        city: values.city,
+        interest: values.interest,
+        notes: values.notes,
         chapaIds: selectedChapas,
+        primaryLeadershipId: values.primary_leadership_id || undefined,
       }),
-    onSuccess: (supporterId) => {
-      toast.success("Obrigado! Você faz parte desta campanha. Em breve nossa equipe entra em contato.");
+    onSuccess: (result) => {
+      toast.success(buildLandingSuccessMessage(result));
       const geo = getGeoForEnrichment(cepLookup);
-      if (geo && supporterId) {
-        void applySupporterGeoFromCep(supporterId, geo).catch(() => {
+      if (geo && result.supporter_id) {
+        void applySupporterGeoFromCep(result.supporter_id, geo).catch(() => {
           /* Enrichment assíncrono: falha não afeta conversão. */
         });
       }
@@ -111,17 +130,26 @@ function PublicLandingPage() {
       setCepInput("");
       setStateUf("");
       setCepLookup({ status: "idle" });
-      setTerritoryConfirmed(false);
       setSelectedChapas([]);
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
-  function toggleChapa(id: string) {
-    setSelectedChapas((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
-    );
-  }
+  const toggleChapa = useCallback(
+    (id: string) => {
+      setSelectedChapas((prev) => {
+        const next = prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
+        const leadershipIds = new Set(
+          next.map((chapaId) => chapaLeadershipMap.get(chapaId)).filter(Boolean) as string[],
+        );
+        if (leadershipIds.size === 1) {
+          setValue("primary_leadership_id", [...leadershipIds][0]);
+        }
+        return next;
+      });
+    },
+    [chapaLeadershipMap, setValue],
+  );
 
   function scrollToSupport() {
     supportRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -139,8 +167,6 @@ function PublicLandingPage() {
   const proposals = Array.isArray(landing.proposals)
     ? (landing.proposals as { title?: string; text?: string }[])
     : [];
-
-  const hideLocationFields = territoryConfirmed && cepLookup.status === "found";
 
   return (
     <div className="landing-page min-h-screen bg-background">
@@ -181,7 +207,8 @@ function PublicLandingPage() {
                 Quero apoiar
               </CardTitle>
               <p className="text-sm text-muted-foreground">
-                Leva menos de um minuto. Seu nome e contato bastam — o restante é opcional.
+                Leva menos de um minuto. Seu nome e contato bastam — o restante é opcional. Você entra na base de{" "}
+                <strong>Eleitores</strong> da campanha.
               </p>
             </CardHeader>
             <CardContent>
@@ -198,26 +225,63 @@ function PublicLandingPage() {
                   cepValue={cepInput}
                   onCepChange={setCepInput}
                   onLookupStateChange={handleCepLookupChange}
-                  neighborhood={neighborhood}
-                  city={city}
-                  onNeighborhoodChange={(v) => setValue("neighborhood", v)}
-                  onCityChange={(v) => setValue("city", v)}
-                  stateUf={stateUf}
+                  onNeighborhoodChange={setNeighborhood}
+                  onCityChange={setCity}
                   onStateUfChange={setStateUf}
-                  hideLocationFields={hideLocationFields}
-                  onTerritoryConfirmed={setTerritoryConfirmed}
                 />
-                {!hideLocationFields && (
-                  <>
-                    <div className="space-y-2">
-                      <Label>Cidade</Label>
-                      <Input {...register("city")} />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Bairro</Label>
-                      <Input {...register("neighborhood")} />
-                    </div>
-                  </>
+                <div className="space-y-2">
+                  <Label>Cidade</Label>
+                  <Input {...register("city")} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Bairro</Label>
+                  <Input {...register("neighborhood")} />
+                </div>
+                {stateUf && (
+                  <div className="space-y-2 sm:col-span-2">
+                    <Label>UF</Label>
+                    <Input value={stateUf} readOnly className="bg-muted/40" />
+                  </div>
+                )}
+                {leaderships.length > 0 && (
+                  <div className="space-y-2 sm:col-span-2">
+                    <Label>Liderança primária (opcional)</Label>
+                    <Select
+                      value={primaryLeadershipId || "none"}
+                      onValueChange={(v) =>
+                        setValue("primary_leadership_id", v === "none" ? undefined : v, {
+                          shouldDirty: true,
+                          shouldValidate: true,
+                        })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione uma liderança" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Nenhuma</SelectItem>
+                        {leaderships.map((l) => (
+                          <SelectItem key={l.id} value={l.id}>
+                            {l.name}
+                            {l.region ? ` · ${l.region}` : ""}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-[11px] text-muted-foreground">
+                      Aparece na aba Eleitores com vínculo à liderança escolhida.
+                    </p>
+                  </div>
+                )}
+                {chapasByLeadership.length > 0 && (
+                  <div className="sm:col-span-2">
+                    <LandingChapasSection
+                      groups={chapasByLeadership}
+                      selectedChapas={selectedChapas}
+                      onToggle={toggleChapa}
+                      embedded
+                    />
+                  </div>
                 )}
                 <div className="space-y-2 sm:col-span-2">
                   <Label>O que mais te motiva? (opcional)</Label>
@@ -237,17 +301,11 @@ function PublicLandingPage() {
           </Card>
         </section>
 
-        <LandingChapasSection
-          groups={chapasByLeadership}
-          selectedChapas={selectedChapas}
-          onToggle={toggleChapa}
-        />
-
         <LandingDemandSection
           slug={slug}
-          territoryLabel={territoryLabel}
-          defaultNeighborhood={neighborhood}
-          defaultCity={city}
+          neighborhood={neighborhood}
+          city={city}
+          stateUf={stateUf}
         />
 
         <p className="pb-4 text-center text-[10px] text-muted-foreground/80">

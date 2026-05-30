@@ -94,8 +94,10 @@ function TerritoryTable({
 
 export function ReportsTerritorySection({
   territories,
+  neighborhoodFilter,
 }: {
   territories?: ReportsSummary["territories"];
+  neighborhoodFilter?: string | null;
 }) {
   return (
     <ReportsSection
@@ -103,7 +105,11 @@ export function ReportsTerritorySection({
       index={3}
       id="reports-territory"
       title="Inteligência territorial"
-      description="Ranking de riscos e oportunidades — leitura política por bairro."
+      description={
+        neighborhoodFilter
+          ? `Ranking filtrado pelo bairro do CEP: ${neighborhoodFilter}.`
+          : "Ranking de riscos e oportunidades — leitura política por bairro."
+      }
       icon={MapPin}
       actions={
         <Button variant="outline" size="sm" className="h-8 text-xs" asChild>

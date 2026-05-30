@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
@@ -16,35 +17,46 @@ type DemandForm = z.infer<typeof landingDemandSchema>;
 
 export function LandingDemandSection({
   slug,
-  territoryLabel,
-  defaultNeighborhood,
-  defaultCity,
+  neighborhood,
+  city,
+  stateUf,
 }: {
   slug: string;
-  territoryLabel?: string | null;
-  defaultNeighborhood?: string;
-  defaultCity?: string;
+  neighborhood?: string;
+  city?: string;
+  stateUf?: string;
 }) {
   const {
     register,
     handleSubmit,
     reset,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<DemandForm>({
     resolver: zodResolver(landingDemandSchema),
     defaultValues: { category: "outros" },
   });
 
+  useEffect(() => {
+    if (neighborhood) setValue("neighborhood", neighborhood);
+  }, [neighborhood, setValue]);
+
+  useEffect(() => {
+    if (city) setValue("city", city);
+  }, [city, setValue]);
+
+  const territoryLabel = [neighborhood, city, stateUf].filter(Boolean).join(" · ") || null;
+
   const mutation = useMutation({
     mutationFn: (values: DemandForm) =>
       registerDemandFromLanding(slug, {
         ...values,
-        neighborhood: values.neighborhood ?? defaultNeighborhood ?? undefined,
-        city: values.city ?? defaultCity ?? undefined,
+        neighborhood: values.neighborhood ?? neighborhood ?? undefined,
+        city: values.city ?? city ?? undefined,
       }),
     onSuccess: () => {
-      toast.success("Sua solicitação foi registrada. A equipe vai analisar.");
-      reset({ category: "outros" });
+      toast.success("Demanda registrada! A equipe verá na aba Demandas da campanha.");
+      reset({ category: "outros", neighborhood: neighborhood ?? "", city: city ?? "" });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -57,7 +69,8 @@ export function LandingDemandSection({
       </summary>
       <div className="border-t border-border/60 px-4 pb-4 pt-3">
         <p className="mb-3 text-xs text-muted-foreground">
-          Use este espaço para registrar uma demanda ou melhoria. Não substitui o cadastro de apoio acima.
+          Registre uma solicitação da comunidade. Ela vai para a aba <strong>Demandas</strong> — separada do
+          cadastro de apoio acima.
         </p>
         {territoryLabel && (
           <div className="mb-3">
@@ -81,11 +94,11 @@ export function LandingDemandSection({
           </div>
           <div className="space-y-2">
             <Label>Cidade</Label>
-            <Input {...register("city")} defaultValue={defaultCity} />
+            <Input {...register("city")} />
           </div>
           <div className="space-y-2">
             <Label>Bairro</Label>
-            <Input {...register("neighborhood")} defaultValue={defaultNeighborhood} />
+            <Input {...register("neighborhood")} />
           </div>
           <div className="space-y-2">
             <Label>Tipo *</Label>
@@ -114,7 +127,7 @@ export function LandingDemandSection({
           </div>
           <div className="sm:col-span-2">
             <Button type="submit" variant="secondary" disabled={isSubmitting} className="w-full sm:w-auto">
-              {mutation.isPending ? "Enviando..." : "Enviar solicitação"}
+              {mutation.isPending ? "Enviando..." : "Enviar para Demandas"}
             </Button>
           </div>
         </form>

@@ -114,18 +114,24 @@ export function DashboardTerritoryMap({
   promising,
   canViewTerritoryLink,
   sectionIndex,
+  territoryFilterLabel,
 }: {
   critical: EnrichedTerritory[];
   promising: EnrichedTerritory[];
   canViewTerritoryLink: boolean;
   sectionIndex: number;
+  territoryFilterLabel?: string | null;
 }) {
   return (
     <DashboardSection
       variant="territory"
       index={sectionIndex}
       title="Mapa estratégico da campanha"
-      description="Riscos e oportunidades territoriais no mesmo painel — duas leituras, uma seção."
+      description={
+        territoryFilterLabel
+          ? `Território filtrado pelo CEP: ${territoryFilterLabel}.`
+          : "Riscos e oportunidades territoriais no mesmo painel — duas leituras, uma seção."
+      }
       icon={Map}
       unstyledBody
       bodyClassName="dashboard-territory-map p-4 md:p-5"

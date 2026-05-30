@@ -8,6 +8,7 @@ export type PesquisasListSearch = {
   from?: string;
   to?: string;
   bairro?: string;
+  cidade?: string;
 };
 
 export function parsePesquisasSearch(raw: Record<string, unknown>): PesquisasListSearch {
@@ -20,6 +21,7 @@ export function parsePesquisasSearch(raw: Record<string, unknown>): PesquisasLis
     from: from && DATE_RE.test(from) ? from : undefined,
     to: to && DATE_RE.test(to) ? to : undefined,
     bairro: trimParam(raw.bairro),
+    cidade: trimParam(raw.cidade),
   }) as PesquisasListSearch;
 }
 
@@ -29,13 +31,14 @@ export function serializePesquisasSearch(filters: PesquisasListSearch): Pesquisa
     from: filters.from,
     to: filters.to,
     bairro: trimParam(filters.bairro),
+    cidade: trimParam(filters.cidade),
   }) as PesquisasListSearch;
 }
 
 export function pesquisasFiltersToRpcParams(search: PesquisasListSearch) {
   return {
     neighborhood: search.bairro || null,
-    city: null,
+    city: search.cidade || null,
     source: null,
     status: null,
     supportLevel: null,

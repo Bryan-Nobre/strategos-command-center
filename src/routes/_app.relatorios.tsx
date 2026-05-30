@@ -288,13 +288,17 @@ function RelatoriosPage() {
               onExport={runExport}
               lastExports={exportLog}
             />
-            <ReportsTerritorySection territories={summary?.territories} />
+            <ReportsTerritorySection
+              territories={summary?.territories}
+              neighborhoodFilter={search.bairro}
+            />
             <ReportsPipeline funnel={summary?.funnel} />
             <ReportsDemandsSection demands={summary?.demands} />
             <ReportsElectoralSection
               growthSeries={summary?.growthSeries ?? []}
               intencao={intencao}
               aprovacao={aprovacao}
+              neighborhoodFilter={search.bairro}
               pollsLoading={pollsLoading}
               pollMeta={summary?.pollMeta}
             />

@@ -124,6 +124,7 @@ function PesquisasPage() {
 
               <ReportsTerritorySection
                 territories={summary?.territories ?? { critical: [], promising: [] }}
+                neighborhoodFilter={search.bairro}
               />
 
               <PesquisasSurveysSection
@@ -131,6 +132,7 @@ function PesquisasPage() {
                 aprovacaoSaved={aprovacaoSaved}
                 intencaoUpdatedAt={intencaoPoll?.recorded_at}
                 aprovacaoUpdatedAt={aprovacaoPoll?.recorded_at}
+                neighborhoodFilter={search.bairro}
                 upsertMutation={upsertMutation}
                 pollsLocked={pollsLocked}
                 isLoading={pollsLoading}

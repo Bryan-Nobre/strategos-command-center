@@ -1,5 +1,5 @@
 import { createFileRoute, useRouteContext } from "@tanstack/react-router";
-import { useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Users, Crown, Vote, MessageSquareWarning } from "lucide-react";
 import { DashboardUpcomingAgenda } from "@/components/dashboard/DashboardUpcomingAgenda";
 import { ModuleRouteGuard } from "@/components/auth/PermissionGate";
@@ -23,6 +23,9 @@ import {
 } from "@/lib/dashboard-compose";
 import { useOperationalDashboard, useActivities, usePollSnapshots } from "@/hooks/use-dashboard";
 import { useAgendaEvents } from "@/hooks/use-agenda";
+import { DashboardTerritoryCepBar } from "@/components/dashboard/DashboardTerritoryCepBar";
+import { filterEnrichedTerritories } from "@/lib/territory-filter";
+import type { TerritoryFilter } from "@/lib/territory-filter";
 import { greetingLabel } from "@/services/dashboard-intelligence";
 
 export const Route = createFileRoute("/_app/dashboard")({
@@ -85,8 +88,27 @@ function DashboardPage() {
 
   const canViewTerritoryLink = canAccessDashboardRoute(permissions, "/eleitores");
 
-  const critical = insights?.criticalTerritories ?? [];
-  const promising = insights?.promisingTerritories ?? [];
+  const [territoryFilter, setTerritoryFilter] = useState<TerritoryFilter | null>(null);
+
+  const handleTerritoryResolved = useCallback((filter: TerritoryFilter) => {
+    setTerritoryFilter(filter);
+  }, []);
+
+  const handleTerritoryClear = useCallback(() => {
+    setTerritoryFilter(null);
+  }, []);
+
+  const criticalAll = insights?.criticalTerritories ?? [];
+  const promisingAll = insights?.promisingTerritories ?? [];
+
+  const critical = useMemo(
+    () => filterEnrichedTerritories(criticalAll, territoryFilter?.neighborhood),
+    [criticalAll, territoryFilter?.neighborhood],
+  );
+  const promising = useMemo(
+    () => filterEnrichedTerritories(promisingAll, territoryFilter?.neighborhood),
+    [promisingAll, territoryFilter?.neighborhood],
+  );
 
   const heroHighlight = useMemo(
     () => pickHeroHighlight(critical, promising, filteredAlerts),
@@ -156,6 +178,11 @@ function DashboardPage() {
             />
 
             <div className="dashboard-war-room-stack">
+              <DashboardTerritoryCepBar
+                activeFilter={territoryFilter}
+                onResolved={handleTerritoryResolved}
+                onClear={handleTerritoryClear}
+              />
               {insights && (
                 <>
                   <DashboardPriorities items={priorities} sectionIndex={1} />
@@ -166,6 +193,11 @@ function DashboardPage() {
                     promising={promising}
                     canViewTerritoryLink={canViewTerritoryLink}
                     sectionIndex={4}
+                    territoryFilterLabel={
+                      territoryFilter
+                        ? [territoryFilter.neighborhood, territoryFilter.city].filter(Boolean).join(" · ")
+                        : null
+                    }
                   />
                   <DashboardPipelineSlim funnel={funnel} sectionIndex={5} />
                   {canViewAgenda && agendaEvents && (
@@ -181,6 +213,7 @@ function DashboardPage() {
               <DashboardAnalyticsSection
                 intencao={intencao}
                 aprovacao={aprovacao}
+                neighborhoodFilter={territoryFilter?.neighborhood}
                 isLoading={pollsLoading}
                 sectionIndex={insights ? (canViewAgenda && agendaEvents?.length ? 7 : 6) : 2}
               />

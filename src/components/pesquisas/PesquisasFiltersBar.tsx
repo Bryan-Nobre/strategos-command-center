@@ -8,6 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { TerritoryCepFilter } from "@/components/territory/TerritoryCepFilter";
 import type { PesquisasListSearch } from "@/lib/list-search/pesquisas";
 
 const PERIOD_OPTIONS = [
@@ -44,6 +45,24 @@ export function PesquisasFiltersBar({
       </div>
 
       <div className="reports-filters-grid">
+        <TerritoryCepFilter
+          className="sm:col-span-2"
+          compact
+          label="CEP (filtra território e aprovação)"
+          hint="O bairro reconhecido pelo CEP filtra mapa e gráfico de aprovação."
+          activeFilter={
+            search.bairro ? { neighborhood: search.bairro, city: search.cidade ?? null } : null
+          }
+          onResolved={(filter) =>
+            onChange({
+              ...search,
+              bairro: filter.neighborhood,
+              cidade: filter.city ?? undefined,
+            })
+          }
+          onClear={() => onChange({ ...search, bairro: undefined, cidade: undefined })}
+        />
+
         <div className="space-y-1.5">
           <label className="text-[10px] font-medium text-muted-foreground">Período</label>
           <Select

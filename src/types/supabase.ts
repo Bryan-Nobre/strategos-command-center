@@ -1382,9 +1382,10 @@ export type Database = {
           p_neighborhood?: string
           p_notes?: string
           p_phone?: string
+          p_primary_leadership_id?: string
           p_slug: string
         }
-        Returns: string
+        Returns: Json
       }
       upsert_postal_code_cache: {
         Args: { p_payload: Json }

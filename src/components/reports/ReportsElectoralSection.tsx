@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useMemo } from "react";
 import { Link } from "@tanstack/react-router";
 import { BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ReportsSection } from "@/components/reports/ReportsSection";
 import { ReportsGrowthChart } from "@/components/reports/ReportsGrowthChart";
 import { narrativeApproval, narrativeIntention } from "@/lib/chart-narratives";
+import { filterApprovalByNeighborhood } from "@/lib/territory-filter";
 import type { ReportsSummary } from "@/services/reports";
 
 const DashboardCharts = lazy(() =>
@@ -19,17 +20,24 @@ export function ReportsElectoralSection({
   growthSeries,
   intencao,
   aprovacao,
+  neighborhoodFilter,
   pollsLoading,
   pollMeta,
 }: {
   growthSeries: ReportsSummary["growthSeries"];
   intencao: IntencaoRow[];
   aprovacao: AprovacaoRow[];
+  neighborhoodFilter?: string | null;
   pollsLoading?: boolean;
   pollMeta?: ReportsSummary["pollMeta"];
 }) {
+  const filteredAprovacao = useMemo(
+    () => filterApprovalByNeighborhood(aprovacao, neighborhoodFilter),
+    [aprovacao, neighborhoodFilter],
+  );
+
   const narrativeInt = narrativeIntention(intencao);
-  const narrativeApr = narrativeApproval(aprovacao);
+  const narrativeApr = narrativeApproval(filteredAprovacao);
 
   const intencaoUpdated = pollMeta?.find((p) => p.type === "intencao_voto")?.updatedAt;
   const aprovacaoUpdated = pollMeta?.find((p) => p.type === "aprovacao_bairro")?.updatedAt;
@@ -91,6 +99,11 @@ export function ReportsElectoralSection({
             <div className="mb-3 space-y-1">
               <span className="reports-data-badge reports-data-badge--survey">Dados declarados</span>
               <h3 className="text-sm font-semibold">Aprovação por bairro</h3>
+              {neighborhoodFilter && (
+                <p className="text-[10px] text-muted-foreground">
+                  Filtrado pelo bairro do CEP: {neighborhoodFilter}
+                </p>
+              )}
               {aprovacaoUpdated && (
                 <p className="text-[10px] text-muted-foreground">
                   Atualizado: {new Date(aprovacaoUpdated).toLocaleDateString("pt-BR")}
@@ -102,13 +115,15 @@ export function ReportsElectoralSection({
             </div>
             {pollsLoading ? (
               <Skeleton className="h-44 w-full rounded-lg" />
-            ) : aprovacao.length === 0 ? (
+            ) : filteredAprovacao.length === 0 ? (
               <p className="py-8 text-center text-xs text-muted-foreground">
-                Nenhum snapshot em Pesquisas.
+                {neighborhoodFilter
+                  ? `Nenhum dado de aprovação para "${neighborhoodFilter}".`
+                  : "Nenhum snapshot em Pesquisas."}
               </p>
             ) : (
               <Suspense fallback={<Skeleton className="h-44 w-full rounded-lg" />}>
-                <DashboardCharts type="aprovacao" data={aprovacao} />
+                <DashboardCharts type="aprovacao" data={filteredAprovacao} />
               </Suspense>
             )}
           </div>

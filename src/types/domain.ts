@@ -113,6 +113,7 @@ export const landingCaptureSchema = z.object({
   city: z.string().optional(),
   interest: z.string().optional(),
   notes: z.string().optional(),
+  primary_leadership_id: z.string().optional(),
 });
 
 export const signupFormSchema = z

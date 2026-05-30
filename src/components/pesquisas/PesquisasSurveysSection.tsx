@@ -1,10 +1,11 @@
-import { lazy, Suspense, useEffect, useState, type ReactNode } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState, type ReactNode } from "react";
 import { Globe, PieChart, Save, MapPin, Plus, Trash2 } from "lucide-react";
 import { ReportsSection } from "@/components/reports/ReportsSection";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { narrativeApproval, narrativeIntention } from "@/lib/chart-narratives";
+import { filterApprovalByNeighborhood } from "@/lib/territory-filter";
 import type { Json } from "@/types/supabase";
 import type { UseMutationResult } from "@tanstack/react-query";
 import type { Enums } from "@/types/supabase";
@@ -32,6 +33,7 @@ export function PesquisasSurveysSection({
   aprovacaoSaved,
   intencaoUpdatedAt,
   aprovacaoUpdatedAt,
+  neighborhoodFilter,
   upsertMutation,
   pollsLocked,
   isLoading,
@@ -41,6 +43,7 @@ export function PesquisasSurveysSection({
   aprovacaoSaved: AprovacaoRow[];
   intencaoUpdatedAt?: string;
   aprovacaoUpdatedAt?: string;
+  neighborhoodFilter?: string | null;
   upsertMutation: UpsertMutation;
   pollsLocked: boolean;
   isLoading?: boolean;
@@ -55,8 +58,13 @@ export function PesquisasSurveysSection({
     setAprovacao(aprovacaoSaved.length ? aprovacaoSaved : [{ bairro: "Centro", aprovacao: 0 }]);
   }, [isLoading, intencaoSaved, aprovacaoSaved]);
 
+  const filteredAprovacaoChart = useMemo(
+    () => filterApprovalByNeighborhood(aprovacao, neighborhoodFilter),
+    [aprovacao, neighborhoodFilter],
+  );
+
   const narrativeInt = narrativeIntention(intencao);
-  const narrativeApr = narrativeApproval(aprovacao);
+  const narrativeApr = narrativeApproval(filteredAprovacaoChart);
 
   return (
     <ReportsSection
@@ -105,7 +113,11 @@ export function PesquisasSurveysSection({
 
         <SurveyCard
           title="Aprovação por bairro"
-          subtitle="Índice regional · DF"
+          subtitle={
+            neighborhoodFilter
+              ? `Filtrado pelo CEP · ${neighborhoodFilter}`
+              : "Índice regional · DF"
+          }
           source="manual"
           landingHint="Bairro informado na landing"
           updatedAt={aprovacaoUpdatedAt}
@@ -113,14 +125,20 @@ export function PesquisasSurveysSection({
           chart={
             isLoading ? (
               <Skeleton className="h-44 w-full rounded-lg" />
-            ) : aprovacao.some((r) => r.aprovacao > 0) ? (
+            ) : filteredAprovacaoChart.some((r) => r.aprovacao > 0) ? (
               <Suspense fallback={<Skeleton className="h-44 w-full rounded-lg" />}>
                 <div className="h-44">
-                  <DashboardCharts type="aprovacao" data={aprovacao} />
+                  <DashboardCharts type="aprovacao" data={filteredAprovacaoChart} />
                 </div>
               </Suspense>
             ) : (
-              <EmptyChart message="Informe índices por bairro para o gráfico de barras." />
+              <EmptyChart
+                message={
+                  neighborhoodFilter
+                    ? `Nenhum índice cadastrado para "${neighborhoodFilter}".`
+                    : "Informe índices por bairro para o gráfico de barras."
+                }
+              />
             )
           }
           editor={<AprovacaoEditor rows={aprovacao} onChange={setAprovacao} disabled={pollsLocked} />}

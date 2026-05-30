@@ -1,22 +1,4 @@
--- P1.3c: relatórios alinhados a territory_key (filtros + agregação).
-
-CREATE OR REPLACE FUNCTION public.demand_matches_neighborhood_filter(
-  p_neighborhood TEXT,
-  p_normalized_neighborhood TEXT,
-  p_filter TEXT
-)
-RETURNS BOOLEAN
-LANGUAGE sql
-IMMUTABLE
-PARALLEL SAFE
-AS $$
-  SELECT
-    p_filter IS NULL
-    OR trim(p_filter) = ''
-    OR public.demand_territory_key_row(p_neighborhood, p_normalized_neighborhood)
-       = public.normalize_neighborhood(p_filter)
-    OR COALESCE(p_neighborhood, '') ILIKE '%' || trim(p_filter) || '%';
-$$;
+-- Hotfix: scored CTE usava neighborhood inexistente apos P1.3c
 
 CREATE OR REPLACE FUNCTION public.get_tenant_reports_summary(
   p_tenant_id UUID,

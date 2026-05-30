@@ -8,6 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { TerritoryCepFilter } from "@/components/territory/TerritoryCepFilter";
 import { SUPPORT_LEVEL_LABELS, SUPPORTER_STATUS_LABELS } from "@/types/domain";
 import type { RelatoriosListSearch } from "@/lib/list-search/relatorios";
 import type { ReportsSummary } from "@/services/reports";
@@ -52,6 +53,26 @@ export function ReportsFiltersBar({
       </div>
 
       <div className="reports-filters-grid">
+        <TerritoryCepFilter
+          className="sm:col-span-2"
+          compact
+          label="CEP (filtra mapa e aprovação)"
+          hint="Ex.: CEP de Ceilândia filtra território e aprovação por bairro."
+          activeFilter={
+            search.bairro
+              ? { neighborhood: search.bairro, city: search.cidade ?? null }
+              : null
+          }
+          onResolved={(filter) =>
+            onChange({
+              ...search,
+              bairro: filter.neighborhood,
+              cidade: filter.city ?? undefined,
+            })
+          }
+          onClear={() => onChange({ ...search, bairro: undefined, cidade: undefined })}
+        />
+
         <FilterSelect
           label="Período"
           value={search.period ?? "30d"}
