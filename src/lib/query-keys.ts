@@ -37,6 +37,7 @@ export const queryKeys = {
   ) => ["leadership-operational-detail", tenantId, leadershipId, params] as const,
   prefs: (tenantId: string) => ["prefs", tenantId] as const,
   planUsage: (tenantId: string) => ["plan-usage", tenantId] as const,
+  planCatalog: () => ["plan-catalog"] as const,
   tenantPermissions: (tenantId: string) => ["tenant-permissions", tenantId] as const,
   tenantRoles: (tenantId: string) => ["tenant-roles", tenantId] as const,
   globalSearch: (tenantId: string, query: string) => ["global-search", tenantId, query] as const,

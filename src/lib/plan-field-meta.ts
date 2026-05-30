@@ -44,7 +44,7 @@ export const PLAN_FIELD_META = {
   },
 } as const;
 
-export const PLAN_ORDER: TenantPlan[] = ["trial", "basic", "pro", "enterprise"];
+export const PLAN_ORDER: TenantPlan[] = ["start", "basic", "pro", "enterprise"];
 
 export const PLAN_ADMIN_INTRO =
   "Estes limites definem o que cada plano comercial permite. Alterações entram em vigor imediatamente para todas as campanhas vinculadas ao plano. " +

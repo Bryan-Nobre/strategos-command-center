@@ -26,6 +26,7 @@ import { GoalsSettingsSection } from "@/components/settings/GoalsSettingsSection
 import { NotificationsSettingsSection } from "@/components/settings/NotificationsSettingsSection";
 import { PlanSettingsCard } from "@/components/settings/PlanSettingsCard";
 import { useRouteContext } from "@tanstack/react-router";
+import type { TenantPlan, TenantStatus } from "@/types/tenant";
 
 export const Route = createFileRoute("/_app/configuracoes")({
   validateSearch: parseConfiguracoesSearch,
@@ -78,7 +79,7 @@ function ConfigPage() {
 
   return (
     <ModuleRouteGuard module="settings">
-      <div className="settings-page mx-auto max-w-5xl space-y-6">
+      <div className="settings-page mx-auto w-full max-w-7xl space-y-6">
         <PageHeader
           title="Configurações"
           description="Perfil, metas da campanha e preferências de alertas."
@@ -86,7 +87,7 @@ function ConfigPage() {
 
         <SettingsCampanhaCard
           tenantName={activeTenant?.name ?? "Sem campanha"}
-          plan={activeTenant?.plan ?? "trial"}
+          plan={activeTenant?.plan ?? "start"}
           status={activeTenant?.status ?? "—"}
           publicCode={publicCode}
         />
@@ -169,8 +170,8 @@ function ConfigPage() {
 
           <TabsContent value="plano">
             <PlanSettingsCard
-              plan={activeTenant?.plan ?? "trial"}
-              status={activeTenant?.status ?? "—"}
+              plan={(activeTenant?.plan ?? "start") as TenantPlan}
+              status={(activeTenant?.status ?? "active") as TenantStatus}
             />
           </TabsContent>
         </Tabs>

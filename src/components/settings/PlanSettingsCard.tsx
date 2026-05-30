@@ -1,32 +1,70 @@
+import { useQuery } from "@tanstack/react-query";
 import { Shield } from "lucide-react";
+import { PlanPricingGrid } from "@/components/settings/PlanPricingGrid";
+import { LoadingState } from "@/components/common/LoadingState";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { queryKeys } from "@/lib/query-keys";
+import { listPlanCatalog } from "@/services/plan-catalog";
+import {
+  TENANT_PLAN_LABELS,
+  TENANT_STATUS_LABELS,
+  type TenantPlan,
+  type TenantStatus,
+} from "@/types/tenant";
 
 export function PlanSettingsCard({
   plan,
   status,
 }: {
-  plan: string;
-  status: string;
+  plan: TenantPlan;
+  status: TenantStatus;
 }) {
+  const {
+    data: plans,
+    isLoading,
+    isError,
+    error,
+  } = useQuery({
+    queryKey: queryKeys.planCatalog(),
+    queryFn: listPlanCatalog,
+    staleTime: 5 * 60_000,
+  });
+
+  const planLabel = TENANT_PLAN_LABELS[plan] ?? plan;
+  const statusLabel = TENANT_STATUS_LABELS[status] ?? status;
+
   return (
-    <Card className="settings-panel shadow-elegant">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Shield className="h-5 w-5 text-primary" />
-          Plano atual
-        </CardTitle>
-        <CardDescription>
-          Upgrade, faturamento e limites comerciais serão tratados em um módulo dedicado.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <Badge className="px-4 py-2 text-base capitalize">{plan}</Badge>
-        <p className="text-sm text-muted-foreground">Status da campanha: {status}</p>
-        <p className="rounded-lg border border-dashed border-border/80 bg-muted/30 p-4 text-xs text-muted-foreground">
-          Em breve: comparativo de planos, uso de limites e solicitação de upgrade sem sair do CRM.
-        </p>
-      </CardContent>
-    </Card>
+    <div className="space-y-6">
+      <Card className="settings-panel shadow-elegant">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Shield className="h-5 w-5 text-primary" />
+            Plano atual
+          </CardTitle>
+          <CardDescription>
+            Sua campanha está no plano {planLabel}. Compare abaixo com os demais planos comerciais.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-wrap items-center gap-3">
+          <Badge className="px-4 py-2 text-base">{planLabel}</Badge>
+          <Badge variant="outline">Status: {statusLabel}</Badge>
+        </CardContent>
+      </Card>
+
+      {isLoading && <LoadingState message="Carregando planos…" />}
+
+      {isError && (
+        <Alert variant="destructive">
+          <AlertTitle>Erro ao carregar planos</AlertTitle>
+          <AlertDescription>
+            {error instanceof Error ? error.message : "Tente novamente em instantes."}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {plans && plans.length > 0 && <PlanPricingGrid plans={plans} currentPlan={plan} />}
+    </div>
   );
 }

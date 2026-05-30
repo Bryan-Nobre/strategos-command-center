@@ -1250,15 +1250,20 @@ export type Database = {
         Args: { p_tenant_id: string }
         Returns: Json
       }
+      list_plan_limit_definitions: { Args: never; Returns: Json }
       list_plan_limit_definitions_admin: { Args: never; Returns: Json }
       update_plan_limit_definition: {
         Args: {
           p_exports_enabled: boolean
+          p_highlight_style?: string
+          p_is_highlighted?: boolean
           p_max_regions: number | null
           p_max_supporters: number | null
           p_max_team_members: number | null
           p_plan: Database["public"]["Enums"]["tenant_plan"]
           p_polls_enabled: boolean
+          p_price_label?: string
+          p_tagline?: string
         }
         Returns: Json
       }
@@ -1543,7 +1548,7 @@ export type Database = {
         | "oposicao"
         | "indeciso"
       tenant_member_status: "active" | "suspended"
-      tenant_plan: "trial" | "basic" | "pro" | "enterprise"
+      tenant_plan: "start" | "basic" | "pro" | "enterprise"
       tenant_role:
         | "owner"
         | "coordinator"
@@ -1723,7 +1728,7 @@ export const Constants = {
         "indeciso",
       ],
       tenant_member_status: ["active", "suspended"],
-      tenant_plan: ["trial", "basic", "pro", "enterprise"],
+      tenant_plan: ["start", "basic", "pro", "enterprise"],
       tenant_role: [
         "owner",
         "coordinator",

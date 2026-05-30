@@ -12,6 +12,13 @@ import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -33,6 +40,10 @@ function toFormState(row: AdminPlanLimitRow): FormState {
     maxRegions: row.maxRegions,
     exportsEnabled: row.exportsEnabled,
     pollsEnabled: row.pollsEnabled,
+    tagline: row.tagline,
+    priceLabel: row.priceLabel,
+    isHighlighted: row.isHighlighted,
+    highlightStyle: row.highlightStyle,
     unlimitedSupporters: row.maxSupporters === null,
     unlimitedTeam: row.maxTeamMembers === null,
     unlimitedRegions: row.maxRegions === null,
@@ -46,6 +57,10 @@ function toPayload(form: FormState): UpdatePlanLimitPayload {
     maxRegions: form.unlimitedRegions ? null : form.maxRegions,
     exportsEnabled: form.exportsEnabled,
     pollsEnabled: form.pollsEnabled,
+    tagline: form.tagline?.trim() || null,
+    priceLabel: form.priceLabel.trim(),
+    isHighlighted: form.isHighlighted,
+    highlightStyle: form.highlightStyle,
   };
 }
 
@@ -241,6 +256,59 @@ export function PlanLimitEditor({
         </div>
       </CardHeader>
       <CardContent className="space-y-8">
+        <div className="space-y-4 rounded-xl border border-border/70 bg-muted/20 p-4">
+          <p className="text-sm font-semibold">Vitrine comercial</p>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="price-label">Preço exibido</Label>
+              <Input
+                id="price-label"
+                value={form.priceLabel}
+                placeholder="Ex.: Grátis, R$ 199/mês"
+                onChange={(e) => setForm({ ...form, priceLabel: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="tagline">Subtítulo</Label>
+              <Input
+                id="tagline"
+                value={form.tagline ?? ""}
+                placeholder="Frase curta abaixo do nome do plano"
+                onChange={(e) => setForm({ ...form, tagline: e.target.value || null })}
+              />
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-6">
+            <div className="flex items-center gap-2">
+              <Switch
+                id="is-highlighted"
+                checked={form.isHighlighted}
+                onCheckedChange={(v) => setForm({ ...form, isHighlighted: v })}
+              />
+              <Label htmlFor="is-highlighted">Plano em destaque</Label>
+            </div>
+            {form.isHighlighted && (
+              <div className="flex items-center gap-2">
+                <Label htmlFor="highlight-style">Gradiente</Label>
+                <Select
+                  value={form.highlightStyle}
+                  onValueChange={(v) =>
+                    setForm({ ...form, highlightStyle: v as FormState["highlightStyle"] })
+                  }
+                >
+                  <SelectTrigger id="highlight-style" className="w-[140px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="blue">Azul</SelectItem>
+                    <SelectItem value="purple">Roxo</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+        </div>
+
         <NumericLimitField fieldKey="maxSupporters" form={form} onChange={setForm} />
         <Separator />
         <NumericLimitField fieldKey="maxTeamMembers" form={form} onChange={setForm} />

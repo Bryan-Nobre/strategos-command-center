@@ -1,13 +1,8 @@
 import { createClient } from "@/lib/supabase/client";
+import type { PlanDefinitionRow, PlanHighlightStyle } from "@/lib/plan-display";
 import type { Enums } from "@/types/supabase";
 
-export type AdminPlanLimitRow = {
-  plan: Enums<"tenant_plan">;
-  maxSupporters: number | null;
-  maxTeamMembers: number | null;
-  maxRegions: number | null;
-  exportsEnabled: boolean;
-  pollsEnabled: boolean;
+export type AdminPlanLimitRow = PlanDefinitionRow & {
   tenantCount: number;
 };
 
@@ -17,6 +12,10 @@ export type UpdatePlanLimitPayload = {
   maxRegions: number | null;
   exportsEnabled: boolean;
   pollsEnabled: boolean;
+  tagline: string | null;
+  priceLabel: string;
+  isHighlighted: boolean;
+  highlightStyle: PlanHighlightStyle;
 };
 
 type RawAdminPlanRow = {
@@ -26,6 +25,10 @@ type RawAdminPlanRow = {
   max_regions: number | null;
   exports_enabled: boolean;
   polls_enabled: boolean;
+  tagline: string | null;
+  price_label: string;
+  is_highlighted: boolean;
+  highlight_style: PlanHighlightStyle;
   tenant_count: number;
 };
 
@@ -37,6 +40,10 @@ function mapRow(raw: RawAdminPlanRow): AdminPlanLimitRow {
     maxRegions: raw.max_regions,
     exportsEnabled: raw.exports_enabled,
     pollsEnabled: raw.polls_enabled,
+    tagline: raw.tagline,
+    priceLabel: raw.price_label ?? "",
+    isHighlighted: raw.is_highlighted === true,
+    highlightStyle: raw.highlight_style === "purple" ? "purple" : "blue",
     tenantCount: raw.tenant_count,
   };
 }
@@ -62,6 +69,10 @@ export async function updatePlanLimitDefinition(
     p_max_regions: payload.maxRegions,
     p_exports_enabled: payload.exportsEnabled,
     p_polls_enabled: payload.pollsEnabled,
+    p_tagline: payload.tagline,
+    p_price_label: payload.priceLabel,
+    p_is_highlighted: payload.isHighlighted,
+    p_highlight_style: payload.highlightStyle,
   });
   if (error) throw error;
 

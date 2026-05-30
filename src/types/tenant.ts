@@ -12,9 +12,9 @@ export const TENANT_STATUS_LABELS: Record<TenantStatus, string> = {
 
 export type TenantPlan = Enums<"tenant_plan">;
 
-/** Plano comercial (limites, trial de produto). Distinto de tenant_status. */
+/** Plano comercial (Start, Basic, Pro…). Distinto de tenant_status. */
 export const TENANT_PLAN_LABELS: Record<TenantPlan, string> = {
-  trial: "Trial",
+  start: "Start",
   basic: "Basic",
   pro: "Pro",
   enterprise: "Enterprise",
@@ -34,7 +34,7 @@ export type PlanLimits = {
 };
 
 export const PLAN_LIMITS: Record<TenantPlan, PlanLimits> = {
-  trial: {
+  start: {
     maxSupporters: 500,
     maxTeamMembers: 3,
     maxRegions: 5,
