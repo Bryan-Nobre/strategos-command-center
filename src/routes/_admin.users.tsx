@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
+import { AdminUserCards } from "@/components/admin/AdminUserCards";
 
 export const Route = createFileRoute("/_admin/users")({
   component: AdminUsersPage,
@@ -32,32 +33,35 @@ function AdminUsersPage() {
       {(users ?? []).length === 0 ? (
         <EmptyState title="Nenhum usuário" description="Cadastros aparecerão após signup de campanhas." />
       ) : (
-        <Card className="shadow-elegant">
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/40">
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Campanhas</TableHead>
-                  <TableHead>Cadastro</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {(users ?? []).map((u) => (
-                  <TableRow key={u.id}>
-                    <TableCell className="font-medium">{u.full_name ?? "—"}</TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">{u.tenant_count}</Badge>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {new Date(u.created_at).toLocaleDateString("pt-BR")}
-                    </TableCell>
+        <>
+          <AdminUserCards users={users ?? []} />
+          <Card className="admin-users-table shadow-elegant">
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/40">
+                    <TableHead>Nome</TableHead>
+                    <TableHead>Campanhas</TableHead>
+                    <TableHead>Cadastro</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+                </TableHeader>
+                <TableBody>
+                  {(users ?? []).map((u) => (
+                    <TableRow key={u.id}>
+                      <TableCell className="font-medium">{u.full_name ?? "—"}</TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">{u.tenant_count}</Badge>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {new Date(u.created_at).toLocaleDateString("pt-BR")}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </>
       )}
     </div>
   );

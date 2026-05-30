@@ -191,7 +191,7 @@ export function GoalsSettingsSection({
                       {GOAL_METRIC_HINTS[goal.metric]}
                     </p>
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="settings-goal-dates grid grid-cols-2 gap-2">
                     <div className="grid gap-2">
                       <Label className="text-xs">Início</Label>
                       <Input

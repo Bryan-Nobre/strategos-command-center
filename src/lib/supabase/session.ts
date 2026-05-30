@@ -1,6 +1,7 @@
 import type { Session, User } from "@supabase/supabase-js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/supabase";
+import { isStaleAuthSessionError } from "./auth-errors";
 import { createClient } from "./client";
 import { createServerSupabaseClient } from "./server";
 import { clearTenantScopedCache } from "@/lib/query-cache";
@@ -32,24 +33,43 @@ export function setStoredTenantId(tenantId: string) {
   localStorage.setItem(ACTIVE_TENANT_KEY, tenantId);
 }
 
+const EMPTY_AUTH: AuthContext = {
+  session: null,
+  user: null,
+  profile: null,
+  tenants: [],
+  activeTenant: null,
+  membershipRole: null,
+};
+
+async function clearStaleAuthSession(supabase: SupabaseClient<Database>) {
+  try {
+    await supabase.auth.signOut({ scope: "local" });
+  } catch {
+    // Ignora falha ao limpar storage local
+  }
+}
+
 async function resolveAuthFromClient(
   supabase: SupabaseClient<Database>,
   options?: { useStoredTenant?: boolean },
 ): Promise<AuthContext> {
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
+  let user: User | null = null;
+  let userError: Error | null = null;
+
+  try {
+    const result = await supabase.auth.getUser();
+    user = result.data.user;
+    userError = result.error;
+  } catch (error) {
+    userError = error instanceof Error ? error : new Error(String(error));
+  }
 
   if (userError || !user) {
-    return {
-      session: null,
-      user: null,
-      profile: null,
-      tenants: [],
-      activeTenant: null,
-      membershipRole: null,
-    };
+    if (userError && isStaleAuthSessionError(userError)) {
+      await clearStaleAuthSession(supabase);
+    }
+    return EMPTY_AUTH;
   }
 
   const {

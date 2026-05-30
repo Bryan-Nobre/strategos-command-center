@@ -1776,7 +1776,7 @@
     background: #07723d;
   }
 
-  @media (min-width: 900px) {
+  @media (min-width: 1001px) {
     .login-split__brand {
       display: flex;
     }
@@ -1889,7 +1889,7 @@
     padding: 2rem 1.25rem;
   }
 
-  @media (min-width: 900px) {
+  @media (min-width: 1001px) {
     .login-split__panel {
       flex: 1;
       padding: 2.5rem;
@@ -1907,7 +1907,7 @@
     padding-bottom: 1.5rem;
   }
 
-  @media (min-width: 900px) {
+  @media (min-width: 1001px) {
     .login-split__panel--signup {
       align-items: center;
       padding-top: 2rem;
@@ -2618,7 +2618,7 @@
   }
 
   /* Mobile: faixa verde com logo no topo */
-  @media (max-width: 899px) {
+  @media (max-width: 1000px) {
     .login-split {
       flex-direction: column;
     }
@@ -3086,4 +3086,189 @@
 
 .admin-plan-card__badge {
   backdrop-filter: blur(8px);
+}
+
+/* ==================================================
+   Layout compacto — breakpoint ≤ 1000px
+   ================================================== */
+@media (max-width: 1000px) {
+  /* Scrollbar — trilho embaçado, indicador verde */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #07723d rgba(6, 23, 53, 0.12);
+  }
+
+  .dark * {
+    scrollbar-color: #10b981 rgba(255, 255, 255, 0.08);
+  }
+
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: rgba(6, 23, 53, 0.1);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-radius: 999px;
+  }
+
+  .dark *::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #07723d 0%, #0b5c32 100%);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #0a8a49 0%, #07723d 100%);
+    background-clip: padding-box;
+  }
+
+  /* Admin — usuários em cards */
+  .admin-users-cards {
+    display: grid;
+  }
+
+  .admin-users-table {
+    display: none;
+  }
+
+  /* Cabeçalho de página — ações 2×2 */
+  .page-header-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+    width: 100%;
+  }
+
+  .page-header-actions > *,
+  .page-header-actions .page-header-action-slot {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .page-header-action-slot button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Eleitores — filtros 2×2 no sheet */
+  .eleitores-filters-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .eleitores-filters-grid > .col-span-2,
+  .eleitores-filters-grid > button,
+  .eleitores-filters-grid > .list-url-actions {
+    grid-column: 1 / -1;
+  }
+
+  /* Agenda — visões empilhadas */
+  .agenda-view-toggle {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.25rem;
+    padding: 0.35rem;
+    width: 100%;
+  }
+
+  .agenda-view-toggle button {
+    width: 100%;
+    flex: none;
+    justify-content: center;
+  }
+
+  .agenda-toolbar-actions {
+    width: 100%;
+  }
+
+  /* Metas — início/fim empilhados */
+  .settings-goal-dates {
+    grid-template-columns: 1fr;
+  }
+
+  /* Dashboard — espaçamento entre seções e pílulas */
+  .dashboard-war-room-stack > .dashboard-section + .dashboard-section,
+  .reports-stack > .dashboard-section + .dashboard-section {
+    margin-top: 2.75rem;
+    padding-top: 2.75rem;
+  }
+
+  .dashboard-section-header {
+    margin-bottom: 1.25rem;
+  }
+
+  .dashboard-section-body {
+    gap: 1.25rem;
+  }
+
+  .dashboard-hero-badges {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .dashboard-hero-badge {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .dashboard-hero-grid {
+    gap: 1.75rem;
+  }
+
+  .dashboard-hero-cta-primary,
+  .dashboard-hero-cta-secondary {
+    width: 100%;
+  }
+
+  .dashboard-metrics-grid,
+  .dashboard-insights-grid,
+  .dashboard-territory-columns {
+    width: 100%;
+    min-width: 0;
+  }
+
+  /* Overlay do sheet só no conteúdo principal (menu lateral sem filtro escuro) */
+  body:has([data-mobile="true"][data-state="open"]) .app-main-shell::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 35;
+    background: rgba(6, 23, 53, 0.45);
+    pointer-events: none;
+  }
+
+  .dark body:has([data-mobile="true"][data-state="open"]) .app-main-shell::before {
+    background: rgba(0, 0, 0, 0.55);
+  }
+}
+
+@media (min-width: 1001px) {
+  .admin-users-cards {
+    display: none;
+  }
+}
+
+/* Shell e modais — todas as larguras */
+.app-main-shell {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.app-main-shell > * {
+  max-width: 100%;
+  min-width: 0;
+}
+
+.dialog-viewport {
+  max-height: min(90dvh, calc(100dvh - 2rem));
+  overflow-y: auto;
 }

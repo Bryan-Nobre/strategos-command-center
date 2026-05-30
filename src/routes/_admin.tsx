@@ -18,7 +18,7 @@ function AdminLayout() {
         <AdminSidebar />
         <SidebarInset className="flex min-w-0 flex-1 flex-col">
           <AppNavbar />
-          <main className="flex-1 px-4 py-6 md:px-8 md:py-8">
+          <main className="app-main-shell min-w-0 w-full max-w-full flex-1 px-4 py-6 md:px-8 md:py-8">
             <Outlet />
           </main>
         </SidebarInset>

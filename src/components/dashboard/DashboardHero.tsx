@@ -64,7 +64,7 @@ export function DashboardHero({
           )}
 
           {badges.length > 0 && (
-            <div className="flex flex-wrap gap-2">
+            <div className="dashboard-hero-badges flex w-full min-w-0 flex-wrap gap-2">
               {badges.map((pill) => (
                 <BadgePill key={pill.id} pill={pill} />
               ))}

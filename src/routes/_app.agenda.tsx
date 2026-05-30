@@ -216,7 +216,7 @@ function AgendaPage() {
               className="pl-9"
             />
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="agenda-toolbar-actions flex w-full min-w-0 flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
             <AgendaViewToggle view={filters.view} onChange={(view) => patchFilter({ view })} />
             <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
               <SheetTrigger asChild>

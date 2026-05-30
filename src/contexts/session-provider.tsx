@@ -9,6 +9,7 @@ import {
 } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
+import { isStaleAuthSessionError } from "@/lib/supabase/auth-errors";
 
 type SessionContextValue = {
   session: Session | null;
@@ -30,12 +31,25 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const refreshSession = useCallback(async () => {
     const supabase = createClient();
-    const {
-      data: { user: nextUser },
-      error,
-    } = await supabase.auth.getUser();
+    let nextUser: User | null = null;
+    let error: Error | null = null;
+
+    try {
+      const result = await supabase.auth.getUser();
+      nextUser = result.data.user;
+      error = result.error;
+    } catch (e) {
+      error = e instanceof Error ? e : new Error(String(e));
+    }
 
     if (error || !nextUser) {
+      if (error && isStaleAuthSessionError(error)) {
+        try {
+          await supabase.auth.signOut({ scope: "local" });
+        } catch {
+          /* storage já limpo */
+        }
+      }
       setUser(null);
       setSession(null);
       return;

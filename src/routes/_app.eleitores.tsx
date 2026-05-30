@@ -62,6 +62,9 @@ import { EleitoresToolbar } from "@/components/eleitores/EleitoresToolbar";
 import { EleitoresTableView } from "@/components/eleitores/EleitoresTableView";
 import { EleitoresCardsView } from "@/components/eleitores/EleitoresCardsView";
 import { EleitoresEditSheet } from "@/components/eleitores/EleitoresEditSheet";
+import { EleitoresPagination } from "@/components/eleitores/EleitoresPagination";
+
+const ELEITORES_PAGE_SIZE = 10;
 import {
   SUPPORT_LEVEL_LABELS,
   SUPPORTER_STATUS_LABELS,
@@ -115,6 +118,7 @@ function EleitoresPage() {
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [exporting, setExporting] = useState(false);
+  const [page, setPage] = useState(1);
   const importRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -179,6 +183,19 @@ function EleitoresPage() {
     () => filterSupporters(supportersEnriched, filters, query),
     [supportersEnriched, filters, query],
   );
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / ELEITORES_PAGE_SIZE));
+
+  const paginated = useMemo(() => {
+    const start = (page - 1) * ELEITORES_PAGE_SIZE;
+    return filtered.slice(start, start + ELEITORES_PAGE_SIZE);
+  }, [filtered, page]);
+
+  const listSearchKey = serializeEleitoresSearch(urlSearch);
+
+  useEffect(() => {
+    setPage(1);
+  }, [listSearchKey, query]);
 
   const landingCount = useMemo(
     () => (supporters ?? []).filter((s) => s.source === "landing").length,
@@ -398,6 +415,7 @@ function EleitoresPage() {
           }
           actions={
             <>
+              <div className="page-header-action-slot">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
@@ -421,6 +439,8 @@ function EleitoresPage() {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+              </div>
+              <div className="page-header-action-slot">
               <Button
                 variant="outline"
                 size="sm"
@@ -430,9 +450,12 @@ function EleitoresPage() {
                 <Upload className="mr-2 h-4 w-4" />
                 Importar
               </Button>
+              </div>
+              <div className="page-header-action-slot">
               <Button variant="ghost" size="sm" onClick={handleDownloadTemplate}>
                 Modelo CSV
               </Button>
+              </div>
               <input
                 ref={importRef}
                 type="file"
@@ -444,6 +467,7 @@ function EleitoresPage() {
                   e.target.value = "";
                 }}
               />
+              <div className="page-header-action-slot">
               <Dialog open={createOpen} onOpenChange={setCreateOpen}>
                 <DialogTrigger asChild>
                   <Button size="sm" disabled={!planGate.canAddSupporters() || !perms.canCreate}>
@@ -471,6 +495,7 @@ function EleitoresPage() {
                   />
                 </DialogContent>
               </Dialog>
+              </div>
             </>
           }
         />
@@ -506,7 +531,7 @@ function EleitoresPage() {
                   <SheetTitle>Filtros avançados</SheetTitle>
                   <SheetDescription>Status, bairro, liderança, apoio e tags.</SheetDescription>
                 </SheetHeader>
-                <div className="mt-6 grid gap-4">
+                <div className="eleitores-filters-grid mt-6 grid gap-3">
                   <div className="grid gap-2">
                     <Label>Status político</Label>
                     <Select value={filters.status} onValueChange={(v) => patchFilter({ status: v })}>
@@ -643,7 +668,7 @@ function EleitoresPage() {
               />
             ) : viewMode === "table" ? (
               <EleitoresTableView
-                rows={filtered}
+                rows={paginated}
                 highlightId={highlightId}
                 highlightRef={highlightRef}
                 leadershipMap={leadershipMap}
@@ -662,7 +687,7 @@ function EleitoresPage() {
               />
             ) : (
               <EleitoresCardsView
-                rows={filtered}
+                rows={paginated}
                 highlightId={highlightId}
                 selectedIds={selectedIds}
                 onToggleSelect={toggleSelect}
@@ -673,6 +698,16 @@ function EleitoresPage() {
                 landingMode={filters.view === "landing"}
                 canUpdate={perms.canUpdate}
                 canDelete={perms.canDelete}
+              />
+            )}
+
+            {filtered.length > 0 && (
+              <EleitoresPagination
+                page={page}
+                totalPages={totalPages}
+                totalItems={filtered.length}
+                pageSize={ELEITORES_PAGE_SIZE}
+                onPageChange={setPage}
               />
             )}
 

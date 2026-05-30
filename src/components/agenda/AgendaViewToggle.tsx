@@ -15,7 +15,7 @@ export function AgendaViewToggle({
   onChange: (view: string) => void;
 }) {
   return (
-    <div className="inline-flex rounded-lg border border-border/80 bg-muted/30 p-0.5">
+    <div className="agenda-view-toggle inline-flex w-full min-w-0 rounded-lg border border-border/80 bg-muted/30 p-0.5 sm:w-auto">
       {VIEWS.map((v) => (
         <Button
           key={v.key}
@@ -23,7 +23,7 @@ export function AgendaViewToggle({
           size="sm"
           variant="ghost"
           className={cn(
-            "h-8 rounded-md px-3 text-xs",
+            "h-8 flex-1 rounded-md px-3 text-xs sm:flex-none",
             view === v.key && "bg-background shadow-sm",
           )}
           onClick={() => onChange(v.key)}

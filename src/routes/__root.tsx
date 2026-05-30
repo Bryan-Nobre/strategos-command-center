@@ -14,6 +14,7 @@ import { SessionProvider } from "@/contexts/session-provider";
 import { AuthProvider } from "@/contexts/auth-provider";
 import { ErrorBoundary } from "@/components/common/ErrorBoundary";
 import { ThemeProvider, useTheme } from "@/contexts/theme-provider";
+import { ThemeRouteEnforcer } from "@/components/theme/ThemeRouteEnforcer";
 import { themeInitScript } from "@/lib/theme";
 
 import appCss from "../styles.css?url";
@@ -131,6 +132,7 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
+        <ThemeRouteEnforcer />
         <ErrorBoundary>
           <SessionProvider>
             <AuthProvider>
