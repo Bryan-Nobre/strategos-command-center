@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/client";
+import { getAuthErrorMessage } from "@/lib/supabase/errors";
 import { normalizeSupporterPhone } from "@/lib/normalize-phone";
 import { parseLandingRegisterResult, type LandingRegisterResult } from "@/lib/landing-register";
+import { parseLandingLgpd, type LandingLgpdConfig } from "@/lib/landing-lgpd";
 import { parseLandingTheme, type LandingTheme } from "@/lib/landing-theme";
 import type { Enums, TablesUpdate } from "@/types/supabase";
 
@@ -37,6 +39,7 @@ export type PublicLanding = {
   theme?: LandingTheme;
   chapas?: PublicLandingChapa[];
   leaderships?: PublicLandingLeadership[];
+  lgpd?: LandingLgpdConfig | null;
 };
 
 export async function getPublicLanding(publicCode: string): Promise<PublicLanding | null> {
@@ -46,10 +49,11 @@ export async function getPublicLanding(publicCode: string): Promise<PublicLandin
   });
   if (error) throw error;
   if (!data) return null;
-  const landing = data as PublicLanding;
+  const landing = data as PublicLanding & { lgpd?: unknown };
   return {
     ...landing,
     theme: parseLandingTheme(landing.theme as never),
+    lgpd: parseLandingLgpd(landing.lgpd),
   };
 }
 
@@ -66,11 +70,18 @@ export async function registerFromLanding(
   publicCode: string,
   payload: {
     name: string;
-    phone?: string;
+    birthDate: string;
+    email: string;
+    phone: string;
     cep?: string;
+    street?: string;
+    addressNumber?: string;
+    addressComplement?: string;
+    stateUf?: string;
     neighborhood?: string;
     city?: string;
-    interest?: string;
+    votingPlaceName: string;
+    lgpdConsent: boolean;
     notes?: string;
     chapaIds?: string[];
     primaryLeadershipId?: string;
@@ -81,12 +92,19 @@ export async function registerFromLanding(
     p_public_code: publicCode.trim().toLowerCase(),
     p_name: payload.name,
     p_phone: normalizeSupporterPhone(payload.phone),
+    p_email: payload.email,
+    p_birth_date: payload.birthDate,
+    p_street: payload.street ?? null,
+    p_address_number: payload.addressNumber ?? null,
+    p_address_complement: payload.addressComplement ?? null,
+    p_state_uf: payload.stateUf ?? null,
+    p_voting_place_name: payload.votingPlaceName,
+    p_lgpd_consent: payload.lgpdConsent,
     p_neighborhood: payload.neighborhood ?? null,
     p_city: payload.city ?? null,
-    p_interest: payload.interest ?? null,
+    p_interest: null,
     p_notes: payload.notes ?? null,
     p_chapa_ids: payload.chapaIds?.length ? payload.chapaIds : null,
-    p_email: null,
     p_cep: payload.cep ?? null,
     p_primary_leadership_id: payload.primaryLeadershipId ?? null,
   });
@@ -132,14 +150,75 @@ export async function getLandingPage(tenantId: string) {
   return data;
 }
 
+const LGPD_LANDING_COLUMNS = [
+  "lgpd_controller_name",
+  "lgpd_controller_cpf",
+  "lgpd_controller_email",
+  "lgpd_revoke_consent_url",
+] as const;
+
+function splitLandingPageUpdate(payload: TablesUpdate<"landing_pages">): {
+  core: TablesUpdate<"landing_pages">;
+  lgpd: Pick<
+    TablesUpdate<"landing_pages">,
+    (typeof LGPD_LANDING_COLUMNS)[number]
+  >;
+} {
+  const core = { ...payload };
+  const lgpd: Pick<
+    TablesUpdate<"landing_pages">,
+    (typeof LGPD_LANDING_COLUMNS)[number]
+  > = {};
+
+  for (const key of LGPD_LANDING_COLUMNS) {
+    if (key in core) {
+      lgpd[key] = core[key] as never;
+      delete core[key];
+    }
+  }
+
+  return { core, lgpd };
+}
+
+function isMissingLgpdColumnError(err: unknown): boolean {
+  if (!err || typeof err !== "object" || !("message" in err)) return false;
+  const msg = String((err as { message: string }).message);
+  return /lgpd_controller_/i.test(msg) && /column|schema cache|PGRST204/i.test(msg);
+}
+
 export async function updateLandingPage(tenantId: string, payload: TablesUpdate<"landing_pages">) {
   const supabase = createClient();
+  const { core, lgpd } = splitLandingPageUpdate(payload);
+
   const { data, error } = await supabase
     .from("landing_pages")
-    .update(payload)
+    .update(core)
     .eq("tenant_id", tenantId)
     .select()
     .single();
-  if (error) throw error;
-  return data;
+
+  if (error) {
+    throw new Error(getAuthErrorMessage(error));
+  }
+
+  const hasLgpdFields = Object.keys(lgpd).length > 0;
+  if (!hasLgpdFields) return data;
+
+  const { data: lgpdData, error: lgpdError } = await supabase
+    .from("landing_pages")
+    .update(lgpd)
+    .eq("tenant_id", tenantId)
+    .select()
+    .single();
+
+  if (lgpdError) {
+    if (isMissingLgpdColumnError(lgpdError)) {
+      throw new Error(
+        "Landing salva parcialmente: faltam colunas LGPD no banco. Aplique a migration 20260707120000_landing_lgpd_terms no Supabase.",
+      );
+    }
+    throw new Error(getAuthErrorMessage(lgpdError));
+  }
+
+  return lgpdData;
 }

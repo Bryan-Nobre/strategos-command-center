@@ -123,17 +123,6 @@ export function EleitoresCardsView({
             </p>
           ) : null}
 
-          {landingMode && e.interest && (
-            <p className="mt-2 rounded-md bg-violet-500/8 px-2 py-1.5 text-xs text-violet-900 dark:text-violet-200">
-              <span className="font-semibold">Interesse: </span>
-              {e.interest}
-            </p>
-          )}
-
-          {!landingMode && e.interest && (
-            <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">{e.interest}</p>
-          )}
-
           <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border/60 pt-3">
             {telHref(e.phone) && (
               <a

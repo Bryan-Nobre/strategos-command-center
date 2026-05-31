@@ -10,11 +10,13 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SignupRouteImport } from './routes/signup'
+import { Route as RevogarConsentimentoRouteImport } from './routes/revogar-consentimento'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as AdminRouteImport } from './routes/_admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PSlugRouteImport } from './routes/p.$slug'
+import { Route as LgpdCodeRouteImport } from './routes/lgpd.$code'
 import { Route as LandpageCodeRouteImport } from './routes/landpage.$code'
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
@@ -31,12 +33,21 @@ import { Route as AdminUsersRouteImport } from './routes/_admin.users'
 import { Route as AdminTenantsRouteImport } from './routes/_admin.tenants'
 import { Route as AdminPlansRouteImport } from './routes/_admin.plans'
 import { Route as AdminMetricasRouteImport } from './routes/_admin.metricas'
+import { Route as LgpdCodeIndexRouteImport } from './routes/lgpd.$code.index'
 import { Route as AppEquipeIndexRouteImport } from './routes/_app.equipe.index'
+import { Route as LgpdCodeTermoRouteImport } from './routes/lgpd.$code.termo'
+import { Route as LgpdCodeRevogarRouteImport } from './routes/lgpd.$code.revogar'
+import { Route as LandpageCodeTermoRouteImport } from './routes/landpage.$code.termo'
 import { Route as AppEquipeCargosRouteImport } from './routes/_app.equipe.cargos'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
   path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RevogarConsentimentoRoute = RevogarConsentimentoRouteImport.update({
+  id: '/revogar-consentimento',
+  path: '/revogar-consentimento',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -60,6 +71,11 @@ const IndexRoute = IndexRouteImport.update({
 const PSlugRoute = PSlugRouteImport.update({
   id: '/p/$slug',
   path: '/p/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LgpdCodeRoute = LgpdCodeRouteImport.update({
+  id: '/lgpd/$code',
+  path: '/lgpd/$code',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LandpageCodeRoute = LandpageCodeRouteImport.update({
@@ -142,10 +158,30 @@ const AdminMetricasRoute = AdminMetricasRouteImport.update({
   path: '/metricas',
   getParentRoute: () => AdminRoute,
 } as any)
+const LgpdCodeIndexRoute = LgpdCodeIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => LgpdCodeRoute,
+} as any)
 const AppEquipeIndexRoute = AppEquipeIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AppEquipeRoute,
+} as any)
+const LgpdCodeTermoRoute = LgpdCodeTermoRouteImport.update({
+  id: '/termo',
+  path: '/termo',
+  getParentRoute: () => LgpdCodeRoute,
+} as any)
+const LgpdCodeRevogarRoute = LgpdCodeRevogarRouteImport.update({
+  id: '/revogar',
+  path: '/revogar',
+  getParentRoute: () => LgpdCodeRoute,
+} as any)
+const LandpageCodeTermoRoute = LandpageCodeTermoRouteImport.update({
+  id: '/termo',
+  path: '/termo',
+  getParentRoute: () => LandpageCodeRoute,
 } as any)
 const AppEquipeCargosRoute = AppEquipeCargosRouteImport.update({
   id: '/cargos',
@@ -156,6 +192,7 @@ const AppEquipeCargosRoute = AppEquipeCargosRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/revogar-consentimento': typeof RevogarConsentimentoRoute
   '/signup': typeof SignupRoute
   '/metricas': typeof AdminMetricasRoute
   '/plans': typeof AdminPlansRoute
@@ -172,14 +209,20 @@ export interface FileRoutesByFullPath {
   '/relatorios': typeof AppRelatoriosRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/invite/$token': typeof InviteTokenRoute
-  '/landpage/$code': typeof LandpageCodeRoute
+  '/landpage/$code': typeof LandpageCodeRouteWithChildren
+  '/lgpd/$code': typeof LgpdCodeRouteWithChildren
   '/p/$slug': typeof PSlugRoute
   '/equipe/cargos': typeof AppEquipeCargosRoute
+  '/landpage/$code/termo': typeof LandpageCodeTermoRoute
+  '/lgpd/$code/revogar': typeof LgpdCodeRevogarRoute
+  '/lgpd/$code/termo': typeof LgpdCodeTermoRoute
   '/equipe/': typeof AppEquipeIndexRoute
+  '/lgpd/$code/': typeof LgpdCodeIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/revogar-consentimento': typeof RevogarConsentimentoRoute
   '/signup': typeof SignupRoute
   '/metricas': typeof AdminMetricasRoute
   '/plans': typeof AdminPlansRoute
@@ -195,10 +238,14 @@ export interface FileRoutesByTo {
   '/relatorios': typeof AppRelatoriosRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/invite/$token': typeof InviteTokenRoute
-  '/landpage/$code': typeof LandpageCodeRoute
+  '/landpage/$code': typeof LandpageCodeRouteWithChildren
   '/p/$slug': typeof PSlugRoute
   '/equipe/cargos': typeof AppEquipeCargosRoute
+  '/landpage/$code/termo': typeof LandpageCodeTermoRoute
+  '/lgpd/$code/revogar': typeof LgpdCodeRevogarRoute
+  '/lgpd/$code/termo': typeof LgpdCodeTermoRoute
   '/equipe': typeof AppEquipeIndexRoute
+  '/lgpd/$code': typeof LgpdCodeIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -206,6 +253,7 @@ export interface FileRoutesById {
   '/_admin': typeof AdminRouteWithChildren
   '/_app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
+  '/revogar-consentimento': typeof RevogarConsentimentoRoute
   '/signup': typeof SignupRoute
   '/_admin/metricas': typeof AdminMetricasRoute
   '/_admin/plans': typeof AdminPlansRoute
@@ -222,16 +270,22 @@ export interface FileRoutesById {
   '/_app/relatorios': typeof AppRelatoriosRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/invite/$token': typeof InviteTokenRoute
-  '/landpage/$code': typeof LandpageCodeRoute
+  '/landpage/$code': typeof LandpageCodeRouteWithChildren
+  '/lgpd/$code': typeof LgpdCodeRouteWithChildren
   '/p/$slug': typeof PSlugRoute
   '/_app/equipe/cargos': typeof AppEquipeCargosRoute
+  '/landpage/$code/termo': typeof LandpageCodeTermoRoute
+  '/lgpd/$code/revogar': typeof LgpdCodeRevogarRoute
+  '/lgpd/$code/termo': typeof LgpdCodeTermoRoute
   '/_app/equipe/': typeof AppEquipeIndexRoute
+  '/lgpd/$code/': typeof LgpdCodeIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/login'
+    | '/revogar-consentimento'
     | '/signup'
     | '/metricas'
     | '/plans'
@@ -249,13 +303,19 @@ export interface FileRouteTypes {
     | '/auth/callback'
     | '/invite/$token'
     | '/landpage/$code'
+    | '/lgpd/$code'
     | '/p/$slug'
     | '/equipe/cargos'
+    | '/landpage/$code/termo'
+    | '/lgpd/$code/revogar'
+    | '/lgpd/$code/termo'
     | '/equipe/'
+    | '/lgpd/$code/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/login'
+    | '/revogar-consentimento'
     | '/signup'
     | '/metricas'
     | '/plans'
@@ -274,13 +334,18 @@ export interface FileRouteTypes {
     | '/landpage/$code'
     | '/p/$slug'
     | '/equipe/cargos'
+    | '/landpage/$code/termo'
+    | '/lgpd/$code/revogar'
+    | '/lgpd/$code/termo'
     | '/equipe'
+    | '/lgpd/$code'
   id:
     | '__root__'
     | '/'
     | '/_admin'
     | '/_app'
     | '/login'
+    | '/revogar-consentimento'
     | '/signup'
     | '/_admin/metricas'
     | '/_admin/plans'
@@ -298,9 +363,14 @@ export interface FileRouteTypes {
     | '/auth/callback'
     | '/invite/$token'
     | '/landpage/$code'
+    | '/lgpd/$code'
     | '/p/$slug'
     | '/_app/equipe/cargos'
+    | '/landpage/$code/termo'
+    | '/lgpd/$code/revogar'
+    | '/lgpd/$code/termo'
     | '/_app/equipe/'
+    | '/lgpd/$code/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -308,10 +378,12 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRouteWithChildren
   AppRoute: typeof AppRouteWithChildren
   LoginRoute: typeof LoginRoute
+  RevogarConsentimentoRoute: typeof RevogarConsentimentoRoute
   SignupRoute: typeof SignupRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
   InviteTokenRoute: typeof InviteTokenRoute
-  LandpageCodeRoute: typeof LandpageCodeRoute
+  LandpageCodeRoute: typeof LandpageCodeRouteWithChildren
+  LgpdCodeRoute: typeof LgpdCodeRouteWithChildren
   PSlugRoute: typeof PSlugRoute
 }
 
@@ -322,6 +394,13 @@ declare module '@tanstack/react-router' {
       path: '/signup'
       fullPath: '/signup'
       preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/revogar-consentimento': {
+      id: '/revogar-consentimento'
+      path: '/revogar-consentimento'
+      fullPath: '/revogar-consentimento'
+      preLoaderRoute: typeof RevogarConsentimentoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -357,6 +436,13 @@ declare module '@tanstack/react-router' {
       path: '/p/$slug'
       fullPath: '/p/$slug'
       preLoaderRoute: typeof PSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lgpd/$code': {
+      id: '/lgpd/$code'
+      path: '/lgpd/$code'
+      fullPath: '/lgpd/$code'
+      preLoaderRoute: typeof LgpdCodeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/landpage/$code': {
@@ -471,12 +557,40 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminMetricasRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/lgpd/$code/': {
+      id: '/lgpd/$code/'
+      path: '/'
+      fullPath: '/lgpd/$code/'
+      preLoaderRoute: typeof LgpdCodeIndexRouteImport
+      parentRoute: typeof LgpdCodeRoute
+    }
     '/_app/equipe/': {
       id: '/_app/equipe/'
       path: '/'
       fullPath: '/equipe/'
       preLoaderRoute: typeof AppEquipeIndexRouteImport
       parentRoute: typeof AppEquipeRoute
+    }
+    '/lgpd/$code/termo': {
+      id: '/lgpd/$code/termo'
+      path: '/termo'
+      fullPath: '/lgpd/$code/termo'
+      preLoaderRoute: typeof LgpdCodeTermoRouteImport
+      parentRoute: typeof LgpdCodeRoute
+    }
+    '/lgpd/$code/revogar': {
+      id: '/lgpd/$code/revogar'
+      path: '/revogar'
+      fullPath: '/lgpd/$code/revogar'
+      preLoaderRoute: typeof LgpdCodeRevogarRouteImport
+      parentRoute: typeof LgpdCodeRoute
+    }
+    '/landpage/$code/termo': {
+      id: '/landpage/$code/termo'
+      path: '/termo'
+      fullPath: '/landpage/$code/termo'
+      preLoaderRoute: typeof LandpageCodeTermoRouteImport
+      parentRoute: typeof LandpageCodeRoute
     }
     '/_app/equipe/cargos': {
       id: '/_app/equipe/cargos'
@@ -544,15 +658,45 @@ const AppRouteChildren: AppRouteChildren = {
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
+interface LandpageCodeRouteChildren {
+  LandpageCodeTermoRoute: typeof LandpageCodeTermoRoute
+}
+
+const LandpageCodeRouteChildren: LandpageCodeRouteChildren = {
+  LandpageCodeTermoRoute: LandpageCodeTermoRoute,
+}
+
+const LandpageCodeRouteWithChildren = LandpageCodeRoute._addFileChildren(
+  LandpageCodeRouteChildren,
+)
+
+interface LgpdCodeRouteChildren {
+  LgpdCodeRevogarRoute: typeof LgpdCodeRevogarRoute
+  LgpdCodeTermoRoute: typeof LgpdCodeTermoRoute
+  LgpdCodeIndexRoute: typeof LgpdCodeIndexRoute
+}
+
+const LgpdCodeRouteChildren: LgpdCodeRouteChildren = {
+  LgpdCodeRevogarRoute: LgpdCodeRevogarRoute,
+  LgpdCodeTermoRoute: LgpdCodeTermoRoute,
+  LgpdCodeIndexRoute: LgpdCodeIndexRoute,
+}
+
+const LgpdCodeRouteWithChildren = LgpdCodeRoute._addFileChildren(
+  LgpdCodeRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
   AppRoute: AppRouteWithChildren,
   LoginRoute: LoginRoute,
+  RevogarConsentimentoRoute: RevogarConsentimentoRoute,
   SignupRoute: SignupRoute,
   AuthCallbackRoute: AuthCallbackRoute,
   InviteTokenRoute: InviteTokenRoute,
-  LandpageCodeRoute: LandpageCodeRoute,
+  LandpageCodeRoute: LandpageCodeRouteWithChildren,
+  LgpdCodeRoute: LgpdCodeRouteWithChildren,
   PSlugRoute: PSlugRoute,
 }
 export const routeTree = rootRouteImport

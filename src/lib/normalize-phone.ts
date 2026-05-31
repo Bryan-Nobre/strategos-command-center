@@ -1,26 +1,40 @@
+const BR_PHONE_MAX_DIGITS = 11;
+
+/** Apenas dígitos, no máximo 11 — usado na digitação (não “come” números do meio). */
+export function extractBrPhoneDigits(raw: string | null | undefined): string {
+  if (!raw) return "";
+  return raw.replace(/\D/g, "").slice(0, BR_PHONE_MAX_DIGITS);
+}
+
 /** Espelha public.normalize_supporter_phone — apenas dígitos, até 11 (DDD+número). */
 export function normalizeSupporterPhone(phone: string | null | undefined): string | null {
   if (!phone) return null;
   const digits = phone.replace(/\D/g, "");
   if (!digits) return null;
-  if (digits.length <= 11) return digits;
-  // +55 ou prefixos longos: mantém os 11 dígitos finais (DDD + número BR)
-  return digits.slice(-11);
+  if (digits.length <= BR_PHONE_MAX_DIGITS) return digits;
+  // Colar +55…: descarta o prefixo do país e mantém DDD+número (11 finais).
+  if (digits.length > BR_PHONE_MAX_DIGITS && digits.startsWith("55")) {
+    return digits.slice(-BR_PHONE_MAX_DIGITS);
+  }
+  return digits.slice(0, BR_PHONE_MAX_DIGITS);
+}
+
+function formatBrPhoneDigits(digits: string): string {
+  if (!digits) return "";
+  if (digits.length <= 10) {
+    return digits.replace(/^(\d{2})(\d{4})(\d{0,4})/, "($1) $2-$3").replace(/[- ]$/, "");
+  }
+  return digits.replace(/^(\d{2})(\d{5})(\d{0,4})/, "($1) $2-$3").replace(/[- ]$/, "");
 }
 
 /** Máscara visual BR (10 ou 11 dígitos). Não altera persistência. */
 export function formatPhoneBrDisplay(phone: string | null | undefined): string {
-  const n = normalizeSupporterPhone(phone);
-  if (!n) return "";
-  if (n.length <= 10) {
-    return n.replace(/^(\d{2})(\d{4})(\d{0,4})/, "($1) $2-$3").replace(/[- ]$/, "");
-  }
-  return n.replace(/^(\d{2})(\d{5})(\d{0,4})/, "($1) $2-$3").replace(/[- ]$/, "");
+  return formatBrPhoneDigits(extractBrPhoneDigits(phone));
 }
 
-/** Aplica máscara enquanto o usuário digita (máx. 11 dígitos). */
+/** Aplica máscara enquanto o usuário digita (máx. 11 dígitos; extras são ignorados). */
 export function maskPhoneBrInput(raw: string): string {
-  return formatPhoneBrDisplay(raw);
+  return formatBrPhoneDigits(extractBrPhoneDigits(raw));
 }
 
 export const PHONE_BR_PLACEHOLDER = "(61) 99999-9999";

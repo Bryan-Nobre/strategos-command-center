@@ -31,8 +31,9 @@ describe("formatPhoneBrDisplay", () => {
 });
 
 describe("maskPhoneBrInput", () => {
-  it("limita a 11 dígitos", () => {
+  it("limita a 11 dígitos mantendo os primeiros (não substitui ao digitar além)", () => {
     assert.equal(maskPhoneBrInput("619999999991234"), "(61) 99999-9999");
+    assert.equal(maskPhoneBrInput("619999999991"), "(61) 99999-9999");
   });
 });
 

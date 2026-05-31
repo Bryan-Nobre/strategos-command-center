@@ -380,9 +380,6 @@ function EleitoresPage() {
     const origem = SUPPORTER_SOURCE_LABELS[target.source] ?? target.source;
     const data = new Date(target.created_at).toLocaleDateString("pt-BR");
     let msg = `Excluir "${target.name}"? Cadastro via ${origem} em ${data}.`;
-    if (target.source === "landing" && target.interest) {
-      msg += ` Interesse declarado: ${target.interest}.`;
-    }
     msg += " Esta ação não pode ser desfeita.";
     return msg;
   }

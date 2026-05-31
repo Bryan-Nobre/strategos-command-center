@@ -43,6 +43,13 @@ export function getAuthErrorMessage(err: unknown): string {
     if (/slug inválido/i.test(msg)) {
       return "Slug inválido. Use pelo menos 3 caracteres (letras, números e hífens).";
     }
+    if (
+      err.code === "PGRST204" ||
+      /Could not find the .* column/i.test(msg) ||
+      /schema cache/i.test(msg)
+    ) {
+      return "O banco de dados está desatualizado em relação ao app. Aplique as migrations pendentes no Supabase e tente novamente.";
+    }
     return msg;
   }
 

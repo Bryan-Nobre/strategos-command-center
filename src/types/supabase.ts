@@ -261,6 +261,10 @@ export type Database = {
           headline: string | null
           id: string
           is_published: boolean
+          lgpd_controller_cpf: string | null
+          lgpd_controller_email: string | null
+          lgpd_controller_name: string | null
+          lgpd_revoke_consent_url: string | null
           photo_url: string | null
           proposals: Json
           public_code: string
@@ -279,6 +283,10 @@ export type Database = {
           headline?: string | null
           id?: string
           is_published?: boolean
+          lgpd_controller_cpf?: string | null
+          lgpd_controller_email?: string | null
+          lgpd_controller_name?: string | null
+          lgpd_revoke_consent_url?: string | null
           photo_url?: string | null
           proposals?: Json
           public_code?: string
@@ -297,6 +305,10 @@ export type Database = {
           headline?: string | null
           id?: string
           is_published?: boolean
+          lgpd_controller_cpf?: string | null
+          lgpd_controller_email?: string | null
+          lgpd_controller_name?: string | null
+          lgpd_revoke_consent_url?: string | null
           photo_url?: string | null
           proposals?: Json
           public_code?: string
@@ -711,6 +723,9 @@ export type Database = {
       }
       supporters: {
         Row: {
+          address_complement: string | null
+          address_number: string | null
+          birth_date: string | null
           cep: string | null
           city: string | null
           created_at: string
@@ -720,6 +735,9 @@ export type Database = {
           electoral_zone: string | null
           email: string | null
           id: string
+          lgpd_consent_at: string | null
+          street: string | null
+          voting_place_name: string | null
           interest: string | null
           is_possible_duplicate: boolean
           last_activity_at: string | null
@@ -754,6 +772,9 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          address_complement?: string | null
+          address_number?: string | null
+          birth_date?: string | null
           cep?: string | null
           city?: string | null
           created_at?: string
@@ -763,6 +784,9 @@ export type Database = {
           electoral_zone?: string | null
           email?: string | null
           id?: string
+          lgpd_consent_at?: string | null
+          street?: string | null
+          voting_place_name?: string | null
           interest?: string | null
           is_possible_duplicate?: boolean
           last_activity_at?: string | null
@@ -1423,19 +1447,40 @@ export type Database = {
       }
       register_supporter_from_landing: {
         Args: {
+          p_address_complement?: string
+          p_address_number?: string
+          p_birth_date?: string
           p_cep?: string
           p_chapa_ids?: string[]
           p_city?: string
           p_email?: string
           p_interest?: string
+          p_lgpd_consent?: boolean
           p_name: string
           p_neighborhood?: string
           p_notes?: string
           p_phone?: string
           p_primary_leadership_id?: string
           p_public_code: string
+          p_state_uf?: string
+          p_street?: string
+          p_voting_place_name?: string
         }
         Returns: Json
+      }
+      search_public_polling_places: {
+        Args: {
+          p_limit?: number
+          p_query?: string
+          p_state_uf?: string
+        }
+        Returns: {
+          address: string | null
+          id: string
+          municipality: string
+          name: string
+          state_uf: string
+        }[]
       }
       upsert_postal_code_cache: {
         Args: { p_payload: Json }

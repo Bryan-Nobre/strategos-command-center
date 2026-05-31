@@ -133,9 +133,6 @@ export function EleitoresTableView({
                     geo_enriched_at={e.geo_enriched_at}
                   />
                 </div>
-                {e.interest && (
-                  <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">{e.interest}</p>
-                )}
               </TableCell>
               <TableCell>
                 <SupporterSourceBadge source={e.source} />

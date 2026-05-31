@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { Constants } from "@/types/supabase";
-import { zPhoneBrOptional } from "@/lib/phone-schema";
+import { zPhoneBrOptional, zPhoneBrRequired } from "@/lib/phone-schema";
+import { isBirthDateEligible, parseBirthDateBr } from "@/lib/birth-date";
 
 export const supporterStatusSchema = z.enum(
   Constants.public.Enums.supporter_status as unknown as [string, ...string[]],
@@ -36,7 +37,6 @@ export const supporterFormSchema = z.object({
   notes: z.string().optional(),
   tags: z.string().optional(),
   leadership_id: z.string().optional(),
-  interest: z.string().optional(),
 });
 
 export const demandFormSchema = z.object({
@@ -107,12 +107,29 @@ export const AGENDA_ATTENDEE_ROLE_LABELS: Record<string, string> = {
 };
 
 export const landingCaptureSchema = z.object({
-  name: z.string().min(2),
-  phone: zPhoneBrOptional,
+  name: z.string().min(2, "Informe seu nome completo"),
+  birth_date: z
+    .string()
+    .min(1, "Informe a data de nascimento")
+    .refine((v) => parseBirthDateBr(v) !== null, {
+      message: "Data inválida. Use DD/MM/AAAA",
+    })
+    .refine((v) => isBirthDateEligible(v), {
+      message: "É necessário ter pelo menos 16 anos",
+    }),
+  email: z.string().email("E-mail inválido"),
+  phone: zPhoneBrRequired,
   cep: z.string().optional(),
+  street: z.string().optional(),
+  address_number: z.string().optional(),
+  address_complement: z.string().optional(),
   neighborhood: z.string().optional(),
   city: z.string().optional(),
-  interest: z.string().optional(),
+  state_uf: z.string().optional(),
+  voting_place_name: z.string().min(2, "Selecione ou informe o local de votação"),
+  lgpd_consent: z.boolean().refine((v) => v === true, {
+    message: "Aceite o tratamento de dados para continuar",
+  }),
   notes: z.string().optional(),
   primary_leadership_id: z.string().optional(),
 });

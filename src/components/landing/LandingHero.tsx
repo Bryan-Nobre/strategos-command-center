@@ -1,4 +1,4 @@
-import { MessageCircle, Vote } from "lucide-react";
+import { Instagram, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DEFAULT_LANDING_THEME,
@@ -7,21 +7,17 @@ import {
   landingSectionBackgroundStyle,
   type LandingTheme,
 } from "@/lib/landing-theme";
+import { getInstagramFromSocialLinks } from "@/lib/landing-social";
 import type { PublicLanding } from "@/services/landing";
 import { cn } from "@/lib/utils";
 
-export function LandingHero({
-  landing,
-  onPrimaryAction,
-}: {
-  landing: PublicLanding;
-  onPrimaryAction: () => void;
-}) {
+export function LandingHero({ landing }: { landing: PublicLanding }) {
   const wa = landing.whatsapp?.replace(/\D/g, "");
-  const social = (landing.social_links ?? {}) as Record<string, string>;
+  const instagram = getInstagramFromSocialLinks(landing.social_links);
   const theme: LandingTheme = landing.theme ?? DEFAULT_LANDING_THEME;
   const title = landingHeroTitle(landing);
   const heroBgStyle = landingSectionBackgroundStyle(theme.hero_background_color);
+  const showContact = Boolean(wa || instagram);
 
   return (
     <section
@@ -56,7 +52,7 @@ export function LandingHero({
                 landingPhotoClassName(theme.photo_style),
               )}
             >
-              <Vote className="h-10 w-10" />
+              <span className="text-2xl font-bold">{title.slice(0, 2).toUpperCase()}</span>
             </div>
           )}
         </div>
@@ -70,28 +66,43 @@ export function LandingHero({
           {landing.bio && (
             <p className="text-sm leading-relaxed text-foreground/90 md:text-base">{landing.bio}</p>
           )}
-          <div className="flex flex-wrap items-center justify-center gap-2 md:justify-start">
-            <Button size="lg" className="h-11 px-6" type="button" onClick={onPrimaryAction}>
-              Quero apoiar
-            </Button>
-            {wa && (
-              <Button size="lg" variant="outline" className="h-11" asChild>
-                <a href={`https://wa.me/${wa}`} target="_blank" rel="noopener noreferrer">
-                  <MessageCircle className="mr-2 h-4 w-4" />
-                  WhatsApp
-                </a>
-              </Button>
-            )}
-            {Object.entries(social).map(([k, v]) =>
-              v ? (
-                <Button key={k} variant="ghost" size="sm" className="h-9 text-xs" asChild>
-                  <a href={v} target="_blank" rel="noopener noreferrer">
-                    {k}
+          {showContact && (
+            <div className="flex flex-wrap items-center justify-center gap-2 md:justify-start">
+              {wa && (
+                <Button
+                  size="icon"
+                  className="landing-hero__btn-wa h-11 w-11 shrink-0"
+                  asChild
+                >
+                  <a
+                    href={`https://wa.me/${wa}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="WhatsApp"
+                  >
+                    <MessageCircle className="h-5 w-5" />
                   </a>
                 </Button>
-              ) : null,
-            )}
-          </div>
+              )}
+              {instagram && (
+                <Button
+                  size="icon"
+                  variant="outline"
+                  className="landing-hero__btn-ig h-11 w-11 shrink-0"
+                  asChild
+                >
+                  <a
+                    href={instagram}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Instagram"
+                  >
+                    <Instagram className="h-5 w-5" />
+                  </a>
+                </Button>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </section>

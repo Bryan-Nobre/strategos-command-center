@@ -16,6 +16,7 @@ import {
   type LandingTheme,
 } from "@/lib/landing-theme";
 import { formatPhoneBrDisplay } from "@/lib/normalize-phone";
+import { getInstagramFromSocialLinks } from "@/lib/landing-social";
 import {
   parseConfiguracoesSearch,
   resolveAllowedConfigTab,
@@ -83,18 +84,28 @@ function ConfigPage() {
   const [headline, setHeadline] = useState("");
   const [landingBio, setLandingBio] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
+  const [instagram, setInstagram] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [photoUrl, setPhotoUrl] = useState("");
   const [theme, setTheme] = useState<LandingTheme>(DEFAULT_LANDING_THEME);
+  const [lgpdControllerName, setLgpdControllerName] = useState("");
+  const [lgpdControllerCpf, setLgpdControllerCpf] = useState("");
+  const [lgpdControllerEmail, setLgpdControllerEmail] = useState("");
+  const [lgpdRevokeConsentUrl, setLgpdRevokeConsentUrl] = useState("");
 
   useEffect(() => {
     if (landing) {
       setHeadline(landing.headline ?? "");
       setLandingBio(landing.bio ?? "");
       setWhatsapp(landing.whatsapp ? formatPhoneBrDisplay(landing.whatsapp) : "");
+      setInstagram(getInstagramFromSocialLinks(landing.social_links));
       setDisplayName(landing.display_name ?? "");
       setPhotoUrl(landing.photo_url ?? "");
       setTheme(parseLandingTheme(landing.theme));
+      setLgpdControllerName(landing.lgpd_controller_name ?? "");
+      setLgpdControllerCpf(landing.lgpd_controller_cpf ?? "");
+      setLgpdControllerEmail(landing.lgpd_controller_email ?? "");
+      setLgpdRevokeConsentUrl(landing.lgpd_revoke_consent_url ?? "");
     }
   }, [landing]);
 
@@ -179,6 +190,8 @@ function ConfigPage() {
                 headline={headline}
                 landingBio={landingBio}
                 whatsapp={whatsapp}
+                instagram={instagram}
+                socialLinks={landing?.social_links}
                 photoUrl={photoUrl}
                 theme={theme}
                 canEdit={perms.canEditLanding}
@@ -186,8 +199,17 @@ function ConfigPage() {
                 onHeadlineChange={setHeadline}
                 onBioChange={setLandingBio}
                 onWhatsappChange={setWhatsapp}
+                onInstagramChange={setInstagram}
                 onPhotoUrlChange={setPhotoUrl}
                 onThemeChange={setTheme}
+                lgpdControllerName={lgpdControllerName}
+                lgpdControllerCpf={lgpdControllerCpf}
+                lgpdControllerEmail={lgpdControllerEmail}
+                lgpdRevokeConsentUrl={lgpdRevokeConsentUrl}
+                onLgpdControllerNameChange={setLgpdControllerName}
+                onLgpdControllerCpfChange={setLgpdControllerCpf}
+                onLgpdControllerEmailChange={setLgpdControllerEmail}
+                onLgpdRevokeConsentUrlChange={setLgpdRevokeConsentUrl}
               />
             </TabsContent>
           )}

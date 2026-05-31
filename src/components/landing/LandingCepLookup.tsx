@@ -24,6 +24,7 @@ type Props = {
   onNeighborhoodChange: (v: string) => void;
   onCityChange: (v: string) => void;
   onStateUfChange: (v: string) => void;
+  onStreetChange?: (v: string) => void;
 };
 
 const DEBOUNCE_MS = 450;
@@ -40,6 +41,7 @@ export function LandingCepLookup({
   onNeighborhoodChange,
   onCityChange,
   onStateUfChange,
+  onStreetChange,
 }: Props) {
   const [lookup, setLookup] = useState<LandingCepLookupState>({ status: "idle" });
   const requestId = useRef(0);
@@ -93,6 +95,7 @@ export function LandingCepLookup({
           if (result.neighborhood) onNeighborhoodChange(result.neighborhood);
           if (result.city) onCityChange(result.city);
           if (result.state_uf) onStateUfChange(result.state_uf);
+          if (result.street && onStreetChange) onStreetChange(result.street);
         } catch (error) {
           if (isAbortError(error) || requestId.current !== id) return;
           setLookup({ status: "error" });
@@ -104,7 +107,7 @@ export function LandingCepLookup({
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [cepValue, onNeighborhoodChange, onCityChange, onStateUfChange]);
+  }, [cepValue, onNeighborhoodChange, onCityChange, onStateUfChange, onStreetChange]);
 
   return (
     <div className="space-y-2 sm:col-span-2">
@@ -124,7 +127,7 @@ export function LandingCepLookup({
           )}
         </div>
         <p className="text-[11px] text-muted-foreground">
-          Ao informar o CEP, cidade e bairro são preenchidos automaticamente nos campos abaixo.
+          Ao informar o CEP, logradouro, bairro, cidade e UF são preenchidos automaticamente quando disponíveis.
         </p>
         {lookup.status === "invalid" && (
           <p className="text-xs text-amber-600 dark:text-amber-500">

@@ -136,13 +136,6 @@ export function SupporterFormFields({
         </Select>
       </div>
       <div className="grid gap-2">
-        <Label>Interesse declarado</Label>
-        <Input
-          {...register("interest")}
-          placeholder="Ex.: saúde, emprego — comum em cadastros da landing"
-        />
-      </div>
-      <div className="grid gap-2">
         <Label>Tags (separadas por vírgula)</Label>
         <Input {...register("tags")} placeholder="vizinho, igreja, sindicato" />
       </div>
@@ -174,7 +167,6 @@ export function supporterFormToPayload(values: SupporterFormValues) {
     status: values.status as Enums<"supporter_status">,
     support_level: values.support_level as Enums<"support_level">,
     notes: values.notes || null,
-    interest: values.interest || null,
     tags,
     leadership_id: values.leadership_id || null,
   };
@@ -191,7 +183,6 @@ export function supporterToFormValues(
     status: string;
     support_level: string;
     notes: string | null;
-    interest?: string | null;
     tags: string[] | null;
     leadership_id: string | null;
   },
@@ -206,7 +197,6 @@ export function supporterToFormValues(
     status: s.status as SupporterFormValues["status"],
     support_level: s.support_level as SupporterFormValues["support_level"],
     notes: s.notes ?? undefined,
-    interest: s.interest ?? undefined,
     tags: (s.tags ?? []).join(", "),
     leadership_id: s.leadership_id ?? undefined,
   };

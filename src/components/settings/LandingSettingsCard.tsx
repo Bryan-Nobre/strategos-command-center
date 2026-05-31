@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Camera, Copy, ExternalLink, Loader2, Palette, Trash2 } from "lucide-react";
+import { Camera, Copy, ExternalLink, Loader2, Palette, Shield, Trash2 } from "lucide-react";
 import { useRef } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -28,6 +28,10 @@ import {
 } from "@/lib/landing-theme";
 import { POLITICAL_DECOR_ICONS } from "@/lib/political-decor-icons";
 import { landingPublicPath } from "@/lib/landing-routes";
+import {
+  normalizeInstagramUrl,
+  serializeLandingSocialLinks,
+} from "@/lib/landing-social";
 import { removeLandingHeroPhoto, uploadLandingHeroPhoto } from "@/services/landing-photo";
 import { updateLandingPage } from "@/services/landing";
 
@@ -39,6 +43,8 @@ type Props = {
   headline: string;
   landingBio: string;
   whatsapp: string;
+  instagram: string;
+  socialLinks: unknown;
   photoUrl: string;
   theme: LandingTheme;
   canEdit: boolean;
@@ -46,8 +52,17 @@ type Props = {
   onHeadlineChange: (v: string) => void;
   onBioChange: (v: string) => void;
   onWhatsappChange: (v: string) => void;
+  onInstagramChange: (v: string) => void;
   onPhotoUrlChange: (v: string) => void;
   onThemeChange: (theme: LandingTheme) => void;
+  lgpdControllerName: string;
+  lgpdControllerCpf: string;
+  lgpdControllerEmail: string;
+  lgpdRevokeConsentUrl: string;
+  onLgpdControllerNameChange: (v: string) => void;
+  onLgpdControllerCpfChange: (v: string) => void;
+  onLgpdControllerEmailChange: (v: string) => void;
+  onLgpdRevokeConsentUrlChange: (v: string) => void;
 };
 
 export function LandingSettingsCard({
@@ -58,6 +73,8 @@ export function LandingSettingsCard({
   headline,
   landingBio,
   whatsapp,
+  instagram,
+  socialLinks,
   photoUrl,
   theme,
   canEdit,
@@ -65,8 +82,17 @@ export function LandingSettingsCard({
   onHeadlineChange,
   onBioChange,
   onWhatsappChange,
+  onInstagramChange,
   onPhotoUrlChange,
   onThemeChange,
+  lgpdControllerName,
+  lgpdControllerCpf,
+  lgpdControllerEmail,
+  lgpdRevokeConsentUrl,
+  onLgpdControllerNameChange,
+  onLgpdControllerCpfChange,
+  onLgpdControllerEmailChange,
+  onLgpdRevokeConsentUrlChange,
 }: Props) {
   const qc = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -78,13 +104,22 @@ export function LandingSettingsCard({
       if (!isValidBrPhoneOptional(whatsapp)) {
         throw new Error(PHONE_INVALID_MSG);
       }
+      const igRaw = instagram.trim();
+      if (igRaw && !normalizeInstagramUrl(igRaw)) {
+        throw new Error("Instagram inválido. Use @usuario ou o link completo do perfil.");
+      }
       return updateLandingPage(tenantId, {
         display_name: displayName.trim() || null,
         headline: headline.trim() || null,
         bio: landingBio.trim() || null,
         whatsapp: normalizeSupporterPhone(whatsapp),
+        social_links: serializeLandingSocialLinks(socialLinks, instagram) as never,
         photo_url: photoUrl.trim() || null,
         theme: serializeLandingTheme(theme) as never,
+        lgpd_controller_name: lgpdControllerName.trim() || null,
+        lgpd_controller_cpf: lgpdControllerCpf.trim() || null,
+        lgpd_controller_email: lgpdControllerEmail.trim() || null,
+        lgpd_revoke_consent_url: lgpdRevokeConsentUrl.trim() || null,
       });
     },
     onSuccess: () => {
@@ -92,7 +127,7 @@ export function LandingSettingsCard({
       qc.invalidateQueries({ queryKey: ["public-landing", publicCode] });
       toast.success("Landing atualizada");
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(e.message || "Não foi possível salvar a landing."),
   });
 
   const uploadPhoto = useMutation({
@@ -478,16 +513,85 @@ export function LandingSettingsCard({
               rows={4}
             />
           </div>
-          <div className="grid gap-2 sm:max-w-sm">
-            <Label>WhatsApp</Label>
-            <PhoneInput
-              value={whatsapp}
-              disabled={!canEdit}
-              onValueChange={onWhatsappChange}
-            />
-            <p className="text-xs text-muted-foreground">
-              Exibido no botão da landing. Salvo com DDD (apenas números).
-            </p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-2">
+              <Label>WhatsApp</Label>
+              <PhoneInput
+                value={whatsapp}
+                disabled={!canEdit}
+                onValueChange={onWhatsappChange}
+              />
+              <p className="text-xs text-muted-foreground">
+                Botão no topo da landing. Salvo com DDD (apenas números).
+              </p>
+            </div>
+            <div className="grid gap-2">
+              <Label>Instagram</Label>
+              <Input
+                value={instagram}
+                disabled={!canEdit}
+                placeholder="@usuario ou link do perfil"
+                onChange={(e) => onInstagramChange(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Botão ao lado do WhatsApp no topo da landing pública.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section className="space-y-4 border-t border-border/60 pt-6">
+          <div className="flex items-center gap-2 text-sm font-semibold">
+            <Shield className="h-4 w-4 text-primary" />
+            Termo de consentimento (LGPD)
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Exibido no cadastro «Quero apoiar». O nome do controlador usa o campo abaixo; se vazio,
+            usa o nome na landing ou o da campanha.
+          </p>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-2 md:col-span-2">
+              <Label>Nome do controlador</Label>
+              <Input
+                value={lgpdControllerName}
+                disabled={!canEdit}
+                placeholder={previewTitle}
+                onChange={(e) => onLgpdControllerNameChange(e.target.value)}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>CPF do controlador</Label>
+              <Input
+                value={lgpdControllerCpf}
+                disabled={!canEdit}
+                placeholder="Ex.: 000.000.000-00"
+                onChange={(e) => onLgpdControllerCpfChange(e.target.value)}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>E-mail de atendimento LGPD</Label>
+              <Input
+                type="email"
+                value={lgpdControllerEmail}
+                disabled={!canEdit}
+                placeholder="contato@campanha.org.br"
+                onChange={(e) => onLgpdControllerEmailChange(e.target.value)}
+              />
+            </div>
+            <div className="grid gap-2 md:col-span-2">
+              <Label>URL para revogar consentimento</Label>
+              <Input
+                type="url"
+                value={lgpdRevokeConsentUrl}
+                disabled={!canEdit}
+                placeholder="https://strategos-command-center.vercel.app/lgpd/seu-codigo/revogar"
+                onChange={(e) => onLgpdRevokeConsentUrlChange(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Se vazio, usa a página de revogação da área LGPD desta campanha (
+                <span className="font-mono">/lgpd/{publicCode || "código"}/revogar</span>).
+              </p>
+            </div>
           </div>
         </section>
 

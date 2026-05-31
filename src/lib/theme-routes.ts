@@ -2,6 +2,8 @@
 const LIGHT_ONLY_PATTERNS: RegExp[] = [
   /^\/login\/?$/,
   /^\/signup\/?$/,
+  /^\/revogar-consentimento\/?$/,
+  /^\/lgpd\/.+/,
   /^\/landpage\/.+/,
 ];
 
