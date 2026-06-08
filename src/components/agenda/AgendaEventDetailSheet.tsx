@@ -82,13 +82,15 @@ export function AgendaEventDetailSheet({
       <SheetContent className="overflow-y-auto sm:max-w-md">
         <SheetHeader>
           <SheetTitle className="pr-8 text-left leading-snug">{event.title}</SheetTitle>
-          <SheetDescription className="flex flex-wrap gap-2">
-            <Badge variant="outline">
-              {AGENDA_EVENT_TYPE_LABELS[event.event_type] ?? event.event_type}
-            </Badge>
-            <Badge variant="secondary">
-              {AGENDA_EVENT_STATUS_LABELS[event.status] ?? event.status}
-            </Badge>
+          <SheetDescription asChild>
+            <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
+              <Badge variant="outline">
+                {AGENDA_EVENT_TYPE_LABELS[event.event_type] ?? event.event_type}
+              </Badge>
+              <Badge variant="secondary">
+                {AGENDA_EVENT_STATUS_LABELS[event.status] ?? event.status}
+              </Badge>
+            </div>
           </SheetDescription>
         </SheetHeader>
 

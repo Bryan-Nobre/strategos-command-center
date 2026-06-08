@@ -17,6 +17,7 @@ import {
 } from "@/lib/landing-theme";
 import { formatPhoneBrDisplay } from "@/lib/normalize-phone";
 import { getInstagramFromSocialLinks } from "@/lib/landing-social";
+import { parseLandingProposals, type LandingProposalItem } from "@/lib/landing-proposals";
 import {
   parseConfiguracoesSearch,
   resolveAllowedConfigTab,
@@ -92,6 +93,7 @@ function ConfigPage() {
   const [lgpdControllerCpf, setLgpdControllerCpf] = useState("");
   const [lgpdControllerEmail, setLgpdControllerEmail] = useState("");
   const [lgpdRevokeConsentUrl, setLgpdRevokeConsentUrl] = useState("");
+  const [proposals, setProposals] = useState<LandingProposalItem[]>([]);
 
   useEffect(() => {
     if (landing) {
@@ -102,6 +104,7 @@ function ConfigPage() {
       setDisplayName(landing.display_name ?? "");
       setPhotoUrl(landing.photo_url ?? "");
       setTheme(parseLandingTheme(landing.theme));
+      setProposals(parseLandingProposals(landing.proposals));
       setLgpdControllerName(landing.lgpd_controller_name ?? "");
       setLgpdControllerCpf(landing.lgpd_controller_cpf ?? "");
       setLgpdControllerEmail(landing.lgpd_controller_email ?? "");
@@ -194,6 +197,7 @@ function ConfigPage() {
                 socialLinks={landing?.social_links}
                 photoUrl={photoUrl}
                 theme={theme}
+                proposals={proposals}
                 canEdit={perms.canEditLanding}
                 onDisplayNameChange={setDisplayName}
                 onHeadlineChange={setHeadline}
@@ -202,6 +206,7 @@ function ConfigPage() {
                 onInstagramChange={setInstagram}
                 onPhotoUrlChange={setPhotoUrl}
                 onThemeChange={setTheme}
+                onProposalsChange={setProposals}
                 lgpdControllerName={lgpdControllerName}
                 lgpdControllerCpf={lgpdControllerCpf}
                 lgpdControllerEmail={lgpdControllerEmail}

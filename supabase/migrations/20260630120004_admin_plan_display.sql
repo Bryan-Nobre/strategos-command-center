@@ -77,7 +77,7 @@ BEGIN
   END IF;
 
   INSERT INTO public.tenants (slug, name, owner_user_id, plan, status)
-  VALUES (v_slug, trim(p_tenant_name), p_user_id, 'start', 'active')
+  VALUES (v_slug, trim(p_tenant_name), p_user_id, 'start', 'suspended')
   RETURNING id INTO v_tenant_id;
 
   v_admin_role_id := public.seed_tenant_default_roles(v_tenant_id);
@@ -92,21 +92,13 @@ BEGIN
     COALESCE(p_headline, 'Juntos por uma cidade melhor'),
     '',
     '[]'::jsonb,
-    true
+    false
   );
 
   INSERT INTO public.user_preferences (user_id, tenant_id)
   VALUES (p_user_id, v_tenant_id);
 
-  INSERT INTO public.poll_snapshots (tenant_id, snapshot_type, title, data) VALUES
-    (v_tenant_id, 'intencao_voto', 'Intenção de voto', '[
-      {"candidato":"Você","valor":38},
-      {"candidato":"Cand. B","valor":26},
-      {"candidato":"Cand. C","valor":18},
-      {"candidato":"Indecisos","valor":18}
-    ]'::jsonb),
-    (v_tenant_id, 'aprovacao_bairro', 'Aprovação por bairro', '[]'::jsonb),
-    (v_tenant_id, 'crescimento', 'Crescimento', '[]'::jsonb);
+  PERFORM public.log_activity(v_tenant_id, 'Campanha criada — aguardando ativação', 'tenant', v_tenant_id);
 
   RETURN v_tenant_id;
 END;

@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Camera, Copy, ExternalLink, Loader2, Palette, Shield, Trash2 } from "lucide-react";
+import { Camera, Copy, ExternalLink, ListChecks, Loader2, Palette, Shield, Trash2 } from "lucide-react";
 import { useRef } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  DEFAULT_LANDING_ACCENT,
   LANDING_THEME_COLOR_FIELDS,
   serializeLandingTheme,
   validateLandingThemeColors,
@@ -34,6 +35,12 @@ import {
 } from "@/lib/landing-social";
 import { removeLandingHeroPhoto, uploadLandingHeroPhoto } from "@/services/landing-photo";
 import { updateLandingPage } from "@/services/landing";
+import { LandingProposalsEditor } from "@/components/settings/LandingProposalsEditor";
+import {
+  serializeLandingProposals,
+  validateLandingProposals,
+  type LandingProposalItem,
+} from "@/lib/landing-proposals";
 
 type Props = {
   tenantId: string;
@@ -47,6 +54,7 @@ type Props = {
   socialLinks: unknown;
   photoUrl: string;
   theme: LandingTheme;
+  proposals: LandingProposalItem[];
   canEdit: boolean;
   onDisplayNameChange: (v: string) => void;
   onHeadlineChange: (v: string) => void;
@@ -55,6 +63,7 @@ type Props = {
   onInstagramChange: (v: string) => void;
   onPhotoUrlChange: (v: string) => void;
   onThemeChange: (theme: LandingTheme) => void;
+  onProposalsChange: (items: LandingProposalItem[]) => void;
   lgpdControllerName: string;
   lgpdControllerCpf: string;
   lgpdControllerEmail: string;
@@ -77,6 +86,7 @@ export function LandingSettingsCard({
   socialLinks,
   photoUrl,
   theme,
+  proposals,
   canEdit,
   onDisplayNameChange,
   onHeadlineChange,
@@ -85,6 +95,7 @@ export function LandingSettingsCard({
   onInstagramChange,
   onPhotoUrlChange,
   onThemeChange,
+  onProposalsChange,
   lgpdControllerName,
   lgpdControllerCpf,
   lgpdControllerEmail,
@@ -108,10 +119,14 @@ export function LandingSettingsCard({
       if (igRaw && !normalizeInstagramUrl(igRaw)) {
         throw new Error("Instagram inválido. Use @usuario ou o link completo do perfil.");
       }
+      const proposalError = validateLandingProposals(proposals);
+      if (proposalError) throw new Error(proposalError);
+      const serializedProposals = serializeLandingProposals(proposals);
       return updateLandingPage(tenantId, {
         display_name: displayName.trim() || null,
         headline: headline.trim() || null,
         bio: landingBio.trim() || null,
+        proposals: serializedProposals as never,
         whatsapp: normalizeSupporterPhone(whatsapp),
         social_links: serializeLandingSocialLinks(socialLinks, instagram) as never,
         photo_url: photoUrl.trim() || null,
@@ -149,6 +164,7 @@ export function LandingSettingsCard({
   });
 
   const previewTitle = displayName.trim() || tenantName;
+  const previewAccent = theme.accent_color ?? DEFAULT_LANDING_ACCENT;
 
   return (
     <Card className="settings-panel shadow-elegant">
@@ -225,7 +241,10 @@ export function LandingSettingsCard({
                         className="h-10 w-10 rounded-lg border border-border object-cover"
                       />
                     ) : (
-                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-xs font-bold text-primary-foreground">
+                      <div
+                        className="flex h-10 w-10 items-center justify-center rounded-lg text-xs font-bold text-white"
+                        style={{ background: previewAccent }}
+                      >
                         {previewTitle.slice(0, 2).toUpperCase()}
                       </div>
                     )}
@@ -245,7 +264,7 @@ export function LandingSettingsCard({
                       : undefined
                   }
                 >
-                  Meio · propostas e cadastro
+                  Meio · {proposals.length > 0 ? `${proposals.length} proposta(s)` : "propostas"} e cadastro
                 </div>
                 <div
                   className="mt-2 rounded-md px-3 py-2 text-[10px] text-muted-foreground"
@@ -302,6 +321,31 @@ export function LandingSettingsCard({
                 </div>
               </div>
             ))}
+          </div>
+
+          <div className="grid gap-2 sm:max-w-md">
+            <Label>Detalhes pequenos (botão, círculo, coração e etc.)</Label>
+            <div className="flex gap-2">
+              <Input
+                type="color"
+                value={theme.accent_color ?? DEFAULT_LANDING_ACCENT}
+                disabled={!canEdit}
+                className="h-10 w-14 cursor-pointer px-1 py-1"
+                onChange={(e) => onThemeChange({ ...theme, accent_color: e.target.value })}
+              />
+              <Input
+                value={theme.accent_color ?? ""}
+                disabled={!canEdit}
+                placeholder={`${DEFAULT_LANDING_ACCENT} (padrão da campanha)`}
+                onChange={(e) =>
+                  onThemeChange({ ...theme, accent_color: e.target.value || null })
+                }
+              />
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              Cor dos botões, checkboxes, coração, bolinhas decorativas e demais destaques na
+              landing. Vazio usa o verde padrão da plataforma.
+            </p>
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
@@ -388,8 +432,8 @@ export function LandingSettingsCard({
                     className="h-3.5 w-3.5"
                     strokeWidth={1.5}
                     style={
-                      theme.political_icons_color
-                        ? { color: theme.political_icons_color }
+                      theme.political_icons_color || theme.accent_color
+                        ? { color: theme.political_icons_color ?? theme.accent_color ?? undefined }
                         : undefined
                     }
                   />
@@ -403,7 +447,7 @@ export function LandingSettingsCard({
                 <div className="flex gap-2">
                   <Input
                     type="color"
-                    value={theme.political_icons_color ?? "#10944a"}
+                    value={theme.political_icons_color ?? theme.accent_color ?? DEFAULT_LANDING_ACCENT}
                     disabled={!canEdit}
                     className="h-10 w-14 cursor-pointer px-1 py-1"
                     onChange={(e) =>
@@ -413,7 +457,7 @@ export function LandingSettingsCard({
                   <Input
                     value={theme.political_icons_color ?? ""}
                     disabled={!canEdit}
-                    placeholder="#10944a (padrão da campanha)"
+                    placeholder={`${DEFAULT_LANDING_ACCENT} (usa cor dos detalhes pequenos)`}
                     onChange={(e) =>
                       onThemeChange({
                         ...theme,
@@ -423,7 +467,7 @@ export function LandingSettingsCard({
                   />
                 </div>
                 <p className="text-[11px] text-muted-foreground">
-                  Vazio usa a cor primária do tema. Ajuste a opacidade pelo contraste com o fundo.
+                  Vazio usa a cor dos detalhes pequenos (ou o verde padrão). Ajuste o contraste com o fundo.
                 </p>
               </div>
             )}
@@ -538,6 +582,21 @@ export function LandingSettingsCard({
               </p>
             </div>
           </div>
+        </section>
+
+        <section className="space-y-4 border-t border-border/60 pt-6">
+          <div className="flex items-center gap-2 text-sm font-semibold">
+            <ListChecks className="h-4 w-4 text-primary" />
+            Propostas da campanha
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Cards exibidos na landing pública, entre o hero e o formulário «Quero apoiar».
+          </p>
+          <LandingProposalsEditor
+            proposals={proposals}
+            canEdit={canEdit}
+            onChange={onProposalsChange}
+          />
         </section>
 
         <section className="space-y-4 border-t border-border/60 pt-6">

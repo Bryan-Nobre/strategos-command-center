@@ -9,6 +9,8 @@ export type LandingTheme = {
   hero_background_color: string | null;
   middle_background_color: string | null;
   footer_background_color: string | null;
+  /** Botões, ícones pequenos, coração, checkboxes e destaques na landing pública. */
+  accent_color: string | null;
   hero_style: LandingHeroStyle;
   show_graphic_elements: boolean;
   show_political_icons: boolean;
@@ -21,12 +23,15 @@ export const DEFAULT_LANDING_THEME: LandingTheme = {
   hero_background_color: null,
   middle_background_color: null,
   footer_background_color: null,
+  accent_color: null,
   hero_style: "default",
   show_graphic_elements: true,
   show_political_icons: false,
   political_icons_color: null,
   photo_style: "rounded",
 };
+
+export const DEFAULT_LANDING_ACCENT = "#10944a";
 
 const HEX_RE = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
 
@@ -61,6 +66,7 @@ export function parseLandingTheme(raw: Json | null | undefined): LandingTheme {
     hero_background_color: parseOptionalColor(row.hero_background_color),
     middle_background_color: parseOptionalColor(row.middle_background_color),
     footer_background_color: parseOptionalColor(row.footer_background_color),
+    accent_color: parseOptionalColor(row.accent_color),
     hero_style: parseHeroStyle(row.hero_style),
     show_graphic_elements: row.show_graphic_elements !== false,
     show_political_icons: row.show_political_icons === true,
@@ -75,6 +81,7 @@ export function serializeLandingTheme(theme: LandingTheme): LandingTheme {
     hero_background_color: parseOptionalColor(theme.hero_background_color),
     middle_background_color: parseOptionalColor(theme.middle_background_color),
     footer_background_color: parseOptionalColor(theme.footer_background_color),
+    accent_color: parseOptionalColor(theme.accent_color),
     hero_style: parseHeroStyle(theme.hero_style),
     show_graphic_elements: theme.show_graphic_elements !== false,
     show_political_icons: theme.show_political_icons === true,
@@ -92,6 +99,32 @@ export function landingSectionBackgroundStyle(
 
 export function landingPageBackgroundStyle(theme: LandingTheme): CSSProperties | undefined {
   return landingSectionBackgroundStyle(theme.background_color);
+}
+
+/** Cor de destaque na landing (botão, coração, checkboxes, bolinhas decorativas). */
+export function resolveLandingAccentColor(theme: LandingTheme): string {
+  return theme.accent_color?.trim() || DEFAULT_LANDING_ACCENT;
+}
+
+/** Variáveis CSS aplicadas no container `.landing-page` para personalizar detalhes. */
+export function landingAccentStyle(theme: LandingTheme): CSSProperties | undefined {
+  const accent = theme.accent_color?.trim();
+  if (!accent) return undefined;
+
+  return {
+    "--landing-accent": accent,
+    "--primary": accent,
+    "--ring": `${accent}59`,
+    "--primary-hover": accent,
+    "--landing-icon-color": theme.political_icons_color?.trim() || accent,
+  } as CSSProperties;
+}
+
+export function landingPageRootStyle(theme: LandingTheme): CSSProperties | undefined {
+  const bg = landingPageBackgroundStyle(theme);
+  const accent = landingAccentStyle(theme);
+  if (!bg && !accent) return undefined;
+  return { ...bg, ...accent };
 }
 
 export function landingHeroTitle(landing: {
@@ -132,6 +165,9 @@ export function validateLandingThemeColors(theme: LandingTheme): string | null {
     !isValidLandingBackgroundColor(theme.political_icons_color)
   ) {
     return "Cor inválida dos ícones políticos. Use formato hexadecimal (#RRGGBB).";
+  }
+  if (theme.accent_color && !isValidLandingBackgroundColor(theme.accent_color)) {
+    return "Cor inválida dos detalhes pequenos. Use formato hexadecimal (#RRGGBB).";
   }
   return null;
 }

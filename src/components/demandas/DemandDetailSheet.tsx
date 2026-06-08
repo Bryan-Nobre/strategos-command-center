@@ -47,12 +47,14 @@ export function DemandDetailSheet({
       <SheetContent className="overflow-y-auto sm:max-w-md">
         <SheetHeader>
           <SheetTitle className="pr-8 text-left leading-snug">{demand.title}</SheetTitle>
-          <SheetDescription className="flex flex-wrap items-center gap-2">
-            <DemandSourceBadge source={demand.source} />
-            <Badge variant="outline">{DEMAND_STATUS_LABELS[demand.status] ?? demand.status}</Badge>
-            <Badge variant={prioVariant[demand.priority]}>
-              {DEMAND_PRIORITY_LABELS[demand.priority] ?? demand.priority}
-            </Badge>
+          <SheetDescription asChild>
+            <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+              <DemandSourceBadge source={demand.source} />
+              <Badge variant="outline">{DEMAND_STATUS_LABELS[demand.status] ?? demand.status}</Badge>
+              <Badge variant={prioVariant[demand.priority]}>
+                {DEMAND_PRIORITY_LABELS[demand.priority] ?? demand.priority}
+              </Badge>
+            </div>
           </SheetDescription>
         </SheetHeader>
 

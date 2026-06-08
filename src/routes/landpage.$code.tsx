@@ -38,8 +38,8 @@ import {
   LandingCepLookup,
   type LandingCepLookupState,
 } from "@/components/landing/LandingCepLookup";
-import { buildLandingSuccessMessage } from "@/lib/landing-register";
-import { DEFAULT_LANDING_THEME, landingPageBackgroundStyle, landingSectionBackgroundStyle } from "@/lib/landing-theme";
+import { getLandingProposalBody, parseLandingProposals } from "@/lib/landing-proposals";
+import { DEFAULT_LANDING_THEME, landingPageRootStyle, landingSectionBackgroundStyle } from "@/lib/landing-theme";
 import { resolveLandingPublicCode } from "@/services/landing";
 import { normalizeCep } from "@/lib/postal-code";
 import { applySupporterGeoFromCep } from "@/services/postal-code";
@@ -86,10 +86,14 @@ function PublicLandingPage() {
   }, [chapas]);
 
   const chapasByLeadership = useMemo(() => {
-    const map = new Map<string, { name: string; region: string | null; items: PublicLandingChapa[] }>();
+    const map = new Map<
+      string,
+      { leadershipId: string; name: string; region: string | null; items: PublicLandingChapa[] }
+    >();
     for (const c of chapas) {
       const key = c.leadership_id;
       const entry = map.get(key) ?? {
+        leadershipId: key,
         name: c.leadership_name,
         region: c.leadership_region,
         items: [],
@@ -196,21 +200,20 @@ function PublicLandingPage() {
     );
   }
 
-  const proposals = Array.isArray(landing.proposals)
-    ? (landing.proposals as { title?: string; text?: string }[])
-    : [];
+  const proposals = parseLandingProposals(landing.proposals);
   const theme = landing.theme ?? DEFAULT_LANDING_THEME;
-  const pageStyle = landingPageBackgroundStyle(theme);
+  const pageStyle = landingPageRootStyle(theme);
   const middleZoneStyle = landingSectionBackgroundStyle(theme.middle_background_color);
   const footerZoneStyle = landingSectionBackgroundStyle(theme.footer_background_color);
+  const decorIconColor = theme.political_icons_color ?? theme.accent_color;
 
   return (
     <div
-      className={`landing-page relative min-h-screen bg-background${theme.show_graphic_elements ? " landing-page--decorated" : ""}${theme.show_political_icons ? " landing-page--with-icons" : ""}`}
+      className={`landing-page relative min-h-screen bg-background${theme.accent_color ? " landing-page--accent" : ""}${theme.show_graphic_elements ? " landing-page--decorated" : ""}${theme.show_political_icons ? " landing-page--with-icons" : ""}`}
       style={pageStyle}
     >
       {theme.show_political_icons && (
-        <LandingPoliticalDecor color={theme.political_icons_color} />
+        <LandingPoliticalDecor color={decorIconColor} />
       )}
       <main className="relative z-[1] mx-auto max-w-3xl space-y-8 px-4 py-8 md:py-12">
         <LandingHero landing={landing} />
@@ -230,9 +233,9 @@ function PublicLandingPage() {
                   <CardHeader className="pb-1 pt-3">
                     <CardTitle className="text-sm">{p.title ?? `Proposta ${i + 1}`}</CardTitle>
                   </CardHeader>
-                  {p.text && (
+                  {getLandingProposalBody(p) && (
                     <CardContent className="pb-3 pt-0 text-xs leading-relaxed text-muted-foreground">
-                      {p.text}
+                      {getLandingProposalBody(p)}
                     </CardContent>
                   )}
                 </Card>
