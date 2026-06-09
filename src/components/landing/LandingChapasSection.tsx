@@ -34,6 +34,9 @@ export function LandingChapasSection({
   if (!groups.length) return null;
 
   const totalSelected = selectedChapas.length;
+  const selectionLive = totalSelected > 0
+    ? `${totalSelected} chapa${totalSelected === 1 ? "" : "s"} selecionada${totalSelected === 1 ? "" : "s"}`
+    : "Nenhuma chapa selecionada";
 
   function toggleLeadership(leadershipId: string) {
     setExpandedLeadershipId((current) => (current === leadershipId ? null : leadershipId));
@@ -58,7 +61,8 @@ export function LandingChapasSection({
             <button
               type="button"
               aria-expanded={isExpanded}
-              className="flex w-full items-center gap-2 px-3 py-2.5 text-left transition-colors hover:bg-muted/40"
+              aria-controls={`chapas-leadership-${group.leadershipId}`}
+              className="flex w-full items-center gap-2 px-3 py-2.5 text-left transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
               onClick={() => toggleLeadership(group.leadershipId)}
             >
               {isExpanded ? (
@@ -82,15 +86,21 @@ export function LandingChapasSection({
             </button>
 
             {isExpanded && (
-              <div className="space-y-1.5 border-t border-border/50 px-2 pb-2 pt-1.5">
+              <div
+                id={`chapas-leadership-${group.leadershipId}`}
+                className="space-y-1.5 border-t border-border/50 px-2 pb-2 pt-1.5"
+                role="group"
+                aria-label={`Chapas de ${group.name}`}
+              >
                 {group.items.map((c) => (
                   <label
                     key={c.id}
-                    className="flex cursor-pointer items-start gap-2.5 rounded-md px-2 py-2 transition-colors hover:bg-muted/30"
+                    className="flex cursor-pointer items-start gap-2.5 rounded-md px-2 py-2 transition-colors hover:bg-muted/30 focus-within:ring-2 focus-within:ring-primary/30"
                   >
                     <Checkbox
                       className="mt-0.5"
                       checked={selectedChapas.includes(c.id)}
+                      aria-label={`Apoiar ${c.name}`}
                       onCheckedChange={() => onToggle(c.id)}
                     />
                     <span className="min-w-0 flex-1">
@@ -117,6 +127,9 @@ export function LandingChapasSection({
         Toque em uma liderança para ver as chapas. Marque quem você apoia antes de confirmar o
         cadastro.
       </p>
+      <p className="sr-only" aria-live="polite" aria-atomic="true">
+        {selectionLive}
+      </p>
       {leadersList}
     </div>
   );
@@ -138,7 +151,8 @@ export function LandingChapasSection({
         <CollapsibleTrigger asChild>
           <button
             type="button"
-            className="flex w-full items-center justify-between gap-2 px-3 py-3 text-left text-sm font-semibold text-foreground transition-colors hover:bg-muted/20"
+            aria-expanded={sectionOpen}
+            className="flex w-full items-center justify-between gap-2 px-3 py-3 text-left text-sm font-semibold text-foreground transition-colors hover:bg-muted/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
           >
             <span className="min-w-0 flex-1">{summaryLabel}</span>
             <span className="flex shrink-0 items-center gap-2">
@@ -173,7 +187,8 @@ export function LandingChapasSection({
       <CollapsibleTrigger asChild>
         <button
           type="button"
-          className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left text-sm font-semibold text-foreground transition-colors hover:bg-muted/20"
+          aria-expanded={sectionOpen}
+          className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left text-sm font-semibold text-foreground transition-colors hover:bg-muted/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
         >
           <span>{summaryLabel}</span>
           <span className="flex items-center gap-2 text-xs font-normal text-muted-foreground">

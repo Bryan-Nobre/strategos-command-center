@@ -8,6 +8,7 @@ import {
   PLATFORM_CONTACT_EMAIL,
 } from "@/lib/tenant-access";
 import { signOut } from "@/lib/supabase/session";
+import { CampaignSetupChecklist } from "@/components/onboarding/CampaignSetupChecklist";
 
 type TenantAccessBlockedProps = {
   tenant: Tenant;
@@ -34,6 +35,7 @@ export function TenantAccessBlocked({ tenant }: TenantAccessBlockedProps) {
           <CardDescription className="text-base leading-relaxed">{description}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          <CampaignSetupChecklist variant="blocked" />
           <div className="rounded-lg border bg-muted/40 p-4 text-sm">
             <p className="font-medium text-foreground">{tenant.name}</p>
             <p className="text-muted-foreground">Plano: {tenant.plan}</p>

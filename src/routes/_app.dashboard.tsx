@@ -18,7 +18,7 @@ import { DashboardUpcomingAgenda } from "@/components/dashboard/DashboardUpcomin
 import { ModuleRouteGuard } from "@/components/auth/PermissionGate";
 import { DashboardHero } from "@/components/dashboard/DashboardHero";
 import { DashboardPriorities } from "@/components/dashboard/DashboardPriorities";
-import { DashboardKpiStrip } from "@/components/dashboard/DashboardKpiStrip";
+import { DashboardKpiStrip, type DashboardKpiItem } from "@/components/dashboard/DashboardKpiStrip";
 import { DashboardTerritoryMap } from "@/components/dashboard/DashboardTerritoryMap";
 import { DashboardGoalsOverview } from "@/components/dashboard/DashboardGoalsOverview";
 import { DashboardPipelineSlim } from "@/components/dashboard/DashboardPipelineSlim";
@@ -36,10 +36,15 @@ import {
 } from "@/lib/dashboard-compose";
 import { useOperationalDashboard, useActivities, usePollSnapshots } from "@/hooks/use-dashboard";
 import { useAgendaEvents } from "@/hooks/use-agenda";
+import { useQuery } from "@tanstack/react-query";
+import { getLandingPage } from "@/services/landing";
+import { parseLandingProposals } from "@/lib/landing-proposals";
+import { CampaignSetupChecklist } from "@/components/onboarding/CampaignSetupChecklist";
 import { DashboardTerritoryCepBar } from "@/components/dashboard/DashboardTerritoryCepBar";
 import { filterEnrichedTerritories } from "@/lib/territory-filter";
 import type { TerritoryFilter } from "@/lib/territory-filter";
 import { greetingLabel } from "@/services/dashboard-intelligence";
+import type { KpiContext } from "@/services/dashboard-intelligence";
 
 export const Route = createFileRoute("/_app/dashboard")({
   validateSearch: (search: Record<string, unknown>) => parseDashboardSearch(search),
@@ -84,6 +89,17 @@ function DashboardPage() {
 
   const metrics = operational?.metrics;
   const insights = operational?.insights;
+
+  const supporterTotal = metrics?.total_supporters ?? 0;
+  const showSetupChecklist = !opLoading && supporterTotal < 10;
+
+  const { data: landingPage } = useQuery({
+    queryKey: ["landing", tenantId],
+    queryFn: () => getLandingPage(tenantId),
+    enabled: !!tenantId && showSetupChecklist,
+  });
+
+  const landingProposals = parseLandingProposals(landingPage?.proposals);
 
   const intencao = (polls?.find((p) => p.snapshot_type === "intencao_voto")?.data ?? []) as {
     candidato: string;
@@ -176,7 +192,10 @@ function DashboardPage() {
 
   const periodLabel = formatDatePeriodLabel(periodRange);
 
-  const kpiItems = useMemo(() => {
+  const kpiSublabel = (text: string | undefined): KpiContext | undefined =>
+    text ? { last7: 0, deltaPct: null, sublabel: text } : undefined;
+
+  const kpiItems = useMemo((): DashboardKpiItem[] => {
     if (periodReports) {
       const s = periodReports.summary;
       const growth =
@@ -188,29 +207,29 @@ function DashboardPage() {
           label: "Novos apoiadores",
           value: String(s.newSupportersInPeriod),
           icon: Users,
-          context: growth,
-          tone: "primary" as const,
+          context: kpiSublabel(growth),
+          tone: "primary",
         },
         {
           label: "Apoio forte (base)",
           value: String(s.strongSupport),
           icon: Vote,
-          context: periodLabel,
-          tone: "primary" as const,
+          context: kpiSublabel(periodLabel),
+          tone: "primary",
         },
         {
           label: "Lideranças",
           value: String(s.leaderships),
           icon: Crown,
-          context: periodLabel,
-          tone: "primary" as const,
+          context: kpiSublabel(periodLabel),
+          tone: "primary",
         },
         {
           label: "Demandas abertas",
           value: String(s.openDemands),
           icon: MessageSquareWarning,
-          context: `${s.resolvedInPeriod} resolvidas no período`,
-          tone: "warning" as const,
+          context: kpiSublabel(`${s.resolvedInPeriod} resolvidas no período`),
+          tone: "warning",
         },
       ];
     }
@@ -253,6 +272,18 @@ function DashboardPage() {
 
         {!opLoading && (
           <>
+            {showSetupChecklist && (
+              <div className="mb-6">
+                <CampaignSetupChecklist
+                  publicCode={landingPage?.public_code}
+                  hasPhoto={!!landingPage?.photo_url?.trim()}
+                  hasHeadline={!!landingPage?.headline?.trim()}
+                  hasProposals={landingProposals.length > 0}
+                  supporterCount={supporterTotal}
+                />
+              </div>
+            )}
+
             <DashboardHero
               greeting={greeting}
               briefing={briefing}

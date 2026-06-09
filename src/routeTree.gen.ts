@@ -8,6 +8,8 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
+import { createFileRoute } from '@tanstack/react-router'
+
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as RevogarConsentimentoRouteImport } from './routes/revogar-consentimento'
@@ -29,16 +31,17 @@ import { Route as AppDemandasRouteImport } from './routes/_app.demandas'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppConfiguracoesRouteImport } from './routes/_app.configuracoes'
 import { Route as AppAgendaRouteImport } from './routes/_app.agenda'
-import { Route as AdminUsersRouteImport } from './routes/_admin.users'
 import { Route as AdminTenantsRouteImport } from './routes/_admin.tenants'
-import { Route as AdminPlansRouteImport } from './routes/_admin.plans'
-import { Route as AdminMetricasRouteImport } from './routes/_admin.metricas'
 import { Route as LgpdCodeIndexRouteImport } from './routes/lgpd.$code.index'
 import { Route as AppEquipeIndexRouteImport } from './routes/_app.equipe.index'
 import { Route as LgpdCodeTermoRouteImport } from './routes/lgpd.$code.termo'
 import { Route as LgpdCodeRevogarRouteImport } from './routes/lgpd.$code.revogar'
 import { Route as LandpageCodeTermoRouteImport } from './routes/landpage.$code.termo'
 import { Route as AppEquipeCargosRouteImport } from './routes/_app.equipe.cargos'
+
+const AdminUsersLazyRouteImport = createFileRoute('/_admin/users')()
+const AdminPlansLazyRouteImport = createFileRoute('/_admin/plans')()
+const AdminMetricasLazyRouteImport = createFileRoute('/_admin/metricas')()
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -62,12 +65,29 @@ const AppRoute = AppRouteImport.update({
 const AdminRoute = AdminRouteImport.update({
   id: '/_admin',
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any).lazy(() => import('./routes/_admin.lazy').then((d) => d.Route))
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminUsersLazyRoute = AdminUsersLazyRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => AdminRoute,
+} as any).lazy(() => import('./routes/_admin.users.lazy').then((d) => d.Route))
+const AdminPlansLazyRoute = AdminPlansLazyRouteImport.update({
+  id: '/plans',
+  path: '/plans',
+  getParentRoute: () => AdminRoute,
+} as any).lazy(() => import('./routes/_admin.plans.lazy').then((d) => d.Route))
+const AdminMetricasLazyRoute = AdminMetricasLazyRouteImport.update({
+  id: '/metricas',
+  path: '/metricas',
+  getParentRoute: () => AdminRoute,
+} as any).lazy(() =>
+  import('./routes/_admin.metricas.lazy').then((d) => d.Route),
+)
 const PSlugRoute = PSlugRouteImport.update({
   id: '/p/$slug',
   path: '/p/$slug',
@@ -97,17 +117,23 @@ const AppRelatoriosRoute = AppRelatoriosRouteImport.update({
   id: '/relatorios',
   path: '/relatorios',
   getParentRoute: () => AppRoute,
-} as any)
+} as any).lazy(() =>
+  import('./routes/_app.relatorios.lazy').then((d) => d.Route),
+)
 const AppPesquisasRoute = AppPesquisasRouteImport.update({
   id: '/pesquisas',
   path: '/pesquisas',
   getParentRoute: () => AppRoute,
-} as any)
+} as any).lazy(() =>
+  import('./routes/_app.pesquisas.lazy').then((d) => d.Route),
+)
 const AppLiderancasRoute = AppLiderancasRouteImport.update({
   id: '/liderancas',
   path: '/liderancas',
   getParentRoute: () => AppRoute,
-} as any)
+} as any).lazy(() =>
+  import('./routes/_app.liderancas.lazy').then((d) => d.Route),
+)
 const AppEquipeRoute = AppEquipeRouteImport.update({
   id: '/equipe',
   path: '/equipe',
@@ -117,12 +143,14 @@ const AppEleitoresRoute = AppEleitoresRouteImport.update({
   id: '/eleitores',
   path: '/eleitores',
   getParentRoute: () => AppRoute,
-} as any)
+} as any).lazy(() =>
+  import('./routes/_app.eleitores.lazy').then((d) => d.Route),
+)
 const AppDemandasRoute = AppDemandasRouteImport.update({
   id: '/demandas',
   path: '/demandas',
   getParentRoute: () => AppRoute,
-} as any)
+} as any).lazy(() => import('./routes/_app.demandas.lazy').then((d) => d.Route))
 const AppDashboardRoute = AppDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -132,32 +160,21 @@ const AppConfiguracoesRoute = AppConfiguracoesRouteImport.update({
   id: '/configuracoes',
   path: '/configuracoes',
   getParentRoute: () => AppRoute,
-} as any)
+} as any).lazy(() =>
+  import('./routes/_app.configuracoes.lazy').then((d) => d.Route),
+)
 const AppAgendaRoute = AppAgendaRouteImport.update({
   id: '/agenda',
   path: '/agenda',
   getParentRoute: () => AppRoute,
 } as any)
-const AdminUsersRoute = AdminUsersRouteImport.update({
-  id: '/users',
-  path: '/users',
-  getParentRoute: () => AdminRoute,
-} as any)
 const AdminTenantsRoute = AdminTenantsRouteImport.update({
   id: '/tenants',
   path: '/tenants',
   getParentRoute: () => AdminRoute,
-} as any)
-const AdminPlansRoute = AdminPlansRouteImport.update({
-  id: '/plans',
-  path: '/plans',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AdminMetricasRoute = AdminMetricasRouteImport.update({
-  id: '/metricas',
-  path: '/metricas',
-  getParentRoute: () => AdminRoute,
-} as any)
+} as any).lazy(() =>
+  import('./routes/_admin.tenants.lazy').then((d) => d.Route),
+)
 const LgpdCodeIndexRoute = LgpdCodeIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -194,10 +211,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/revogar-consentimento': typeof RevogarConsentimentoRoute
   '/signup': typeof SignupRoute
-  '/metricas': typeof AdminMetricasRoute
-  '/plans': typeof AdminPlansRoute
   '/tenants': typeof AdminTenantsRoute
-  '/users': typeof AdminUsersRoute
   '/agenda': typeof AppAgendaRoute
   '/configuracoes': typeof AppConfiguracoesRoute
   '/dashboard': typeof AppDashboardRoute
@@ -212,6 +226,9 @@ export interface FileRoutesByFullPath {
   '/landpage/$code': typeof LandpageCodeRouteWithChildren
   '/lgpd/$code': typeof LgpdCodeRouteWithChildren
   '/p/$slug': typeof PSlugRoute
+  '/metricas': typeof AdminMetricasLazyRoute
+  '/plans': typeof AdminPlansLazyRoute
+  '/users': typeof AdminUsersLazyRoute
   '/equipe/cargos': typeof AppEquipeCargosRoute
   '/landpage/$code/termo': typeof LandpageCodeTermoRoute
   '/lgpd/$code/revogar': typeof LgpdCodeRevogarRoute
@@ -224,10 +241,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/revogar-consentimento': typeof RevogarConsentimentoRoute
   '/signup': typeof SignupRoute
-  '/metricas': typeof AdminMetricasRoute
-  '/plans': typeof AdminPlansRoute
   '/tenants': typeof AdminTenantsRoute
-  '/users': typeof AdminUsersRoute
   '/agenda': typeof AppAgendaRoute
   '/configuracoes': typeof AppConfiguracoesRoute
   '/dashboard': typeof AppDashboardRoute
@@ -240,6 +254,9 @@ export interface FileRoutesByTo {
   '/invite/$token': typeof InviteTokenRoute
   '/landpage/$code': typeof LandpageCodeRouteWithChildren
   '/p/$slug': typeof PSlugRoute
+  '/metricas': typeof AdminMetricasLazyRoute
+  '/plans': typeof AdminPlansLazyRoute
+  '/users': typeof AdminUsersLazyRoute
   '/equipe/cargos': typeof AppEquipeCargosRoute
   '/landpage/$code/termo': typeof LandpageCodeTermoRoute
   '/lgpd/$code/revogar': typeof LgpdCodeRevogarRoute
@@ -255,10 +272,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/revogar-consentimento': typeof RevogarConsentimentoRoute
   '/signup': typeof SignupRoute
-  '/_admin/metricas': typeof AdminMetricasRoute
-  '/_admin/plans': typeof AdminPlansRoute
   '/_admin/tenants': typeof AdminTenantsRoute
-  '/_admin/users': typeof AdminUsersRoute
   '/_app/agenda': typeof AppAgendaRoute
   '/_app/configuracoes': typeof AppConfiguracoesRoute
   '/_app/dashboard': typeof AppDashboardRoute
@@ -273,6 +287,9 @@ export interface FileRoutesById {
   '/landpage/$code': typeof LandpageCodeRouteWithChildren
   '/lgpd/$code': typeof LgpdCodeRouteWithChildren
   '/p/$slug': typeof PSlugRoute
+  '/_admin/metricas': typeof AdminMetricasLazyRoute
+  '/_admin/plans': typeof AdminPlansLazyRoute
+  '/_admin/users': typeof AdminUsersLazyRoute
   '/_app/equipe/cargos': typeof AppEquipeCargosRoute
   '/landpage/$code/termo': typeof LandpageCodeTermoRoute
   '/lgpd/$code/revogar': typeof LgpdCodeRevogarRoute
@@ -287,10 +304,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/revogar-consentimento'
     | '/signup'
-    | '/metricas'
-    | '/plans'
     | '/tenants'
-    | '/users'
     | '/agenda'
     | '/configuracoes'
     | '/dashboard'
@@ -305,6 +319,9 @@ export interface FileRouteTypes {
     | '/landpage/$code'
     | '/lgpd/$code'
     | '/p/$slug'
+    | '/metricas'
+    | '/plans'
+    | '/users'
     | '/equipe/cargos'
     | '/landpage/$code/termo'
     | '/lgpd/$code/revogar'
@@ -317,10 +334,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/revogar-consentimento'
     | '/signup'
-    | '/metricas'
-    | '/plans'
     | '/tenants'
-    | '/users'
     | '/agenda'
     | '/configuracoes'
     | '/dashboard'
@@ -333,6 +347,9 @@ export interface FileRouteTypes {
     | '/invite/$token'
     | '/landpage/$code'
     | '/p/$slug'
+    | '/metricas'
+    | '/plans'
+    | '/users'
     | '/equipe/cargos'
     | '/landpage/$code/termo'
     | '/lgpd/$code/revogar'
@@ -347,10 +364,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/revogar-consentimento'
     | '/signup'
-    | '/_admin/metricas'
-    | '/_admin/plans'
     | '/_admin/tenants'
-    | '/_admin/users'
     | '/_app/agenda'
     | '/_app/configuracoes'
     | '/_app/dashboard'
@@ -365,6 +379,9 @@ export interface FileRouteTypes {
     | '/landpage/$code'
     | '/lgpd/$code'
     | '/p/$slug'
+    | '/_admin/metricas'
+    | '/_admin/plans'
+    | '/_admin/users'
     | '/_app/equipe/cargos'
     | '/landpage/$code/termo'
     | '/lgpd/$code/revogar'
@@ -430,6 +447,27 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_admin/users': {
+      id: '/_admin/users'
+      path: '/users'
+      fullPath: '/users'
+      preLoaderRoute: typeof AdminUsersLazyRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/_admin/plans': {
+      id: '/_admin/plans'
+      path: '/plans'
+      fullPath: '/plans'
+      preLoaderRoute: typeof AdminPlansLazyRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/_admin/metricas': {
+      id: '/_admin/metricas'
+      path: '/metricas'
+      fullPath: '/metricas'
+      preLoaderRoute: typeof AdminMetricasLazyRouteImport
+      parentRoute: typeof AdminRoute
     }
     '/p/$slug': {
       id: '/p/$slug'
@@ -529,32 +567,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAgendaRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_admin/users': {
-      id: '/_admin/users'
-      path: '/users'
-      fullPath: '/users'
-      preLoaderRoute: typeof AdminUsersRouteImport
-      parentRoute: typeof AdminRoute
-    }
     '/_admin/tenants': {
       id: '/_admin/tenants'
       path: '/tenants'
       fullPath: '/tenants'
       preLoaderRoute: typeof AdminTenantsRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/_admin/plans': {
-      id: '/_admin/plans'
-      path: '/plans'
-      fullPath: '/plans'
-      preLoaderRoute: typeof AdminPlansRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/_admin/metricas': {
-      id: '/_admin/metricas'
-      path: '/metricas'
-      fullPath: '/metricas'
-      preLoaderRoute: typeof AdminMetricasRouteImport
       parentRoute: typeof AdminRoute
     }
     '/lgpd/$code/': {
@@ -603,17 +620,17 @@ declare module '@tanstack/react-router' {
 }
 
 interface AdminRouteChildren {
-  AdminMetricasRoute: typeof AdminMetricasRoute
-  AdminPlansRoute: typeof AdminPlansRoute
   AdminTenantsRoute: typeof AdminTenantsRoute
-  AdminUsersRoute: typeof AdminUsersRoute
+  AdminMetricasLazyRoute: typeof AdminMetricasLazyRoute
+  AdminPlansLazyRoute: typeof AdminPlansLazyRoute
+  AdminUsersLazyRoute: typeof AdminUsersLazyRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
-  AdminMetricasRoute: AdminMetricasRoute,
-  AdminPlansRoute: AdminPlansRoute,
   AdminTenantsRoute: AdminTenantsRoute,
-  AdminUsersRoute: AdminUsersRoute,
+  AdminMetricasLazyRoute: AdminMetricasLazyRoute,
+  AdminPlansLazyRoute: AdminPlansLazyRoute,
+  AdminUsersLazyRoute: AdminUsersLazyRoute,
 }
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)

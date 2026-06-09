@@ -1,4 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createLazyFileRoute } from "@tanstack/react-router";
+import { RoutePendingFallback } from "@/components/common/RoutePendingFallback";
 import { useQuery } from "@tanstack/react-query";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { listPlatformUsers } from "@/services/admin";
@@ -12,8 +13,9 @@ import {
 } from "@/components/ui/table";
 import { AdminUserCards } from "@/components/admin/AdminUserCards";
 
-export const Route = createFileRoute("/_admin/users")({
+export const Route = createLazyFileRoute("/_admin/users")({
   component: AdminUsersPage,
+  pendingComponent: RoutePendingFallback,
 });
 
 function AdminUsersPage() {

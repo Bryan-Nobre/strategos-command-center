@@ -1,8 +1,10 @@
 import { GripVertical, Plus, Trash2 } from "lucide-react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 import {
   createEmptyProposal,
   MAX_LANDING_PROPOSALS,
@@ -20,6 +22,8 @@ export function LandingProposalsEditor({
   canEdit,
   onChange,
 }: LandingProposalsEditorProps) {
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+
   function patchItem(index: number, patch: Partial<LandingProposalItem>) {
     onChange(proposals.map((item, i) => (i === index ? { ...item, ...patch } : item)));
   }
@@ -28,11 +32,13 @@ export function LandingProposalsEditor({
     onChange(proposals.filter((_, i) => i !== index));
   }
 
-  function moveItem(index: number, direction: -1 | 1) {
-    const next = index + direction;
-    if (next < 0 || next >= proposals.length) return;
+  function reorder(from: number, to: number) {
+    if (from === to || from < 0 || to < 0 || from >= proposals.length || to >= proposals.length) {
+      return;
+    }
     const copy = [...proposals];
-    [copy[index], copy[next]] = [copy[next], copy[index]];
+    const [item] = copy.splice(from, 1);
+    copy.splice(to, 0, item);
     onChange(copy);
   }
 
@@ -47,13 +53,35 @@ export function LandingProposalsEditor({
         <ul className="space-y-3">
           {proposals.map((proposal, index) => (
             <li
-              key={index}
-              className="rounded-lg border border-border/70 bg-muted/15 p-4 space-y-3"
+              key={`proposal-${index}-${proposal.title}`}
+              draggable={canEdit}
+              onDragStart={() => setDragIndex(index)}
+              onDragOver={(e) => {
+                e.preventDefault();
+              }}
+              onDrop={() => {
+                if (dragIndex != null) reorder(dragIndex, index);
+                setDragIndex(null);
+              }}
+              onDragEnd={() => setDragIndex(null)}
+              className={cn(
+                "rounded-lg border border-border/70 bg-muted/15 p-4 space-y-3 transition-opacity",
+                dragIndex === index && "opacity-50",
+              )}
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                  <GripVertical className="h-4 w-4 shrink-0 opacity-50" aria-hidden />
-                  Proposta {index + 1}
+                  <GripVertical
+                    className={cn(
+                      "h-4 w-4 shrink-0",
+                      canEdit ? "cursor-grab text-muted-foreground active:cursor-grabbing" : "opacity-50",
+                    )}
+                    aria-hidden
+                  />
+                  <span>Proposta {index + 1}</span>
+                  {canEdit && (
+                    <span className="sr-only">Arraste para reordenar ou use os botões Subir e Descer</span>
+                  )}
                 </div>
                 {canEdit && (
                   <div className="flex shrink-0 items-center gap-1">
@@ -63,7 +91,8 @@ export function LandingProposalsEditor({
                       size="sm"
                       className="h-8 px-2 text-xs"
                       disabled={index === 0}
-                      onClick={() => moveItem(index, -1)}
+                      aria-label={`Subir proposta ${index + 1}`}
+                      onClick={() => reorder(index, index - 1)}
                     >
                       Subir
                     </Button>
@@ -73,7 +102,8 @@ export function LandingProposalsEditor({
                       size="sm"
                       className="h-8 px-2 text-xs"
                       disabled={index === proposals.length - 1}
-                      onClick={() => moveItem(index, 1)}
+                      aria-label={`Descer proposta ${index + 1}`}
+                      onClick={() => reorder(index, index + 1)}
                     >
                       Descer
                     </Button>
@@ -82,6 +112,7 @@ export function LandingProposalsEditor({
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 text-destructive"
+                      aria-label={`Remover proposta ${index + 1}`}
                       onClick={() => removeItem(index)}
                     >
                       <Trash2 className="h-4 w-4" />
@@ -130,7 +161,8 @@ export function LandingProposalsEditor({
       )}
 
       <p className="text-[11px] text-muted-foreground">
-        Até {MAX_LANDING_PROPOSALS} propostas · exibidas na seção «Propostas» da landing pública.
+        Até {MAX_LANDING_PROPOSALS} propostas · arraste pelo ícone ou use Subir/Descer · exibidas na
+        seção «Propostas» da landing pública.
       </p>
     </div>
   );

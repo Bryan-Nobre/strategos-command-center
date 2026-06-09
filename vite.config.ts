@@ -15,5 +15,17 @@ export default defineConfig({
     resolve: {
       dedupe: ["@tanstack/react-query", "@tanstack/query-core"],
     },
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks(id: string) {
+            if (!id.includes("node_modules")) return;
+            if (id.includes("recharts")) return "vendor-recharts";
+            if (id.includes("exceljs")) return "vendor-exceljs";
+            if (id.includes("react-dom")) return "vendor-react-dom";
+          },
+        },
+      },
+    },
   },
 });

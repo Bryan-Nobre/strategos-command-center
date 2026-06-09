@@ -1,4 +1,5 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createLazyFileRoute, Link } from "@tanstack/react-router";
+import { RoutePendingFallback } from "@/components/common/RoutePendingFallback";
 import { useQuery } from "@tanstack/react-query";
 import { RefreshCw } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -9,8 +10,9 @@ import { LoadingState } from "@/components/common/LoadingState";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-export const Route = createFileRoute("/_admin/metricas")({
+export const Route = createLazyFileRoute("/_admin/metricas")({
   component: AdminMetricsPage,
+  pendingComponent: RoutePendingFallback,
 });
 
 function AdminMetricsPage() {

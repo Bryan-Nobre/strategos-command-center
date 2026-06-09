@@ -1,8 +1,8 @@
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { Heart } from "lucide-react";
 import {
   getPublicLanding,
@@ -10,10 +10,10 @@ import {
   type PublicLandingChapa,
 } from "@/services/landing";
 import { landingCaptureSchema } from "@/types/domain";
+import type { CaptureForm } from "@/lib/landing-capture-form";
 import { PhoneFormField } from "@/components/common/PhoneFormField";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { LandingLgpdConsent } from "@/components/landing/LandingLgpdConsent";
+import { LandingCaptureSteps } from "@/components/landing/LandingCaptureSteps";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -38,15 +38,14 @@ import {
   LandingCepLookup,
   type LandingCepLookupState,
 } from "@/components/landing/LandingCepLookup";
+import { buildLandingSuccessMessage } from "@/lib/landing-register";
 import { getLandingProposalBody, parseLandingProposals } from "@/lib/landing-proposals";
 import { DEFAULT_LANDING_THEME, landingPageRootStyle, landingSectionBackgroundStyle } from "@/lib/landing-theme";
 import { resolveLandingPublicCode } from "@/services/landing";
 import { normalizeCep } from "@/lib/postal-code";
 import { applySupporterGeoFromCep } from "@/services/postal-code";
 import { toast } from "sonner";
-import { createFileRoute, Link, redirect } from "@tanstack/react-router";
-
-type CaptureForm = z.infer<typeof landingCaptureSchema>;
+import { LandingLgpdConsent } from "@/components/landing/LandingLgpdConsent";
 
 export const Route = createFileRoute("/landpage/$code")({
   beforeLoad: async ({ params }) => {
@@ -261,161 +260,176 @@ function PublicLandingPage() {
               </p>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleSubmit((v) => mutation.mutate(v))} className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2 sm:col-span-2">
-                  <Label htmlFor="landing-name">Nome *</Label>
-                  <Input id="landing-name" {...register("name")} autoComplete="name" />
-                  {errors.name && (
-                    <p className="text-xs text-destructive">{errors.name.message}</p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="landing-birth">Data de nascimento *</Label>
-                  <Input
-                    id="landing-birth"
-                    inputMode="numeric"
-                    autoComplete="bday"
-                    placeholder="DD/MM/AAAA"
-                    value={birthDate}
-                    onChange={(e) =>
-                      setValue("birth_date", formatBirthDateMask(e.target.value), {
-                        shouldValidate: true,
-                      })
-                    }
-                  />
-                  {errors.birth_date && (
-                    <p className="text-xs text-destructive">{errors.birth_date.message}</p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="landing-email">E-mail *</Label>
-                  <Input
-                    id="landing-email"
-                    type="email"
-                    autoComplete="email"
-                    {...register("email")}
-                  />
-                  {errors.email && (
-                    <p className="text-xs text-destructive">{errors.email.message}</p>
-                  )}
-                </div>
-                <PhoneFormField
-                  className="sm:col-span-2"
-                  control={control}
-                  name="phone"
-                  label="WhatsApp *"
-                />
-                <div className="space-y-2 sm:col-span-2">
-                  <LandingFieldHelpLink
-                    prefix="Não sabe o CEP?"
-                    linkLabel="Clique aqui"
-                    href={CORREIOS_CEP_URL}
-                  />
-                </div>
-                <LandingCepLookup
-                  cepValue={cepInput}
-                  onCepChange={setCepInput}
-                  onLookupStateChange={handleCepLookupChange}
-                  onNeighborhoodChange={setNeighborhood}
-                  onCityChange={setCity}
-                  onStateUfChange={setStateUf}
-                  onStreetChange={setStreet}
-                />
-                <div className="space-y-2 sm:col-span-2">
-                  <Label htmlFor="landing-street">Logradouro</Label>
-                  <Input id="landing-street" {...register("street")} autoComplete="street-address" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="landing-number">Nº</Label>
-                  <Input id="landing-number" {...register("address_number")} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="landing-complement">Complemento</Label>
-                  <Input id="landing-complement" {...register("address_complement")} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="landing-neighborhood">Bairro</Label>
-                  <Input id="landing-neighborhood" {...register("neighborhood")} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="landing-city">Cidade</Label>
-                  <Input id="landing-city" {...register("city")} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="landing-uf">UF</Label>
-                  <Input
-                    id="landing-uf"
-                    maxLength={2}
-                    className={stateUf ? "bg-muted/40" : undefined}
-                    readOnly={!!stateUf && cepLookup.status === "found"}
-                    {...register("state_uf")}
-                  />
-                </div>
-                <LandingVotingPlaceField
-                  value={votingPlaceName}
-                  onChange={(v) =>
-                    setValue("voting_place_name", v, { shouldValidate: true, shouldDirty: true })
-                  }
-                  error={errors.voting_place_name?.message}
-                />
-                {leaderships.length > 0 && (
-                  <div className="space-y-2 sm:col-span-2">
-                    <Label>Liderança primária (opcional)</Label>
-                    <Select
-                      value={primaryLeadershipId || "none"}
-                      onValueChange={(v) =>
-                        setValue("primary_leadership_id", v === "none" ? undefined : v, {
-                          shouldDirty: true,
-                          shouldValidate: true,
-                        })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione uma liderança" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Nenhuma</SelectItem>
-                        {leaderships.map((l) => (
-                          <SelectItem key={l.id} value={l.id}>
-                            {l.name}
-                            {l.region ? ` · ${l.region}` : ""}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-[11px] text-muted-foreground">
-                      Aparece na aba Eleitores com vínculo à liderança escolhida.
-                    </p>
-                  </div>
-                )}
-                {chapasByLeadership.length > 0 && (
-                  <div className="sm:col-span-2">
-                    <LandingChapasSection
-                      groups={chapasByLeadership}
-                      selectedChapas={selectedChapas}
-                      onToggle={toggleChapa}
-                      embedded
+              <LandingCaptureSteps
+                register={register}
+                control={control}
+                errors={errors}
+                watch={watch}
+                setValue={setValue}
+                handleSubmit={handleSubmit}
+                isSubmitting={isSubmitting}
+                onSubmit={(v) => mutation.mutate(v)}
+                personalStep={
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2 sm:col-span-2">
+                      <Label htmlFor="landing-name">Nome *</Label>
+                      <Input id="landing-name" {...register("name")} autoComplete="name" />
+                      {errors.name && (
+                        <p className="text-xs text-destructive">{errors.name.message}</p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="landing-birth">Data de nascimento *</Label>
+                      <Input
+                        id="landing-birth"
+                        inputMode="numeric"
+                        autoComplete="bday"
+                        placeholder="DD/MM/AAAA"
+                        value={birthDate}
+                        onChange={(e) =>
+                          setValue("birth_date", formatBirthDateMask(e.target.value), {
+                            shouldValidate: true,
+                          })
+                        }
+                      />
+                      {errors.birth_date && (
+                        <p className="text-xs text-destructive">{errors.birth_date.message}</p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="landing-email">E-mail *</Label>
+                      <Input
+                        id="landing-email"
+                        type="email"
+                        autoComplete="email"
+                        {...register("email")}
+                      />
+                      {errors.email && (
+                        <p className="text-xs text-destructive">{errors.email.message}</p>
+                      )}
+                    </div>
+                    <PhoneFormField
+                      className="sm:col-span-2"
+                      control={control}
+                      name="phone"
+                      label="WhatsApp *"
                     />
                   </div>
-                )}
-                <div className="space-y-2 sm:col-span-2">
-                  <Label>Quer deixar uma mensagem? (opcional)</Label>
-                  <Textarea {...register("notes")} rows={3} className="min-h-[5rem] resize-y" />
-                </div>
-                <LandingLgpdConsent
-                  checked={lgpdConsent}
-                  onCheckedChange={(checked) =>
-                    setValue("lgpd_consent", checked, { shouldValidate: true })
-                  }
-                  error={errors.lgpd_consent?.message}
-                  publicCode={code}
-                />
-                <div className="sm:col-span-2">
-                  <Button type="submit" disabled={isSubmitting} size="lg" className="h-11 w-full sm:w-auto">
-                    {isSubmitting ? "Enviando..." : "Confirmar meu apoio"}
-                  </Button>
-                </div>
-              </form>
+                }
+                addressStep={
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2 sm:col-span-2">
+                      <LandingFieldHelpLink
+                        prefix="Não sabe o CEP?"
+                        linkLabel="Clique aqui"
+                        href={CORREIOS_CEP_URL}
+                      />
+                    </div>
+                    <LandingCepLookup
+                      cepValue={cepInput}
+                      onCepChange={setCepInput}
+                      onLookupStateChange={handleCepLookupChange}
+                      onNeighborhoodChange={setNeighborhood}
+                      onCityChange={setCity}
+                      onStateUfChange={setStateUf}
+                      onStreetChange={setStreet}
+                    />
+                    <div className="space-y-2 sm:col-span-2">
+                      <Label htmlFor="landing-street">Logradouro</Label>
+                      <Input id="landing-street" {...register("street")} autoComplete="street-address" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="landing-number">Nº</Label>
+                      <Input id="landing-number" {...register("address_number")} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="landing-complement">Complemento</Label>
+                      <Input id="landing-complement" {...register("address_complement")} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="landing-neighborhood">Bairro</Label>
+                      <Input id="landing-neighborhood" {...register("neighborhood")} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="landing-city">Cidade</Label>
+                      <Input id="landing-city" {...register("city")} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="landing-uf">UF</Label>
+                      <Input
+                        id="landing-uf"
+                        maxLength={2}
+                        className={stateUf ? "bg-muted/40" : undefined}
+                        readOnly={!!stateUf && cepLookup.status === "found"}
+                        {...register("state_uf")}
+                      />
+                    </div>
+                    <LandingVotingPlaceField
+                      value={votingPlaceName}
+                      onChange={(v) =>
+                        setValue("voting_place_name", v, { shouldValidate: true, shouldDirty: true })
+                      }
+                      error={errors.voting_place_name?.message}
+                    />
+                  </div>
+                }
+                supportStep={
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    {leaderships.length > 0 && (
+                      <div className="space-y-2 sm:col-span-2">
+                        <Label>Liderança primária (opcional)</Label>
+                        <Select
+                          value={primaryLeadershipId || "none"}
+                          onValueChange={(v) =>
+                            setValue("primary_leadership_id", v === "none" ? undefined : v, {
+                              shouldDirty: true,
+                              shouldValidate: true,
+                            })
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione uma liderança" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Nenhuma</SelectItem>
+                            {leaderships.map((l) => (
+                              <SelectItem key={l.id} value={l.id}>
+                                {l.name}
+                                {l.region ? ` · ${l.region}` : ""}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-[11px] text-muted-foreground">
+                          Aparece na aba Eleitores com vínculo à liderança escolhida.
+                        </p>
+                      </div>
+                    )}
+                    {chapasByLeadership.length > 0 && (
+                      <div className="sm:col-span-2">
+                        <LandingChapasSection
+                          groups={chapasByLeadership}
+                          selectedChapas={selectedChapas}
+                          onToggle={toggleChapa}
+                          embedded
+                        />
+                      </div>
+                    )}
+                    <div className="space-y-2 sm:col-span-2">
+                      <Label>Quer deixar uma mensagem? (opcional)</Label>
+                      <Textarea {...register("notes")} rows={3} className="min-h-[5rem] resize-y" />
+                    </div>
+                    <LandingLgpdConsent
+                      checked={lgpdConsent}
+                      onCheckedChange={(checked) =>
+                        setValue("lgpd_consent", checked, { shouldValidate: true })
+                      }
+                      error={errors.lgpd_consent?.message}
+                      publicCode={code}
+                    />
+                  </div>
+                }
+              />
             </CardContent>
           </Card>
         </section>

@@ -2664,6 +2664,10 @@
 /* ==================================================
    Landing pública — conversão territorial
    ================================================== */
+.landing-page--preview {
+  isolation: isolate;
+}
+
 .landing-page {
   background: linear-gradient(
     180deg,

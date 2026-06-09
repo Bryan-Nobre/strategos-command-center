@@ -69,7 +69,7 @@ export async function updatePlanLimitDefinition(
     p_max_regions: payload.maxRegions,
     p_exports_enabled: payload.exportsEnabled,
     p_polls_enabled: payload.pollsEnabled,
-    p_tagline: payload.tagline,
+    p_tagline: payload.tagline ?? undefined,
     p_price_label: payload.priceLabel,
     p_is_highlighted: payload.isHighlighted,
     p_highlight_style: payload.highlightStyle,

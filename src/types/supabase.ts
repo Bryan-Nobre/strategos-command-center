@@ -1250,10 +1250,15 @@ export type Database = {
       }
       leadership_operational_summary_v: {
         Row: {
+          active_supporters_30d: number
           actor_type: Database["public"]["Enums"]["leadership_actor_type"]
+          avg_activity_score: number
           chapa_count: number
+          cold_network_pct: number | null
           created_at: string
           estimated_votes: number
+          hot_supporters: number
+          inactive_supporters: number
           landing_only_network: boolean
           leadership_id: string
           leadership_region: string | null

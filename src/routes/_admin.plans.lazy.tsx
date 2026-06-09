@@ -1,4 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createLazyFileRoute } from "@tanstack/react-router";
+import { RoutePendingFallback } from "@/components/common/RoutePendingFallback";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CreditCard, ShieldAlert } from "lucide-react";
@@ -19,8 +20,9 @@ import type { TenantPlan } from "@/types/tenant";
 import { toast } from "sonner";
 import type { Enums } from "@/types/supabase";
 
-export const Route = createFileRoute("/_admin/plans")({
+export const Route = createLazyFileRoute("/_admin/plans")({
   component: AdminPlansPage,
+  pendingComponent: RoutePendingFallback,
 });
 
 function rowToPayload(row: AdminPlanLimitRow): UpdatePlanLimitPayload {

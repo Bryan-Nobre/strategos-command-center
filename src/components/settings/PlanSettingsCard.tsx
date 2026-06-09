@@ -53,7 +53,7 @@ export function PlanSettingsCard({
         </CardContent>
       </Card>
 
-      {isLoading && <LoadingState message="Carregando planos…" />}
+      {isLoading && <LoadingState label="Carregando planos…" />}
 
       {isError && (
         <Alert variant="destructive">
