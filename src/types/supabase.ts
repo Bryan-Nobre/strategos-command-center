@@ -1269,6 +1269,7 @@ export type Database = {
           pledged_supporters_count: number
           pledged_votes: number
           political_strength_score: number
+          total_points: number
           primary_supporters: number
           secondary_supporters: number
           supporter_id: string | null

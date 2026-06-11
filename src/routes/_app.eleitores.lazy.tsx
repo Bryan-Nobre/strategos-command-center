@@ -63,7 +63,13 @@ import { EleitoresToolbar } from "@/components/eleitores/EleitoresToolbar";
 import { EleitoresTableView } from "@/components/eleitores/EleitoresTableView";
 import { EleitoresCardsView } from "@/components/eleitores/EleitoresCardsView";
 import { EleitoresEditSheet } from "@/components/eleitores/EleitoresEditSheet";
-import { EleitoresPagination } from "@/components/eleitores/EleitoresPagination";
+import { ListPagination } from "@/components/common/ListPagination";
+import {
+  listSearchFingerprint,
+  listTotalPages,
+  pageForItemIndex,
+  paginateSlice,
+} from "@/lib/list-pagination";
 
 const ELEITORES_PAGE_SIZE = 10;
 import {
@@ -111,7 +117,8 @@ function EleitoresPage() {
     serialize: serializeEleitoresSearch,
   });
 
-  const highlightRef = useRef<HTMLTableRowElement>(null);
+  const highlightTableRef = useRef<HTMLTableRowElement>(null);
+  const highlightCardRef = useRef<HTMLElement>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<SupporterRow | null>(null);
@@ -125,6 +132,7 @@ function EleitoresPage() {
   useEffect(() => {
     if (
       urlSearch.bairro ||
+      urlSearch.cidade ||
       urlSearch.status ||
       urlSearch.lideranca ||
       urlSearch.apoio ||
@@ -133,7 +141,15 @@ function EleitoresPage() {
     ) {
       setFiltersOpen(true);
     }
-  }, [urlSearch.bairro, urlSearch.status, urlSearch.lideranca, urlSearch.apoio, urlSearch.tag, urlSearch.engagement]);
+  }, [
+    urlSearch.bairro,
+    urlSearch.cidade,
+    urlSearch.status,
+    urlSearch.lideranca,
+    urlSearch.apoio,
+    urlSearch.tag,
+    urlSearch.engagement,
+  ]);
 
   const { data: supporters, isLoading } = useSupporters(tenantId);
   const { data: politicalSummaries } = useSupporterPoliticalSummaries(tenantId);
@@ -155,6 +171,15 @@ function EleitoresPage() {
     for (const s of supporters ?? []) {
       const n = s.normalized_neighborhood ?? s.neighborhood;
       if (n) set.add(n);
+    }
+    return [...set].sort();
+  }, [supporters]);
+
+  const cities = useMemo(() => {
+    const set = new Set<string>();
+    for (const s of supporters ?? []) {
+      const c = s.normalized_city ?? s.city;
+      if (c) set.add(c);
     }
     return [...set].sort();
   }, [supporters]);
@@ -185,18 +210,25 @@ function EleitoresPage() {
     [supportersEnriched, filters, query],
   );
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / ELEITORES_PAGE_SIZE));
+  const totalPages = listTotalPages(filtered.length, ELEITORES_PAGE_SIZE);
 
-  const paginated = useMemo(() => {
-    const start = (page - 1) * ELEITORES_PAGE_SIZE;
-    return filtered.slice(start, start + ELEITORES_PAGE_SIZE);
-  }, [filtered, page]);
+  const paginated = useMemo(
+    () => paginateSlice(filtered, page, ELEITORES_PAGE_SIZE),
+    [filtered, page],
+  );
 
-  const listSearchKey = serializeEleitoresSearch(urlSearch);
+  const filterFingerprint = useMemo(
+    () => listSearchFingerprint(serializeEleitoresSearch(urlSearch)),
+    [urlSearch],
+  );
 
   useEffect(() => {
     setPage(1);
-  }, [listSearchKey, query]);
+  }, [filterFingerprint, query]);
+
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
 
   const landingCount = useMemo(
     () => (supporters ?? []).filter((s) => s.source === "landing").length,
@@ -211,10 +243,21 @@ function EleitoresPage() {
   const viewMode = filters.view === "landing" ? "cards" : filters.view;
 
   useEffect(() => {
-    if (highlightId && highlightRef.current) {
-      highlightRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
-    }
+    if (!highlightId || filtered.length === 0) return;
+    const index = filtered.findIndex((s) => s.id === highlightId);
+    if (index < 0) return;
+    const targetPage = pageForItemIndex(index, ELEITORES_PAGE_SIZE);
+    setPage((current) => (current === targetPage ? current : targetPage));
   }, [highlightId, filtered]);
+
+  useEffect(() => {
+    if (!highlightId) return;
+    const ref = viewMode === "table" ? highlightTableRef : highlightCardRef;
+    const timer = window.setTimeout(() => {
+      ref.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 80);
+    return () => window.clearTimeout(timer);
+  }, [highlightId, page, paginated, viewMode]);
 
   useEffect(() => {
     setSelectedIds((prev) => {
@@ -226,6 +269,7 @@ function EleitoresPage() {
   const activeFilterCount = countActiveFilters([
     filters.status !== "all",
     filters.bairro !== "all",
+    filters.cidade !== "all",
     filters.lideranca !== "all",
     filters.apoio !== "all",
     !!filters.tag,
@@ -250,6 +294,7 @@ function EleitoresPage() {
         busca: "",
         status: "all",
         bairro: "all",
+        cidade: "all",
         lideranca: "all",
         apoio: "all",
         tag: "",
@@ -527,7 +572,7 @@ function EleitoresPage() {
               <SheetContent>
                 <SheetHeader>
                   <SheetTitle>Filtros avançados</SheetTitle>
-                  <SheetDescription>Status, bairro, liderança, apoio e tags.</SheetDescription>
+                  <SheetDescription>Status, cidade, bairro, liderança, apoio e tags.</SheetDescription>
                 </SheetHeader>
                 <div className="eleitores-filters-grid mt-6 grid gap-3">
                   <div className="grid gap-2">
@@ -547,6 +592,26 @@ function EleitoresPage() {
                     </Select>
                   </div>
                   <div className="grid gap-2">
+                    <Label>Cidade</Label>
+                    <Select value={filters.cidade} onValueChange={(v) => patchFilter({ cidade: v })}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todas</SelectItem>
+                        {filters.cidade !== "all" &&
+                          !cities.includes(filters.cidade) && (
+                            <SelectItem value={filters.cidade}>{filters.cidade}</SelectItem>
+                          )}
+                        {cities.map((c) => (
+                          <SelectItem key={c} value={c}>
+                            {c}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid gap-2">
                     <Label>Bairro</Label>
                     <Select value={filters.bairro} onValueChange={(v) => patchFilter({ bairro: v })}>
                       <SelectTrigger>
@@ -554,6 +619,10 @@ function EleitoresPage() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">Todos</SelectItem>
+                        {filters.bairro !== "all" &&
+                          !neighborhoods.includes(filters.bairro) && (
+                            <SelectItem value={filters.bairro}>{filters.bairro}</SelectItem>
+                          )}
                         {neighborhoods.map((n) => (
                           <SelectItem key={n} value={n}>
                             {n}
@@ -671,7 +740,7 @@ function EleitoresPage() {
               <EleitoresTableView
                 rows={paginated}
                 highlightId={highlightId}
-                highlightRef={highlightRef}
+                highlightRef={highlightTableRef}
                 leadershipMap={leadershipMap}
                 selectedIds={selectedIds}
                 onToggleSelect={toggleSelect}
@@ -690,6 +759,7 @@ function EleitoresPage() {
               <EleitoresCardsView
                 rows={paginated}
                 highlightId={highlightId}
+                highlightRef={highlightCardRef}
                 selectedIds={selectedIds}
                 onToggleSelect={toggleSelect}
                 onCardClick={setEditTarget}
@@ -703,12 +773,13 @@ function EleitoresPage() {
             )}
 
             {filtered.length > 0 && (
-              <EleitoresPagination
+              <ListPagination
                 page={page}
                 totalPages={totalPages}
                 totalItems={filtered.length}
                 pageSize={ELEITORES_PAGE_SIZE}
                 onPageChange={setPage}
+                itemLabel="apoiadores"
               />
             )}
 

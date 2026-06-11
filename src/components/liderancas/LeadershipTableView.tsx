@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/table";
 import { LeadershipVoteProgress } from "@/components/liderancas/LeadershipVoteProgress";
 import type { LeadershipListItem } from "@/components/liderancas/leadership-list-types";
+import { leadershipTotalPoints } from "@/lib/leadership-points";
 import { DEEP_LINK_HIGHLIGHT_CLASS } from "@/lib/search-deep-link";
 import { cn } from "@/lib/utils";
 
@@ -36,7 +37,7 @@ export function LeadershipTableView({
       <Table>
         <TableHeader>
           <TableRow className="bg-muted/40">
-            <TableHead className="w-14">Força</TableHead>
+            <TableHead className="w-14">Pontos</TableHead>
             <TableHead>Liderança</TableHead>
             <TableHead className="hidden sm:table-cell">Rede P/S</TableHead>
             <TableHead className="hidden md:table-cell">+7d</TableHead>
@@ -56,7 +57,9 @@ export function LeadershipTableView({
               )}
               onClick={() => onOpen(l)}
             >
-              <TableCell className="tabular-nums font-semibold">{l.political_strength_score}</TableCell>
+              <TableCell className="tabular-nums font-semibold" title="Pontos totais da rede">
+                {leadershipTotalPoints(l)}
+              </TableCell>
               <TableCell>
                 <div className="font-medium">{l.name}</div>
                 <p className="text-xs text-muted-foreground">{l.leadership_region ?? "Sem região"}</p>
@@ -85,8 +88,9 @@ export function LeadershipTableView({
               </TableCell>
               <TableCell className="hidden xl:table-cell">
                 <LeadershipVoteProgress
-                  pledged={l.pledged_votes}
+                  points={leadershipTotalPoints(l)}
                   target={l.estimated_votes}
+                  landpagePoints={l.pledged_votes}
                   size="sm"
                 />
               </TableCell>

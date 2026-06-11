@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 export function EleitoresCardsView({
   rows,
   highlightId,
+  highlightRef,
   selectedIds,
   onToggleSelect,
   onCardClick,
@@ -33,6 +34,7 @@ export function EleitoresCardsView({
 }: {
   rows: SupporterListItem[];
   highlightId?: string;
+  highlightRef?: React.RefObject<HTMLElement | null>;
   selectedIds: Set<string>;
   onToggleSelect: (id: string) => void;
   onCardClick: (row: SupporterListItem) => void;
@@ -48,6 +50,7 @@ export function EleitoresCardsView({
       {rows.map((e) => (
         <article
           key={e.id}
+          ref={e.id === highlightId ? highlightRef : undefined}
           role="button"
           tabIndex={0}
           onClick={() => onCardClick(e)}

@@ -12,6 +12,7 @@ import { LeadershipNetworkTab } from "@/components/liderancas/LeadershipNetworkT
 import { LeadershipResumoTab } from "@/components/liderancas/LeadershipResumoTab";
 import { LeadershipTerritorioTab } from "@/components/liderancas/LeadershipTerritorioTab";
 import type { LeadershipListItem } from "@/components/liderancas/leadership-list-types";
+import { leadershipTotalPoints } from "@/lib/leadership-points";
 
 export function LeadershipDetailSheet({
   leadership,
@@ -63,8 +64,8 @@ export function LeadershipDetailSheet({
         <SheetHeader>
           <SheetTitle>{leadership?.name ?? "Liderança"}</SheetTitle>
           <SheetDescription>
-            Centro operacional: rede política, chapas e território. Score = heurística interna (não
-            projeção eleitoral).
+            Centro operacional: rede, chapas e território. Pontos = soma dos apoiadores na rede (não
+            é projeção eleitoral oficial).
           </SheetDescription>
         </SheetHeader>
 
@@ -111,6 +112,7 @@ export function LeadershipDetailSheet({
                 tenantId={tenantId}
                 leadershipId={leadershipId}
                 leadershipName={leadership.name}
+                totalPoints={leadershipTotalPoints(leadership)}
               />
             </TabsContent>
 

@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { queryKeys } from "@/lib/query-keys";
 import { notifySupporterImportCompleted } from "@/services/notifications";
 import { planLimitUserMessage } from "@/lib/plan-errors";
+import { getAuthErrorMessage } from "@/lib/supabase/errors";
 import * as supportersService from "@/services/supporters";
 import type { TablesInsert, TablesUpdate } from "@/types/supabase";
 
@@ -54,7 +55,7 @@ export function useUpdateSupporter(tenantId: string) {
       qc.invalidateQueries({ queryKey: queryKeys.leaderships(tenantId) });
       toast.success("Apoiador atualizado");
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(getAuthErrorMessage(e)),
   });
 }
 

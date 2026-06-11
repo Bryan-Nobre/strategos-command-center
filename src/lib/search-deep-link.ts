@@ -11,4 +11,5 @@ export function parseDeepLinkSearch(search: Record<string, unknown>): DeepLinkSe
   };
 }
 
-export const DEEP_LINK_HIGHLIGHT_CLASS = "ring-2 ring-primary/60 bg-primary/5 animate-in fade-in duration-300";
+export const DEEP_LINK_HIGHLIGHT_CLASS =
+  "ring-2 ring-primary bg-primary/10 shadow-sm animate-in fade-in duration-500";

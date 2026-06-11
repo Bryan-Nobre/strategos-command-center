@@ -11,6 +11,7 @@ import {
   useDeleteLeadershipChapa,
 } from "@/hooks/use-leadership-chapas";
 import { useState } from "react";
+import { LEADERSHIP_POINTS_HELP } from "@/lib/leadership-metrics-copy";
 
 export function LeadershipChapasTab({
   tenantId,
@@ -31,8 +32,8 @@ export function LeadershipChapasTab({
 
   return (
     <div className="space-y-3">
-      <p className="text-xs text-muted-foreground">
-        Chapas publicadas na landing. Cada apoio soma o peso na meta desta liderança.
+      <p className="text-xs leading-relaxed text-muted-foreground">
+        Chapas publicadas na landpage. {LEADERSHIP_POINTS_HELP.chapaWeight}
       </p>
 
       {isLoading ? (
@@ -46,15 +47,17 @@ export function LeadershipChapasTab({
             >
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium">{c.name}</p>
-                <p className="text-[10px] text-muted-foreground">
-                  Peso {c.vote_weight} · {c.pledge_count ?? 0} apoio(s) · +{c.pledged_votes ?? 0} na meta
+                <p className="text-[11px] text-muted-foreground">
+                  <strong className="text-foreground tabular-nums">{c.vote_weight}</strong>{" "}
+                  {c.vote_weight === 1 ? "ponto" : "pontos"} por apoiador · {c.pledge_count ?? 0}{" "}
+                  apoio(s) · +{c.pledged_votes ?? 0} pontos na meta
                 </p>
               </div>
               {canUpdate && (
                 <>
                   <div className="flex items-center gap-2">
                     <Label htmlFor={`pub-${c.id}`} className="text-[10px]">
-                      Landing
+                      Landpage
                     </Label>
                     <Switch
                       id={`pub-${c.id}`}
@@ -80,21 +83,30 @@ export function LeadershipChapasTab({
       )}
 
       {canUpdate && (
-        <div className="flex flex-wrap gap-2 border-t border-border/60 pt-3">
-          <Input
-            placeholder="Nome da chapa / candidato"
-            value={newChapaName}
-            onChange={(e) => setNewChapaName(e.target.value)}
-            className="min-w-[140px] flex-1"
-          />
-          <Input
-            type="number"
-            min={1}
-            className="w-20"
-            title="Peso na meta"
-            value={newChapaWeight}
-            onChange={(e) => setNewChapaWeight(e.target.value)}
-          />
+        <div className="space-y-3 border-t border-border/60 pt-3">
+          <div className="grid gap-2">
+            <Label htmlFor="new-chapa-name">Nome da chapa / candidato</Label>
+            <Input
+              id="new-chapa-name"
+              placeholder="Ex.: Chapa 1234 — Vereador João"
+              value={newChapaName}
+              onChange={(e) => setNewChapaName(e.target.value)}
+            />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="new-chapa-weight">Pontos por apoiador nesta chapa</Label>
+            <p className="text-[11px] leading-relaxed text-muted-foreground">
+              {LEADERSHIP_POINTS_HELP.chapaWeight} Ex.: 1 = um ponto; 2 = dobra os pontos na meta.
+            </p>
+            <Input
+              id="new-chapa-weight"
+              type="number"
+              min={1}
+              className="max-w-[8rem]"
+              value={newChapaWeight}
+              onChange={(e) => setNewChapaWeight(e.target.value)}
+            />
+          </div>
           <Button
             size="sm"
             disabled={!newChapaName.trim() || createChapa.isPending}
@@ -116,7 +128,7 @@ export function LeadershipChapasTab({
             }}
           >
             <Plus className="mr-1 h-4 w-4" />
-            Chapa
+            Adicionar chapa
           </Button>
         </div>
       )}

@@ -37,6 +37,12 @@ export function getAuthErrorMessage(err: unknown): string {
     if (/não autenticado|not authenticated|jwt/i.test(msg)) {
       return "Sessão não iniciada. Confirme seu e-mail ou desative 'Confirm email' no Supabase Auth (desenvolvimento).";
     }
+    if (
+      err.code === "23505" &&
+      /supporter_leadership_links|is_primary|sll_one_primary/i.test(msg)
+    ) {
+      return "Não foi possível atualizar a liderança do apoiador (conflito de vínculo). Atualize a página e tente de novo.";
+    }
     if (err.code === "23505" || /duplicate|unique|slug/i.test(msg)) {
       return "Este slug de landing já está em uso. Escolha outro (ex.: joao-silva-2026).";
     }

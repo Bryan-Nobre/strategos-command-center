@@ -14,6 +14,7 @@ export type EleitoresListSearch = {
   busca?: string;
   id?: string;
   bairro?: string;
+  cidade?: string;
   status?: string;
   lideranca?: string;
   apoio?: string;
@@ -55,6 +56,7 @@ export function parseEleitoresSearch(raw: Record<string, unknown>): EleitoresLis
     busca: deep.busca,
     id: deep.id,
     bairro: trimParam(raw.bairro),
+    cidade: trimParam(raw.cidade),
     status,
     lideranca: validLideranca,
     apoio,
@@ -73,6 +75,7 @@ export function serializeEleitoresSearch(filters: EleitoresListSearch): Eleitore
     busca: trimParam(filters.busca),
     id: trimParam(filters.id),
     bairro: trimParam(filters.bairro),
+    cidade: trimParam(filters.cidade),
     status: pickEnum(filters.status, STATUSES),
     lideranca:
       filters.lideranca === "none" || trimParam(filters.lideranca)
@@ -98,6 +101,7 @@ export type EleitoresFilterState = {
   busca: string;
   status: string;
   bairro: string;
+  cidade: string;
   lideranca: string;
   apoio: string;
   tag: string;
@@ -114,6 +118,7 @@ export function eleitoresSearchToFilterState(search: EleitoresListSearch): Eleit
     busca: search.busca ?? "",
     status: search.status ?? "all",
     bairro: search.bairro ?? "all",
+    cidade: search.cidade ?? "all",
     lideranca: search.lideranca ?? "all",
     apoio: search.apoio ?? "all",
     tag: search.tag ?? "",
@@ -134,6 +139,7 @@ export function filterStateToEleitoresSearch(
     busca: state.busca || undefined,
     id: highlightId,
     bairro: state.bairro !== "all" ? state.bairro : undefined,
+    cidade: state.cidade !== "all" ? state.cidade : undefined,
     status: state.status !== "all" ? state.status : undefined,
     lideranca: state.lideranca !== "all" ? state.lideranca : undefined,
     apoio: state.apoio !== "all" ? state.apoio : undefined,

@@ -1,22 +1,15 @@
 /** Segmentos filtrados server-side (get_leadership_operational_detail). */
 export const LEADERSHIP_NETWORK_SEGMENTS = [
   { id: "all", label: "Todos" },
-  { id: "primary", label: "Primários" },
-  { id: "secondary", label: "Secundários" },
-  { id: "with_pledge", label: "Com pledge" },
-  { id: "crm_only", label: "Só CRM" },
-  { id: "landing", label: "Landing" },
-  { id: "manual", label: "Manual" },
-  { id: "import", label: "Import" },
-  { id: "hot", label: "Quentes" },
-  { id: "cold", label: "Frios" },
-  { id: "inactive", label: "Inativos" },
-  { id: "active_7d", label: "Ativos 7d" },
+  { id: "with_pledge", label: "Landpage" },
+  { id: "crm_only", label: "Manual no CRM" },
 ] as const;
 
 export type LeadershipNetworkSegmentId = (typeof LEADERSHIP_NETWORK_SEGMENTS)[number]["id"];
 
-export const LEADERSHIP_NETWORK_PAGE_SIZE = 50;
+export type LeadershipNetworkViewMode = "table" | "blocks";
+
+export const LEADERSHIP_NETWORK_PAGE_SIZE = 10;
 
 export type LeadershipNetworkSupporterRow = {
   supporter_id: string;

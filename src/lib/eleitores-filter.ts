@@ -61,6 +61,9 @@ export function filterSupporters(
     const matchesNeighborhood =
       filters.bairro === "all" ||
       territoryFilterMatches(filters.bairro, e.neighborhood, e.normalized_neighborhood);
+    const matchesCity =
+      filters.cidade === "all" ||
+      territoryFilterMatches(filters.cidade, e.city, e.normalized_city);
     const matchesLeadership = (() => {
       if (filters.lideranca === "all") return true;
       if (filters.lideranca === "none") {
@@ -84,6 +87,7 @@ export function filterSupporters(
       matchesQuery &&
       matchesStatus &&
       matchesNeighborhood &&
+      matchesCity &&
       matchesLeadership &&
       matchesSupport &&
       matchesTag &&

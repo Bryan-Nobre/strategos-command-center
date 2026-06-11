@@ -1,9 +1,15 @@
 import { Link } from "@tanstack/react-router";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, Info } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LeadershipVoteProgress } from "@/components/liderancas/LeadershipVoteProgress";
+import {
+  LEADERSHIP_POINTS_HELP,
+  formatLeadershipPoints,
+} from "@/lib/leadership-metrics-copy";
+import { leadershipTotalPoints } from "@/lib/leadership-points";
 import type { LeadershipListItem } from "@/components/liderancas/leadership-list-types";
 
 export function LeadershipResumoTab({
@@ -29,53 +35,54 @@ export function LeadershipResumoTab({
   onVotesChange: (v: string) => void;
   onSave: () => void;
 }) {
+  const totalPoints = leadershipTotalPoints(leadership);
+
   return (
     <div className="space-y-5">
       <LeadershipVoteProgress
-        pledged={leadership.pledged_votes}
+        points={totalPoints}
         target={leadership.estimated_votes}
+        landpagePoints={leadership.pledged_votes}
       />
 
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <div className="rounded-md border bg-muted/30 px-2 py-2 text-center">
-          <p className="text-lg font-semibold tabular-nums">{leadership.political_strength_score}</p>
-          <p className="text-[10px] text-muted-foreground">Força (score)</p>
+      <Alert className="border-primary/20 bg-primary/5">
+        <Info className="h-4 w-4" aria-hidden />
+        <AlertTitle className="text-sm">
+          {LEADERSHIP_POINTS_HELP.title}:{" "}
+          <span className="tabular-nums">{formatLeadershipPoints(totalPoints)}</span>
+        </AlertTitle>
+        <AlertDescription className="space-y-1 text-xs leading-relaxed">
+          <p>{LEADERSHIP_POINTS_HELP.short}</p>
+          <p className="text-muted-foreground">{LEADERSHIP_POINTS_HELP.howItWorks}</p>
+        </AlertDescription>
+      </Alert>
+
+      <div className="grid grid-cols-2 gap-2">
+        <div className="rounded-lg border bg-card px-3 py-2.5 text-center shadow-sm">
+          <p className="text-xl font-semibold tabular-nums">{leadership.linked_supporters}</p>
+          <p className="mt-1 text-xs font-medium">Apoiadores</p>
+          <p className="mt-0.5 text-[10px] text-muted-foreground">Pessoas na rede</p>
         </div>
-        <div className="rounded-md border bg-muted/30 px-2 py-2 text-center">
-          <p className="text-lg font-semibold tabular-nums">{leadership.active_supporters_30d ?? 0}</p>
-          <p className="text-[10px] text-muted-foreground">Ativos 30d</p>
+        <div className="rounded-lg border bg-card px-3 py-2.5 text-center shadow-sm">
+          <p className="text-xl font-semibold tabular-nums">{leadership.pledge_links_count}</p>
+          <p className="mt-1 text-xs font-medium">Landpage</p>
+          <p className="mt-0.5 text-[10px] text-muted-foreground">Com apoio a chapa</p>
         </div>
-        <div className="rounded-md border bg-muted/30 px-2 py-2 text-center">
-          <p className="text-lg font-semibold tabular-nums">{leadership.hot_supporters ?? 0}</p>
-          <p className="text-[10px] text-muted-foreground">Quentes</p>
+        <div className="rounded-lg border bg-card px-3 py-2.5 text-center shadow-sm">
+          <p className="text-xl font-semibold tabular-nums">{leadership.manual_links_count}</p>
+          <p className="mt-1 text-xs font-medium">Manual no CRM</p>
+          <p className="mt-0.5 text-[10px] text-muted-foreground">1 ponto cada (padrão)</p>
         </div>
-        <div className="rounded-md border bg-muted/30 px-2 py-2 text-center">
-          <p className="text-lg font-semibold tabular-nums">{leadership.weekly_growth}</p>
-          <p className="text-[10px] text-muted-foreground">+7 dias vínculos</p>
+        <div className="rounded-lg border bg-card px-3 py-2.5 text-center shadow-sm">
+          <p className="text-xl font-semibold tabular-nums">{leadership.weekly_growth}</p>
+          <p className="mt-1 text-xs font-medium">+7 dias</p>
+          <p className="mt-0.5 text-[10px] text-muted-foreground">Novos na rede</p>
         </div>
       </div>
 
-      {leadership.linked_supporters > 0 && (
-        <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-          <span>
-            Rede fria/inativa:{" "}
-            <strong className="text-foreground">
-              {leadership.cold_network_pct ?? 0}%
-            </strong>{" "}
-            ({leadership.inactive_supporters ?? 0} de {leadership.linked_supporters})
-          </span>
-          <span>
-            Score médio:{" "}
-            <strong className="text-foreground tabular-nums">
-              {leadership.avg_activity_score ?? 0}
-            </strong>
-          </span>
-        </div>
-      )}
-
       {leadership.landing_only_network && leadership.linked_supporters > 0 && (
         <p className="text-xs text-amber-700 dark:text-amber-300">
-          Rede depende apenas de apoios na landing (sem vínculos manuais no CRM).
+          Rede depende apenas de apoios na landpage (sem vínculos manuais no CRM).
         </p>
       )}
 
@@ -99,7 +106,10 @@ export function LeadershipResumoTab({
               <Input value={region} onChange={(e) => onRegionChange(e.target.value)} />
             </div>
             <div className="grid gap-2">
-              <Label>Meta de votos (associados)</Label>
+              <Label>Meta (pontos / associados estimados)</Label>
+              <p className="text-[11px] text-muted-foreground">
+                Alvo usado na barra de progresso acima. Ex.: meta de 500 associados = 500 pontos.
+              </p>
               <Input
                 type="number"
                 min={0}

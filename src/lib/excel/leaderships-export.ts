@@ -10,7 +10,7 @@ export async function downloadLeadershipsExcel({
     pledged_votes: number;
     apoiadores: number;
     chapa_count: number;
-    political_strength_score: number;
+    total_points: number;
     primary_supporters: number;
     secondary_supporters: number;
     weekly_growth: number;
@@ -24,7 +24,7 @@ export async function downloadLeadershipsExcel({
   });
 
   sheet.columns = [
-    { header: "Força (score)", key: "score", width: 12 },
+    { header: "Pontos totais", key: "score", width: 12 },
     { header: "Liderança", key: "name", width: 28 },
     { header: "Região", key: "region", width: 18 },
     { header: "Primários", key: "primary", width: 10 },
@@ -45,7 +45,7 @@ export async function downloadLeadershipsExcel({
 
   rows.forEach((r) => {
     sheet.addRow({
-      score: r.political_strength_score,
+      score: r.total_points,
       name: r.name,
       region: r.region ?? "",
       primary: r.primary_supporters,

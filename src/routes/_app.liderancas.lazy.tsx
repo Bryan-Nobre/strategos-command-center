@@ -48,6 +48,15 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { DatePeriodFilter } from "@/components/filters/DatePeriodFilter";
 import { isCreatedInPeriod, resolveDatePeriodRange } from "@/lib/date-period";
+import { leadershipTotalPoints } from "@/lib/leadership-points";
+import { ListPagination } from "@/components/common/ListPagination";
+import {
+  listSearchFingerprint,
+  listTotalPages,
+  paginateSlice,
+} from "@/lib/list-pagination";
+
+const LIDERANCAS_PAGE_SIZE = 12;
 
 const liderancasRoute = getRouteApi("/_app/liderancas");
 
@@ -79,6 +88,7 @@ function LiderancasPage() {
   const [detailTarget, setDetailTarget] = useState<LeadershipListItem | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<LeadershipListItem | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [page, setPage] = useState(1);
 
   const [name, setName] = useState("");
   const [region, setRegion] = useState("");
@@ -111,6 +121,25 @@ function LiderancasPage() {
       return matchesQuery && matchesRegion && matchesPeriod;
     }) as LeadershipListItem[];
   }, [list, query, filters.regiao, periodRange]);
+
+  const totalPages = listTotalPages(filteredList.length, LIDERANCAS_PAGE_SIZE);
+  const paginatedList = useMemo(
+    () => paginateSlice(filteredList, page, LIDERANCAS_PAGE_SIZE),
+    [filteredList, page],
+  );
+
+  const filterFingerprint = useMemo(
+    () => listSearchFingerprint(serializeLiderancasSearch(urlSearch)),
+    [urlSearch],
+  );
+
+  useEffect(() => {
+    setPage(1);
+  }, [filterFingerprint, query]);
+
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
 
   const totals = useMemo(() => {
     const items = filteredList;
@@ -159,7 +188,7 @@ function LiderancasPage() {
           pledged_votes: l.pledged_votes ?? 0,
           apoiadores: l.linked_supporters,
           chapa_count: l.chapa_count ?? 0,
-          political_strength_score: l.political_strength_score,
+          total_points: leadershipTotalPoints(l),
           primary_supporters: l.primary_supporters,
           secondary_supporters: l.secondary_supporters,
           weekly_growth: l.weekly_growth,
@@ -181,7 +210,7 @@ function LiderancasPage() {
       <div className="liderancas-page space-y-6">
         <PageHeader
           title="Lideranças"
-          description="Centro operacional da rede política: força, vínculos primários/secundários, crescimento e território básico. O score é heurística interna, não projeção eleitoral."
+          description="Rede política por liderança. Pontos = soma dos apoiadores na rede (landpage: peso da chapa; CRM manual: 1 ponto cada). Não é projeção eleitoral oficial."
           actions={
             <>
               <Button
@@ -264,6 +293,7 @@ function LiderancasPage() {
                                   top_neighborhood_count: null,
                                   top_neighborhood_concentration_pct: null,
                                   landing_only_network: false,
+                                  total_points: 0,
                                   political_strength_score: 0,
                                   active_supporters_30d: 0,
                                   hot_supporters: 0,
@@ -381,7 +411,7 @@ function LiderancasPage() {
               />
             ) : filters.view === "table" ? (
               <LeadershipTableView
-                rows={filteredList}
+                rows={paginatedList}
                 highlightId={highlightId}
                 highlightRef={highlightRowRef}
                 onOpen={setDetailTarget}
@@ -391,13 +421,24 @@ function LiderancasPage() {
               />
             ) : (
               <LeadershipCardsView
-                rows={filteredList}
+                rows={paginatedList}
                 highlightId={highlightId}
                 highlightRef={highlightCardRef}
                 onOpen={setDetailTarget}
                 onDelete={setDeleteTarget}
                 canUpdate={perms.canUpdate}
                 canDelete={perms.canDelete}
+              />
+            )}
+
+            {filteredList.length > 0 && (
+              <ListPagination
+                page={page}
+                totalPages={totalPages}
+                totalItems={filteredList.length}
+                pageSize={LIDERANCAS_PAGE_SIZE}
+                onPageChange={setPage}
+                itemLabel="lideranças"
               />
             )}
           </CardContent>

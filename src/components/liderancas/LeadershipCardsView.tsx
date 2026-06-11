@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { LeadershipVoteProgress } from "@/components/liderancas/LeadershipVoteProgress";
 import type { LeadershipListItem } from "@/components/liderancas/leadership-list-types";
+import { leadershipTotalPoints } from "@/lib/leadership-points";
 import { DEEP_LINK_HIGHLIGHT_CLASS } from "@/lib/search-deep-link";
 import { cn } from "@/lib/utils";
 
@@ -47,8 +48,14 @@ export function LeadershipCardsView({
           <CardContent className="p-5">
             <div className="mb-3 flex items-start justify-between gap-2">
               <div className="flex min-w-0 flex-1 items-start gap-2">
-                <div className="flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-lg bg-primary/10 text-sm font-bold tabular-nums text-primary">
-                  {l.political_strength_score}
+                <div
+                  className="flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-lg bg-primary/10 text-primary"
+                  title="Pontos totais da rede"
+                >
+                  <span className="text-sm font-bold tabular-nums leading-none">
+                    {leadershipTotalPoints(l)}
+                  </span>
+                  <span className="text-[8px] font-medium uppercase tracking-wide opacity-80">pts</span>
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5">
@@ -79,12 +86,8 @@ export function LeadershipCardsView({
 
             <div className="mb-3 flex flex-wrap items-center gap-2 text-xs">
               <span>
-                <strong className="text-foreground">{l.primary_supporters}</strong>
-                <span className="text-muted-foreground"> prim.</span>
-              </span>
-              <span>
-                <strong className="text-foreground">{l.secondary_supporters}</strong>
-                <span className="text-muted-foreground"> sec.</span>
+                <strong className="text-foreground">{l.linked_supporters}</strong>
+                <span className="text-muted-foreground"> apoiadores</span>
               </span>
               {l.weekly_growth > 0 && (
                 <span className="inline-flex items-center gap-0.5 text-chart-2">
@@ -108,8 +111,9 @@ export function LeadershipCardsView({
             )}
 
             <LeadershipVoteProgress
-              pledged={l.pledged_votes}
+              points={leadershipTotalPoints(l)}
               target={l.estimated_votes}
+              landpagePoints={l.pledged_votes}
               size="sm"
               className="opacity-90"
             />
