@@ -44,13 +44,14 @@ function toFormState(row: AdminPlanLimitRow): FormState {
     priceLabel: row.priceLabel,
     isHighlighted: row.isHighlighted,
     highlightStyle: row.highlightStyle,
+    isListed: row.isListed,
     unlimitedSupporters: row.maxSupporters === null,
     unlimitedTeam: row.maxTeamMembers === null,
     unlimitedRegions: row.maxRegions === null,
   };
 }
 
-function toPayload(form: FormState): UpdatePlanLimitPayload {
+function toPayload(form: FormState, plan: AdminPlanLimitRow["plan"]): UpdatePlanLimitPayload {
   return {
     maxSupporters: form.unlimitedSupporters ? null : form.maxSupporters,
     maxTeamMembers: form.unlimitedTeam ? null : form.maxTeamMembers,
@@ -61,6 +62,7 @@ function toPayload(form: FormState): UpdatePlanLimitPayload {
     priceLabel: form.priceLabel.trim(),
     isHighlighted: form.isHighlighted,
     highlightStyle: form.highlightStyle,
+    isListed: plan === "start" ? false : form.isListed,
   };
 }
 
@@ -215,8 +217,8 @@ function isFormValid(form: FormState): boolean {
   );
 }
 
-function isDirty(a: FormState, b: FormState): boolean {
-  return JSON.stringify(toPayload(a)) !== JSON.stringify(toPayload(b));
+function isDirty(a: FormState, b: FormState, plan: AdminPlanLimitRow["plan"]): boolean {
+  return JSON.stringify(toPayload(a, plan)) !== JSON.stringify(toPayload(b, plan));
 }
 
 export function PlanLimitEditor({
@@ -236,7 +238,7 @@ export function PlanLimitEditor({
   }, [row]);
 
   const planLabel = TENANT_PLAN_LABELS[row.plan as TenantPlan];
-  const dirty = isDirty(form, initial);
+  const dirty = isDirty(form, initial, row.plan);
   const valid = isFormValid(form);
 
   return (
@@ -258,15 +260,26 @@ export function PlanLimitEditor({
       <CardContent className="space-y-8">
         <div className="space-y-4 rounded-xl border border-border/70 bg-muted/20 p-4">
           <p className="text-sm font-semibold">Vitrine comercial</p>
+          {row.plan === "start" && (
+            <p className="text-xs text-muted-foreground">
+              O plano Start é interno (cadastro gratuito) e não aparece na vitrine. Ajuste aqui
+              apenas os limites técnicos.
+            </p>
+          )}
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="price-label">Preço exibido</Label>
+              <Label htmlFor="price-label">Preço exibido na vitrine</Label>
               <Input
                 id="price-label"
                 value={form.priceLabel}
-                placeholder="Ex.: Grátis, R$ 199/mês"
+                placeholder="Ex.: R$ 199, R$ 499, Sob consulta"
+                disabled={row.plan === "start"}
                 onChange={(e) => setForm({ ...form, priceLabel: e.target.value })}
               />
+              <p className="text-[11px] text-muted-foreground">
+                Texto livre. Valores como <strong>R$ 199</strong> ganham o sufixo &quot;/ mês&quot;
+                automaticamente nos cards.
+              </p>
             </div>
             <div className="space-y-2 md:col-span-2">
               <Label htmlFor="tagline">Subtítulo</Label>
@@ -279,10 +292,21 @@ export function PlanLimitEditor({
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-6">
+            {row.plan !== "start" && (
+              <div className="flex items-center gap-2">
+                <Switch
+                  id="is-listed"
+                  checked={form.isListed}
+                  onCheckedChange={(v) => setForm({ ...form, isListed: v })}
+                />
+                <Label htmlFor="is-listed">Exibir na vitrine comercial</Label>
+              </div>
+            )}
             <div className="flex items-center gap-2">
               <Switch
                 id="is-highlighted"
                 checked={form.isHighlighted}
+                disabled={row.plan === "start"}
                 onCheckedChange={(v) => setForm({ ...form, isHighlighted: v })}
               />
               <Label htmlFor="is-highlighted">Plano em destaque</Label>
@@ -327,7 +351,7 @@ export function PlanLimitEditor({
           <Button
             type="button"
             disabled={!dirty || !valid || saving}
-            onClick={() => onSave(toPayload(form))}
+            onClick={() => onSave(toPayload(form, row.plan))}
             className="shrink-0"
           >
             <Save className="mr-2 h-4 w-4" />

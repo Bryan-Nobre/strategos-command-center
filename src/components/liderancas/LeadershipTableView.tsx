@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/table";
 import { LeadershipVoteProgress } from "@/components/liderancas/LeadershipVoteProgress";
 import type { LeadershipListItem } from "@/components/liderancas/leadership-list-types";
-import { leadershipTotalPoints } from "@/lib/leadership-points";
+import { leadershipLandpagePoints, leadershipTotalPoints } from "@/lib/leadership-points";
 import { DEEP_LINK_HIGHLIGHT_CLASS } from "@/lib/search-deep-link";
 import { cn } from "@/lib/utils";
 
@@ -90,7 +90,7 @@ export function LeadershipTableView({
                 <LeadershipVoteProgress
                   points={leadershipTotalPoints(l)}
                   target={l.estimated_votes}
-                  landpagePoints={l.pledged_votes}
+                  landpagePoints={leadershipLandpagePoints(l)}
                   size="sm"
                 />
               </TableCell>

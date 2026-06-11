@@ -149,8 +149,7 @@ export function landingPhotoClassName(style: LandingPhotoStyle): string {
 export const LANDING_THEME_COLOR_FIELDS = [
   { key: "background_color" as const, label: "Página inteira", fallback: "#f4f7fb" },
   { key: "hero_background_color" as const, label: "Bloco topo (hero)", fallback: "#ffffff" },
-  { key: "middle_background_color" as const, label: "Bloco meio", fallback: "#f8fafc" },
-  { key: "footer_background_color" as const, label: "Bloco final", fallback: "#f1f5f9" },
+  { key: "middle_background_color" as const, label: "Bloco formulário", fallback: "#f8fafc" },
 ];
 
 export function validateLandingThemeColors(theme: LandingTheme): string | null {

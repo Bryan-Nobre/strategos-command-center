@@ -1,6 +1,11 @@
 import { Check, Sparkles } from "lucide-react";
 import type { PlanDefinitionRow } from "@/lib/plan-display";
-import { buildPlanFeatureList, planCardClassName, planDisplayName } from "@/lib/plan-display";
+import {
+  buildPlanFeatureList,
+  formatPlanPriceDisplay,
+  planCardClassName,
+  planDisplayName,
+} from "@/lib/plan-display";
 import type { TenantPlan } from "@/types/tenant";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,10 +30,16 @@ export function PlanPricingGrid({ plans, currentPlan }: Props) {
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div
+        className={cn(
+          "grid gap-4 md:grid-cols-2",
+          plans.length >= 3 ? "xl:grid-cols-3" : "xl:grid-cols-2",
+        )}
+      >
         {plans.map((row) => {
           const isCurrent = row.plan === currentPlan;
           const features = buildPlanFeatureList(row);
+          const price = formatPlanPriceDisplay(row.priceLabel);
 
           return (
             <article
@@ -57,12 +68,12 @@ export function PlanPricingGrid({ plans, currentPlan }: Props) {
                 )}
               </div>
 
-              <div className="mt-5">
-                <p className="text-3xl font-bold tracking-tight text-white">
-                  {row.priceLabel || "—"}
-                </p>
-                <p className="text-xs text-zinc-500">/ mês · faturamento comercial</p>
-              </div>
+              {price.main && (
+                <div className="mt-5">
+                  <p className="text-3xl font-bold tracking-tight text-white">{price.main}</p>
+                  {price.suffix && <p className="text-xs text-zinc-500">{price.suffix}</p>}
+                </div>
+              )}
 
               <ul className="mt-6 flex-1 space-y-3 border-t border-white/10 pt-5">
                 {features.map((feature) => (

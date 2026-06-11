@@ -28,7 +28,7 @@ import {
   type LandingTheme,
 } from "@/lib/landing-theme";
 import { POLITICAL_DECOR_ICONS } from "@/lib/political-decor-icons";
-import { landingPublicPath } from "@/lib/landing-routes";
+import { landingPublicPath, landingPublicUrl } from "@/lib/landing-routes";
 import {
   normalizeInstagramUrl,
   serializeLandingSocialLinks,
@@ -248,8 +248,8 @@ export function LandingSettingsCard({
         {publicCode && (
           <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border/70 bg-muted/20 px-3 py-2.5">
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-medium text-muted-foreground">Código público da campanha</p>
-              <p className="font-mono text-sm">{publicCode}</p>
+              <p className="text-xs font-medium text-muted-foreground">Link público da campanha</p>
+              <p className="break-all font-mono text-sm">{landingPublicUrl(publicCode)}</p>
             </div>
             <Button
               type="button"
@@ -257,8 +257,8 @@ export function LandingSettingsCard({
               size="sm"
               disabled={!canEdit}
               onClick={() => {
-                void navigator.clipboard.writeText(landingPublicPath(publicCode)).then(() => {
-                  toast.success("Link copiado");
+                void navigator.clipboard.writeText(landingPublicUrl(publicCode)).then(() => {
+                  toast.success("Link completo copiado");
                 });
               }}
             >
@@ -280,6 +280,11 @@ export function LandingSettingsCard({
             theme={theme}
             proposals={proposals}
           />
+          <p className="text-[11px] leading-relaxed text-muted-foreground">
+            O cadastro tem 3 passos (dados, endereço e apoio com LGPD). O passo «Seu bairro» é extra e
+            opcional — envio de demanda exige LGPD e usa o botão no rodapé do passo. O rodapé da página é
+            só texto, sem bloco colorido.
+          </p>
 
           <div className="grid gap-4 md:grid-cols-2">
             <div className="grid gap-2">

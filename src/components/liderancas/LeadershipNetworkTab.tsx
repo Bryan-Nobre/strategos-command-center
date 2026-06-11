@@ -46,8 +46,6 @@ import {
 
   LeadershipRelationshipBadge,
 
-  LeadershipWeightBadge,
-
 } from "@/components/liderancas/LeadershipPoliticalBadges";
 
 import { SupporterEngagementBadge } from "@/components/supporters/SupporterEngagementBadge";
@@ -378,8 +376,6 @@ export function LeadershipNetworkTab({
 
                     <TableHead>Tipo</TableHead>
 
-                    <TableHead className="min-w-[5.5rem]">Pontos</TableHead>
-
                     <TableHead className="hidden sm:table-cell">Origem</TableHead>
 
                     <TableHead className="hidden md:table-cell">Bairro</TableHead>
@@ -433,12 +429,6 @@ export function LeadershipNetworkTab({
                       <TableCell>
 
                         <LeadershipRelationshipBadge type={row.relationship_type} />
-
-                      </TableCell>
-
-                      <TableCell>
-
-                        <LeadershipWeightBadge weight={row.weight} />
 
                       </TableCell>
 

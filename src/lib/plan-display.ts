@@ -14,7 +14,31 @@ export type PlanDefinitionRow = {
   priceLabel: string;
   isHighlighted: boolean;
   highlightStyle: PlanHighlightStyle;
+  /** Exibir na vitrine comercial (Configurações / comparativo). */
+  isListed: boolean;
 };
+
+export type PlanPriceDisplay = {
+  main: string;
+  suffix: string | null;
+};
+
+const PRICE_WITHOUT_SUFFIX =
+  /^(grátis|gratis|sob consulta|personalizado|a combinar|sob medida)/i;
+
+/** Formata o preço configurado no admin para exibição nos cards. */
+export function formatPlanPriceDisplay(priceLabel: string): PlanPriceDisplay {
+  const main = priceLabel.trim();
+  if (!main) return { main: "", suffix: null };
+  if (PRICE_WITHOUT_SUFFIX.test(main)) {
+    return { main, suffix: null };
+  }
+  return { main, suffix: "/ mês" };
+}
+
+export function filterListedPlans<T extends Pick<PlanDefinitionRow, "isListed">>(plans: T[]): T[] {
+  return plans.filter((p) => p.isListed);
+}
 
 function formatNumericLimit(value: number | null, unit: string): string {
   if (value === null) return `${unit} ilimitados`;

@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
-import { ArrowRight, Sparkles } from "lucide-react";
+import { ArrowRight, ExternalLink, Settings2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { landingPublicPath } from "@/lib/landing-routes";
 import { cn } from "@/lib/utils";
 import type { DailyMetric, QuickPill } from "@/services/dashboard-intelligence";
 import type { HeroCta } from "@/lib/dashboard-compose";
@@ -24,6 +25,7 @@ function BadgePill({ pill }: { pill: QuickPill }) {
 export function DashboardHero({
   greeting,
   briefing,
+  landingPublicCode,
   alertLine,
   opportunityLine,
   badges,
@@ -33,6 +35,8 @@ export function DashboardHero({
 }: {
   greeting: string;
   briefing: string;
+  /** Código público da landing — link rápido abaixo da saudação. */
+  landingPublicCode?: string | null;
   alertLine?: string;
   opportunityLine?: string;
   badges: QuickPill[];
@@ -40,12 +44,48 @@ export function DashboardHero({
   primaryCta: HeroCta;
   secondaryCta: HeroCta;
 }) {
+  const landingCode = landingPublicCode?.trim().toLowerCase() ?? "";
+  const landingPath = landingCode ? landingPublicPath(landingCode) : null;
   return (
     <section className="dashboard-hero">
       <div className="dashboard-hero-grid">
         <div className="min-w-0 space-y-4">
           <div className="space-y-2">
             <h1 className="dashboard-hero-title">{greeting}</h1>
+            {landingPath ? (
+              <div className="dashboard-hero-landing flex flex-wrap items-center gap-x-2 gap-y-1.5 text-sm">
+                <Link
+                  to="/landpage/$code"
+                  params={{ code: landingCode }}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex min-w-0 max-w-full items-center gap-1.5 font-medium text-primary hover:underline"
+                >
+                  <ExternalLink className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                  <span className="truncate">{landingPath}</span>
+                </Link>
+                <span className="text-muted-foreground/60" aria-hidden>
+                  ·
+                </span>
+                <Link
+                  to="/configuracoes"
+                  search={{ tab: "landing" }}
+                  className="inline-flex items-center gap-1.5 text-muted-foreground hover:text-foreground"
+                >
+                  <Settings2 className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                  Configurar landing
+                </Link>
+              </div>
+            ) : (
+              <Link
+                to="/configuracoes"
+                search={{ tab: "landing" }}
+                className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+              >
+                <Settings2 className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                Configurar sua landing pública
+              </Link>
+            )}
             <p className="dashboard-hero-briefing">{briefing}</p>
           </div>
 

@@ -67,6 +67,8 @@ function PublicLandingPage() {
   const [selectedChapas, setSelectedChapas] = useState<string[]>([]);
   const [cepInput, setCepInput] = useState("");
   const [cepLookup, setCepLookup] = useState<LandingCepLookupState>({ status: "idle" });
+  const [formStepIndex, setFormStepIndex] = useState(0);
+  const [demandSubmitPending, setDemandSubmitPending] = useState(false);
 
   const { data: landing, isLoading, error } = useQuery({
     queryKey: ["public-landing", code],
@@ -170,6 +172,7 @@ function PublicLandingPage() {
       setCepInput("");
       setCepLookup({ status: "idle" });
       setSelectedChapas([]);
+      setFormStepIndex(3);
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -203,7 +206,6 @@ function PublicLandingPage() {
   const theme = landing.theme ?? DEFAULT_LANDING_THEME;
   const pageStyle = landingPageRootStyle(theme);
   const middleZoneStyle = landingSectionBackgroundStyle(theme.middle_background_color);
-  const footerZoneStyle = landingSectionBackgroundStyle(theme.footer_background_color);
   const decorIconColor = theme.political_icons_color ?? theme.accent_color;
 
   return (
@@ -261,14 +263,14 @@ function PublicLandingPage() {
             </CardHeader>
             <CardContent>
               <LandingCaptureSteps
-                register={register}
-                control={control}
+                stepIndex={formStepIndex}
+                onStepIndexChange={setFormStepIndex}
                 errors={errors}
-                watch={watch}
-                setValue={setValue}
                 handleSubmit={handleSubmit}
                 isSubmitting={isSubmitting}
                 onSubmit={(v) => mutation.mutate(v)}
+                demandSubmitDisabled={!lgpdConsent}
+                demandSubmitPending={demandSubmitPending}
                 personalStep={
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2 sm:col-span-2">
@@ -429,30 +431,38 @@ function PublicLandingPage() {
                     />
                   </div>
                 }
+                demandStep={
+                  <LandingDemandSection
+                    publicCode={code}
+                    neighborhood={neighborhood}
+                    city={city}
+                    stateUf={stateUf}
+                    embedded
+                    hideSubmitButton
+                    lgpdConsent={lgpdConsent}
+                    onLgpdChange={(checked) =>
+                      setValue("lgpd_consent", checked, { shouldValidate: true })
+                    }
+                    lgpdError={
+                      formStepIndex === 3 && !lgpdConsent
+                        ? errors.lgpd_consent?.message
+                        : undefined
+                    }
+                    onPendingChange={setDemandSubmitPending}
+                  />
+                }
               />
             </CardContent>
           </Card>
         </section>
         </div>
 
-        <div
-          className={`landing-zone landing-zone--footer space-y-8${theme.footer_background_color ? " landing-zone--filled" : ""}`}
-          style={footerZoneStyle}
-        >
-        <LandingDemandSection
-          publicCode={code}
-          neighborhood={neighborhood}
-          city={city}
-          stateUf={stateUf}
-        />
-
-        <p className="pb-4 text-center text-[10px] text-muted-foreground/80">
+        <p className="border-t border-border/40 pb-4 pt-6 text-center text-[10px] text-muted-foreground/80">
           Dados tratados com responsabilidade.{" "}
           <Link to="/login" className="underline-offset-2 hover:underline">
             Strategos
           </Link>
         </p>
-        </div>
       </main>
     </div>
   );

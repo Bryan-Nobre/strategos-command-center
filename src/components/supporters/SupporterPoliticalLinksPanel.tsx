@@ -69,7 +69,7 @@ export function SupporterPoliticalLinksPanel({
                   {SUPPORTER_LEADERSHIP_RELATIONSHIP_LABELS[link.relationship_type] ??
                     link.relationship_type}
                 </Badge>
-                <span>Peso {link.weight}</span>
+                <span>1 ponto</span>
                 <span>
                   {SUPPORTER_LEADERSHIP_LINK_SOURCE_LABELS[link.source] ?? link.source}
                 </span>
@@ -97,7 +97,6 @@ export function SupporterPoliticalLinksPanel({
                   {p.leadership_name}
                 </span>
                 <span className="text-xs">
-                  peso {p.vote_weight}
                   {p.pledged_at
                     ? ` · ${format(new Date(p.pledged_at), "dd/MM/yy", { locale: ptBR })}`
                     : ""}

@@ -9,7 +9,8 @@ import { PlanLimitEditor } from "@/components/admin/PlanLimitEditor";
 import { LoadingState } from "@/components/common/LoadingState";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { queryKeys } from "@/lib/query-keys";
-import { PLAN_ADMIN_INTRO, PLAN_ORDER } from "@/lib/plan-field-meta";
+import { PLAN_ADMIN_INTRO, PLAN_COMMERCIAL_ORDER, PLAN_ORDER } from "@/lib/plan-field-meta";
+import { filterListedPlans } from "@/lib/plan-display";
 import {
   listPlanLimitDefinitions,
   updatePlanLimitDefinition,
@@ -36,12 +37,13 @@ function rowToPayload(row: AdminPlanLimitRow): UpdatePlanLimitPayload {
     priceLabel: row.priceLabel,
     isHighlighted: row.isHighlighted,
     highlightStyle: row.highlightStyle,
+    isListed: row.isListed,
   };
 }
 
 function AdminPlansPage() {
   const qc = useQueryClient();
-  const [selectedPlan, setSelectedPlan] = useState<TenantPlan>(PLAN_ORDER[0]);
+  const [selectedPlan, setSelectedPlan] = useState<TenantPlan>(PLAN_COMMERCIAL_ORDER[0]);
 
   const { data: plans, isLoading, isError, error } = useQuery({
     queryKey: queryKeys.adminPlans(),
@@ -70,7 +72,8 @@ function AdminPlansPage() {
     return PLAN_ORDER.map((plan) => byPlan.get(plan)).filter(Boolean) as AdminPlanLimitRow[];
   }, [plans]);
 
-  const selectedRow = ordered.find((row) => row.plan === selectedPlan) ?? ordered[0];
+  const listedPlans = useMemo(() => filterListedPlans(ordered), [ordered]);
+  const selectedRow = ordered.find((row) => row.plan === selectedPlan) ?? listedPlans[0] ?? ordered[0];
 
   if (isLoading) return <LoadingState />;
 
@@ -93,9 +96,9 @@ function AdminPlansPage() {
         <AlertTitle>Como isso se relaciona com Clientes</AlertTitle>
         <AlertDescription className="space-y-2">
           <p>
-            Em <strong>Clientes</strong> você escolhe qual plano cada campanha usa (Start, Basic,
-            Pro…). Nesta tela você define <strong>o que cada plano permite</strong> — limites
-            numéricos, módulos e a vitrine visual.
+            Em <strong>Clientes</strong> você escolhe qual plano cada campanha usa (Basic, Pro… ou
+            Start interno). Nesta tela você define <strong>o que cada plano permite</strong> —
+            limites, preços na vitrine e módulos.
           </p>
           <p>
             <strong>Status</strong> (Ativo, Suspenso, Pendente, Cancelado) continua só em Clientes e
@@ -105,7 +108,8 @@ function AdminPlansPage() {
       </Alert>
 
       <AdminPlansPricingGrid
-        plans={ordered}
+        plans={listedPlans}
+        allPlans={ordered}
         selectedPlan={selectedRow?.plan as TenantPlan}
         savingPlan={
           mutation.isPending ? (mutation.variables?.plan as TenantPlan) : null

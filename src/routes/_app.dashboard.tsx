@@ -36,6 +36,7 @@ import {
 } from "@/lib/dashboard-compose";
 import { useOperationalDashboard, useActivities, usePollSnapshots } from "@/hooks/use-dashboard";
 import { useAgendaEvents } from "@/hooks/use-agenda";
+import { toIsoDate } from "@/lib/agenda-utils";
 import { useQuery } from "@tanstack/react-query";
 import { getLandingPage } from "@/services/landing";
 import { parseLandingProposals } from "@/lib/landing-proposals";
@@ -86,6 +87,11 @@ function DashboardPage() {
   const { data: polls, isLoading: pollsLoading } = usePollSnapshots(tenantId);
   const canViewAgenda = canRead("agenda");
   const { data: agendaEvents } = useAgendaEvents(canViewAgenda ? tenantId : "");
+  const hasUpcomingAgenda = useMemo(() => {
+    if (!canViewAgenda || !agendaEvents?.length) return false;
+    const today = toIsoDate(new Date());
+    return agendaEvents.some((e) => e.event_date >= today && e.status !== "cancelado");
+  }, [canViewAgenda, agendaEvents]);
 
   const metrics = operational?.metrics;
   const insights = operational?.insights;
@@ -96,7 +102,8 @@ function DashboardPage() {
   const { data: landingPage } = useQuery({
     queryKey: ["landing", tenantId],
     queryFn: () => getLandingPage(tenantId),
-    enabled: !!tenantId && showSetupChecklist,
+    enabled: !!tenantId,
+    staleTime: 5 * 60_000,
   });
 
   const landingProposals = parseLandingProposals(landingPage?.proposals);
@@ -265,6 +272,10 @@ function DashboardPage() {
     ];
   }, [periodReports, metrics, insights?.operational.kpi, periodLabel]);
 
+  const insightSectionStart = hasUpcomingAgenda ? 2 : 1;
+  const analyticsSectionIndex = insights ? insightSectionStart + 5 : 2;
+  const activitySectionIndex = analyticsSectionIndex + 1;
+
   return (
     <ModuleRouteGuard module="dashboard">
       <div className="dashboard-war-room mx-auto w-full max-w-7xl">
@@ -287,6 +298,7 @@ function DashboardPage() {
             <DashboardHero
               greeting={greeting}
               briefing={briefing}
+              landingPublicCode={landingPage?.public_code}
               alertLine={heroHighlight.alertLine}
               opportunityLine={heroHighlight.opportunityLine}
               badges={heroBadges}
@@ -317,26 +329,29 @@ function DashboardPage() {
                 onResolved={handleTerritoryResolved}
                 onClear={handleTerritoryClear}
               />
+              {hasUpcomingAgenda && agendaEvents && (
+                <DashboardUpcomingAgenda events={agendaEvents} sectionIndex={1} />
+              )}
               {insights && (
                 <>
-                  <DashboardPriorities items={priorities} sectionIndex={1} />
-                  <DashboardKpiStrip items={kpiItems} sectionIndex={2} />
-                  <DashboardGoalsOverview goals={insights.weeklyGoals} sectionIndex={3} />
+                  <DashboardPriorities items={priorities} sectionIndex={insightSectionStart} />
+                  <DashboardKpiStrip items={kpiItems} sectionIndex={insightSectionStart + 1} />
+                  <DashboardGoalsOverview
+                    goals={insights.weeklyGoals}
+                    sectionIndex={insightSectionStart + 2}
+                  />
                   <DashboardTerritoryMap
                     critical={critical}
                     promising={promising}
                     canViewTerritoryLink={canViewTerritoryLink}
-                    sectionIndex={4}
+                    sectionIndex={insightSectionStart + 3}
                     territoryFilterLabel={
                       territoryFilter
                         ? [territoryFilter.neighborhood, territoryFilter.city].filter(Boolean).join(" · ")
                         : null
                     }
                   />
-                  <DashboardPipelineSlim funnel={funnel} sectionIndex={5} />
-                  {canViewAgenda && agendaEvents && (
-                    <DashboardUpcomingAgenda events={agendaEvents} sectionIndex={6} />
-                  )}
+                  <DashboardPipelineSlim funnel={funnel} sectionIndex={insightSectionStart + 4} />
                 </>
               )}
 
@@ -349,12 +364,12 @@ function DashboardPage() {
                 aprovacao={aprovacao}
                 neighborhoodFilter={territoryFilter?.neighborhood}
                 isLoading={pollsLoading}
-                sectionIndex={insights ? (canViewAgenda && agendaEvents?.length ? 7 : 6) : 2}
+                sectionIndex={analyticsSectionIndex}
               />
               <DashboardActivityTimeline
                 activities={activities ?? []}
                 isLoading={activitiesLoading}
-                sectionIndex={insights ? (canViewAgenda && agendaEvents?.length ? 8 : 7) : 3}
+                sectionIndex={activitySectionIndex}
               />
             </div>
           </>

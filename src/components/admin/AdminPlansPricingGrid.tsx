@@ -1,6 +1,11 @@
 import { Check, Sparkles, Star } from "lucide-react";
 import type { AdminPlanLimitRow } from "@/services/admin-plans";
-import { buildPlanFeatureList, planCardClassName, planDisplayName } from "@/lib/plan-display";
+import {
+  buildPlanFeatureList,
+  formatPlanPriceDisplay,
+  planCardClassName,
+  planDisplayName,
+} from "@/lib/plan-display";
 import type { TenantPlan } from "@/types/tenant";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,7 +14,10 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 
 type Props = {
+  /** Planos visíveis na vitrine (sem Start). */
   plans: AdminPlanLimitRow[];
+  /** Todos os planos — para editar o interno Start. */
+  allPlans: AdminPlanLimitRow[];
   selectedPlan: TenantPlan;
   savingPlan: TenantPlan | null;
   onSelectPlan: (plan: TenantPlan) => void;
@@ -18,11 +26,13 @@ type Props = {
 
 export function AdminPlansPricingGrid({
   plans,
+  allPlans,
   selectedPlan,
   savingPlan,
   onSelectPlan,
   onToggleHighlight,
 }: Props) {
+  const internalPlans = allPlans.filter((p) => !p.isListed);
   return (
     <section className="admin-plans-showcase rounded-2xl border border-zinc-800 bg-[#050505] p-6 md:p-8">
       <div className="mb-6 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
@@ -32,8 +42,8 @@ export function AdminPlansPricingGrid({
           </p>
           <h2 className="mt-1 text-xl font-semibold text-white">Como os planos aparecem</h2>
           <p className="mt-1 max-w-2xl text-sm text-zinc-400">
-            Prévia do layout que o cliente verá ao escolher plano. Marque quais ficam em destaque e
-            clique em um card para editar limites e textos.
+            Prévia do que o cliente vê em Configurações → Plano. Defina o preço em cada plano e
+            clique no card para editar limites e textos. O plano Start é interno e não aparece aqui.
           </p>
         </div>
         <Badge variant="outline" className="border-zinc-700 text-zinc-300">
@@ -41,11 +51,17 @@ export function AdminPlansPricingGrid({
         </Badge>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div
+        className={cn(
+          "grid gap-4 md:grid-cols-2",
+          plans.length >= 3 ? "xl:grid-cols-3" : "xl:grid-cols-2",
+        )}
+      >
         {plans.map((row) => {
           const selected = row.plan === selectedPlan;
           const saving = savingPlan === row.plan;
           const features = buildPlanFeatureList(row);
+          const price = formatPlanPriceDisplay(row.priceLabel);
 
           return (
             <article
@@ -69,11 +85,17 @@ export function AdminPlansPricingGrid({
                 )}
               </div>
 
-              <div className="mt-5">
-                <p className="text-3xl font-bold tracking-tight text-white">
-                  {row.priceLabel || "—"}
-                </p>
-                <p className="text-xs text-zinc-500">/ mês · faturamento comercial</p>
+              <div className="mt-5 min-h-[3.25rem]">
+                {price.main ? (
+                  <>
+                    <p className="text-3xl font-bold tracking-tight text-white">{price.main}</p>
+                    {price.suffix && <p className="text-xs text-zinc-500">{price.suffix}</p>}
+                  </>
+                ) : (
+                  <p className="text-sm text-amber-400/90">
+                    Preço não configurado — edite o plano e preencha o campo de preço.
+                  </p>
+                )}
               </div>
 
               <ul className="mt-6 flex-1 space-y-3 border-t border-white/10 pt-5">
@@ -119,6 +141,28 @@ export function AdminPlansPricingGrid({
           );
         })}
       </div>
+
+      {internalPlans.length > 0 && (
+        <div className="mt-6 flex flex-wrap items-center gap-2 border-t border-zinc-800 pt-4">
+          <p className="text-xs text-zinc-500">Plano interno (não listado na vitrine):</p>
+          {internalPlans.map((row) => (
+            <Button
+              key={row.plan}
+              type="button"
+              size="sm"
+              variant={row.plan === selectedPlan ? "default" : "outline"}
+              className={
+                row.plan === selectedPlan
+                  ? "bg-white text-black hover:bg-white/90"
+                  : "border-zinc-700 text-zinc-300"
+              }
+              onClick={() => onSelectPlan(row.plan as TenantPlan)}
+            >
+              {planDisplayName(row.plan as TenantPlan)}
+            </Button>
+          ))}
+        </div>
+      )}
     </section>
   );
 }

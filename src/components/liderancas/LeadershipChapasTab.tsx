@@ -23,7 +23,6 @@ export function LeadershipChapasTab({
   canUpdate: boolean;
 }) {
   const [newChapaName, setNewChapaName] = useState("");
-  const [newChapaWeight, setNewChapaWeight] = useState("1");
 
   const { data: chapas, isLoading } = useLeadershipChapas(tenantId, leadershipId);
   const createChapa = useCreateLeadershipChapa(tenantId, leadershipId);
@@ -33,7 +32,7 @@ export function LeadershipChapasTab({
   return (
     <div className="space-y-3">
       <p className="text-xs leading-relaxed text-muted-foreground">
-        Chapas publicadas na landpage. {LEADERSHIP_POINTS_HELP.chapaWeight}
+        {LEADERSHIP_POINTS_HELP.chapaHelp}
       </p>
 
       {isLoading ? (
@@ -48,9 +47,8 @@ export function LeadershipChapasTab({
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium">{c.name}</p>
                 <p className="text-[11px] text-muted-foreground">
-                  <strong className="text-foreground tabular-nums">{c.vote_weight}</strong>{" "}
-                  {c.vote_weight === 1 ? "ponto" : "pontos"} por apoiador · {c.pledge_count ?? 0}{" "}
-                  apoio(s) · +{c.pledged_votes ?? 0} pontos na meta
+                  {c.pledge_count ?? 0} apoio(s) · cada apoiador conta{" "}
+                  <strong className="text-foreground">1 ponto</strong> nesta liderança
                 </p>
               </div>
               {canUpdate && (
@@ -93,20 +91,6 @@ export function LeadershipChapasTab({
               onChange={(e) => setNewChapaName(e.target.value)}
             />
           </div>
-          <div className="grid gap-2">
-            <Label htmlFor="new-chapa-weight">Pontos por apoiador nesta chapa</Label>
-            <p className="text-[11px] leading-relaxed text-muted-foreground">
-              {LEADERSHIP_POINTS_HELP.chapaWeight} Ex.: 1 = um ponto; 2 = dobra os pontos na meta.
-            </p>
-            <Input
-              id="new-chapa-weight"
-              type="number"
-              min={1}
-              className="max-w-[8rem]"
-              value={newChapaWeight}
-              onChange={(e) => setNewChapaWeight(e.target.value)}
-            />
-          </div>
           <Button
             size="sm"
             disabled={!newChapaName.trim() || createChapa.isPending}
@@ -114,14 +98,13 @@ export function LeadershipChapasTab({
               createChapa.mutate(
                 {
                   name: newChapaName.trim(),
-                  vote_weight: Math.max(1, Number(newChapaWeight) || 1),
+                  vote_weight: 1,
                   is_published: true,
                   display_order: (chapas?.length ?? 0) + 1,
                 },
                 {
                   onSuccess: () => {
                     setNewChapaName("");
-                    setNewChapaWeight("1");
                   },
                 },
               );

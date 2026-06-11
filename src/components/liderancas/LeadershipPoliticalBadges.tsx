@@ -5,7 +5,6 @@ import {
   SUPPORTER_LEADERSHIP_RELATIONSHIP_LABELS,
 } from "@/types/domain";
 import { linkSourceForBadge } from "@/lib/leadership-network";
-import { cn } from "@/lib/utils";
 
 export function LeadershipPrimaryBadge({ isPrimary }: { isPrimary: boolean }) {
   if (isPrimary) {
@@ -42,15 +41,3 @@ export function LeadershipLinkSourceBadge({ source }: { source: string }) {
   );
 }
 
-export function LeadershipWeightBadge({ weight, className }: { weight: number; className?: string }) {
-  const label = weight === 1 ? "1 ponto" : `${weight} pontos`;
-  return (
-    <Badge
-      variant="outline"
-      title="Pontos que esta pessoa soma nesta liderança (chapas na landpage ou vínculo manual)"
-      className={cn("tabular-nums font-semibold text-[10px]", className)}
-    >
-      {label}
-    </Badge>
-  );
-}

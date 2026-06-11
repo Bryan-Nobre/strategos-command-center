@@ -5,7 +5,6 @@ import {
   LeadershipLinkSourceBadge,
   LeadershipPrimaryBadge,
   LeadershipRelationshipBadge,
-  LeadershipWeightBadge,
 } from "@/components/liderancas/LeadershipPoliticalBadges";
 import { LeadershipNetworkSupporterActions } from "@/components/liderancas/LeadershipNetworkSupporterActions";
 import { SupporterEngagementBadge } from "@/components/supporters/SupporterEngagementBadge";
@@ -40,7 +39,6 @@ export function LeadershipNetworkCardsView({
                   {row.neighborhood ? ` · ${row.neighborhood}` : ""}
                 </p>
               </div>
-              <LeadershipWeightBadge weight={row.weight} />
             </div>
 
             <div className="flex flex-wrap gap-1">

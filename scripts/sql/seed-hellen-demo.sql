@@ -1,5 +1,8 @@
 -- =============================================================================
 -- Seed de demonstração: campanha da Hellen
+-- ATENÇÃO: dados de exemplo antigos usavam São Paulo. Para dashboard só do DF,
+-- use scripts/sql/reset-dashboard-df.sql (limpa e repovoa Brasília/DF).
+--
 -- Execute no SQL Editor do Supabase (como postgres / service role).
 --
 -- Localiza a campanha por nome, slug ou perfil contendo "hellen".

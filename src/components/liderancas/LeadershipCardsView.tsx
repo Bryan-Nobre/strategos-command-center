@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { LeadershipVoteProgress } from "@/components/liderancas/LeadershipVoteProgress";
 import type { LeadershipListItem } from "@/components/liderancas/leadership-list-types";
-import { leadershipTotalPoints } from "@/lib/leadership-points";
+import { leadershipLandpagePoints, leadershipTotalPoints } from "@/lib/leadership-points";
 import { DEEP_LINK_HIGHLIGHT_CLASS } from "@/lib/search-deep-link";
 import { cn } from "@/lib/utils";
 
@@ -113,7 +113,7 @@ export function LeadershipCardsView({
             <LeadershipVoteProgress
               points={leadershipTotalPoints(l)}
               target={l.estimated_votes}
-              landpagePoints={l.pledged_votes}
+              landpagePoints={leadershipLandpagePoints(l)}
               size="sm"
               className="opacity-90"
             />

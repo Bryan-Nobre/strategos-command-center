@@ -16,6 +16,7 @@ export type UpdatePlanLimitPayload = {
   priceLabel: string;
   isHighlighted: boolean;
   highlightStyle: PlanHighlightStyle;
+  isListed: boolean;
 };
 
 type RawAdminPlanRow = {
@@ -29,6 +30,7 @@ type RawAdminPlanRow = {
   price_label: string;
   is_highlighted: boolean;
   highlight_style: PlanHighlightStyle;
+  is_listed: boolean;
   tenant_count: number;
 };
 
@@ -44,6 +46,7 @@ function mapRow(raw: RawAdminPlanRow): AdminPlanLimitRow {
     priceLabel: raw.price_label ?? "",
     isHighlighted: raw.is_highlighted === true,
     highlightStyle: raw.highlight_style === "purple" ? "purple" : "blue",
+    isListed: raw.is_listed !== false,
     tenantCount: raw.tenant_count,
   };
 }
@@ -73,6 +76,7 @@ export async function updatePlanLimitDefinition(
     p_price_label: payload.priceLabel,
     p_is_highlighted: payload.isHighlighted,
     p_highlight_style: payload.highlightStyle,
+    p_is_listed: payload.isListed,
   });
   if (error) throw error;
 

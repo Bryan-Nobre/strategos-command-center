@@ -58,8 +58,8 @@ export function LeadershipVoteProgress({
       </p>
       {landpagePoints != null && landpagePoints > 0 && (
         <p className="text-[10px] text-muted-foreground">
-          Destes, <strong className="text-foreground tabular-nums">{landpagePoints}</strong> pontos
-          vieram da landpage (apoio a chapas).
+          Destes, <strong className="text-foreground tabular-nums">{landpagePoints}</strong>{" "}
+          {landpagePoints === 1 ? "apoiador veio" : "apoiadores vieram"} da landpage (apoio a chapas).
         </p>
       )}
       {safeTarget === 0 && points === 0 && (

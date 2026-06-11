@@ -12,6 +12,7 @@ type RawPlanCatalogRow = {
   price_label: string;
   is_highlighted: boolean;
   highlight_style: PlanHighlightStyle;
+  is_listed: boolean;
 };
 
 function mapRow(raw: RawPlanCatalogRow): PlanDefinitionRow {
@@ -26,6 +27,7 @@ function mapRow(raw: RawPlanCatalogRow): PlanDefinitionRow {
     priceLabel: raw.price_label ?? "",
     isHighlighted: raw.is_highlighted === true,
     highlightStyle: raw.highlight_style === "purple" ? "purple" : "blue",
+    isListed: raw.is_listed !== false,
   };
 }
 

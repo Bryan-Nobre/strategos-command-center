@@ -15,7 +15,7 @@ export function DashboardTerritoryCepBar({
   const label = territoryFilterLabel(activeFilter);
 
   return (
-    <div className="dashboard-territory-cep rounded-xl border border-border/70 bg-card/60 p-4">
+    <div className="dashboard-territory-cep mb-8 rounded-xl border border-border/70 bg-card/60 p-4">
       <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
         <MapPin className="h-4 w-4 text-primary" />
         Filtro territorial por CEP

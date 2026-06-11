@@ -46,6 +46,9 @@ export const PLAN_FIELD_META = {
 
 export const PLAN_ORDER: TenantPlan[] = ["start", "basic", "pro", "enterprise"];
 
+/** Planos exibidos na vitrine comercial (sem o interno Start). */
+export const PLAN_COMMERCIAL_ORDER: TenantPlan[] = ["basic", "pro", "enterprise"];
+
 export const PLAN_ADMIN_INTRO =
   "Estes limites definem o que cada plano comercial permite. Alterações entram em vigor imediatamente para todas as campanhas vinculadas ao plano. " +
   "Status da campanha (Ativo/Suspenso) continua sendo alterado em Clientes — não confundir com plano.";

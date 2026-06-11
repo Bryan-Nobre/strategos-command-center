@@ -1,6 +1,10 @@
-import { Heart } from "lucide-react";
+import { Heart, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  LANDING_CAPTURE_CORE_STEPS,
+  LANDING_CAPTURE_OPTIONAL_STEP,
+} from "@/components/landing/LandingCaptureSteps";
 import {
   DEFAULT_LANDING_ACCENT,
   landingPageRootStyle,
@@ -8,6 +12,7 @@ import {
   type LandingTheme,
 } from "@/lib/landing-theme";
 import { getLandingProposalBody, type LandingProposalItem } from "@/lib/landing-proposals";
+import { cn } from "@/lib/utils";
 
 type LandingLivePreviewProps = {
   title: string;
@@ -35,7 +40,7 @@ export function LandingLivePreview({
         Prévia ao vivo · como o visitante verá a landing
       </p>
       <div
-        className={`landing-page landing-page--preview relative max-h-[420px] overflow-y-auto text-foreground${theme.accent_color ? " landing-page--accent" : ""}${theme.show_graphic_elements ? " landing-page--decorated" : ""}`}
+        className={`landing-page landing-page--preview relative max-h-[480px] overflow-y-auto text-foreground${theme.accent_color ? " landing-page--accent" : ""}${theme.show_graphic_elements ? " landing-page--decorated" : ""}`}
         style={pageStyle}
       >
         <div className="space-y-3 p-3">
@@ -92,21 +97,49 @@ export function LandingLivePreview({
             </div>
           )}
 
-          <div
-            className="rounded-xl border border-border/40 p-3"
-            style={middleStyle}
-          >
+          <div className="rounded-xl border border-border/40 p-3" style={middleStyle}>
             <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold">
               <Heart className="h-3.5 w-3.5 text-primary" aria-hidden />
               Quero apoiar
             </p>
+
+            <div className="mb-2 flex gap-1">
+              {LANDING_CAPTURE_CORE_STEPS.map((s) => (
+                <span
+                  key={s.id}
+                  className="flex-1 rounded bg-primary/10 px-1 py-1 text-center text-[9px] font-medium text-primary"
+                >
+                  {s.label}
+                </span>
+              ))}
+              <span
+                className={cn(
+                  "max-w-[3.25rem] shrink-0 rounded border border-dashed border-border px-1 py-1 text-center text-[9px] text-muted-foreground",
+                )}
+              >
+                {LANDING_CAPTURE_OPTIONAL_STEP.shortLabel}
+              </span>
+            </div>
+
             <div className="mb-2 grid grid-cols-2 gap-1.5">
               <div className="h-6 rounded-md border border-border/60 bg-background/80" />
               <div className="h-6 rounded-md border border-border/60 bg-background/80" />
             </div>
+
+            <div className="mb-2 flex items-start gap-1.5 rounded-md border border-border/50 bg-background/60 px-2 py-1.5">
+              <span className="mt-0.5 h-3 w-3 shrink-0 rounded border border-primary/40" aria-hidden />
+              <span className="flex items-center gap-1 text-[9px] leading-snug text-muted-foreground">
+                <ShieldCheck className="h-3 w-3 text-primary" aria-hidden />
+                Consentimento LGPD no passo Apoio
+              </span>
+            </div>
+
             <Button type="button" size="sm" className="h-7 text-[10px] pointer-events-none">
               Confirmar meu apoio
             </Button>
+            <p className="mt-2 text-[9px] text-muted-foreground">
+              Passo extra: demanda do bairro (LGPD + Enviar demanda).
+            </p>
           </div>
 
           {theme.show_graphic_elements && (
@@ -120,6 +153,10 @@ export function LandingLivePreview({
               ))}
             </div>
           )}
+
+          <p className="border-t border-border/40 pt-2 text-center text-[9px] text-muted-foreground/80">
+            Rodapé · texto de privacidade
+          </p>
         </div>
       </div>
     </div>

@@ -9,7 +9,7 @@ import {
   LEADERSHIP_POINTS_HELP,
   formatLeadershipPoints,
 } from "@/lib/leadership-metrics-copy";
-import { leadershipTotalPoints } from "@/lib/leadership-points";
+import { leadershipLandpagePoints, leadershipTotalPoints } from "@/lib/leadership-points";
 import type { LeadershipListItem } from "@/components/liderancas/leadership-list-types";
 
 export function LeadershipResumoTab({
@@ -42,7 +42,7 @@ export function LeadershipResumoTab({
       <LeadershipVoteProgress
         points={totalPoints}
         target={leadership.estimated_votes}
-        landpagePoints={leadership.pledged_votes}
+        landpagePoints={leadershipLandpagePoints(leadership)}
       />
 
       <Alert className="border-primary/20 bg-primary/5">

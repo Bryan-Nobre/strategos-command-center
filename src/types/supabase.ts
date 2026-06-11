@@ -1327,6 +1327,7 @@ export type Database = {
           p_max_team_members: number | null
           p_plan: Database["public"]["Enums"]["tenant_plan"]
           p_polls_enabled: boolean
+          p_is_listed?: boolean
           p_price_label?: string
           p_tagline?: string
         }
